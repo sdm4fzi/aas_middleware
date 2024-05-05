@@ -3,8 +3,8 @@ from typing import Dict, List
 
 import anyio
 from fastapi import APIRouter, BackgroundTasks, HTTPException
-from aas_middleware.workflows.worfklow_description import WorkflowDescription
-from aas_middleware.workflows.workflow import Workflow
+from aas_middleware.connect.workflows.worfklow_description import WorkflowDescription
+from aas_middleware.connect.workflows.workflow import Workflow
 
 def generate_workflow_endpoint(workflow: Workflow) -> List[APIRouter]:
     """

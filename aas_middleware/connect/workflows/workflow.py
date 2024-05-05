@@ -6,7 +6,7 @@ import anyio
 from anyio.abc import TaskGroup
 import anyio.to_thread
 
-from aas_middleware.workflows.worfklow_description import WorkflowDescription
+from aas_middleware.connect.workflows.worfklow_description import WorkflowDescription
 
 
 class Workflow:

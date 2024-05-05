@@ -6,12 +6,12 @@ import uvicorn
 
 
 
-from aas_middleware.middleware.middleware import Middleware
+from aas_middleware import Middleware
 middleware = Middleware()
 
-from aas_middleware.connectors.http_request_connector import HttpRequestConnector
-from aas_middleware.providers.base_provider import ConnectorProvider
-from aas_middleware.consumers.consumers import Consumer
+from aas_middleware.connect.connectors.http_request_connector import HttpRequestConnector
+from aas_middleware.connect.providers.base_provider import ConnectorProvider
+from aas_middleware.connect.consumers.consumers import Consumer
 
 class ProductionResource(BaseModel):
     ID: str

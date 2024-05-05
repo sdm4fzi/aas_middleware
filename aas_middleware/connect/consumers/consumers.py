@@ -1,10 +1,10 @@
 from typing import Type, TypeVar, Generic
 
 from aas_middleware.core import Connector
-from aas_middleware.data_model import base
+from aas_middleware.model import core
 
 C = TypeVar("C", bound=Connector)
-D = TypeVar("D", bound=base.Identifiable)
+D = TypeVar("D", bound=core.Identifiable)
 
 class Consumer(Generic[C, D]):
     def __init__(self, connector: C, data_model: Type[D]) -> None:

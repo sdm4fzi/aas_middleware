@@ -1,10 +1,27 @@
 from __future__ import annotations
-from typing import Optional, Dict, Union
+from typing import Optional, Dict, Union, TypeVar
+from uuid import UUID
 
-from pydantic import BaseModel, validator, root_validator
+from pydantic import BaseModel, field_validator, model_validator
 
-# TODO: check if reference is working like this
-Reference = Union[str]
+Identifier = TypeVar("Identifier", bound=str | int | UUID)
+Reference = TypeVar("Reference", bound=str | int | UUID)
+
+
+# TODO: move these function to the util
+def get_identifiable_fields(model: BaseModel):
+    model_fields = []
+    for field_name, field_info in model.model_fields.items():
+        if field_info.annotation is Identifier:
+            model_fields.append(field_name)
+    return model_fields
+
+def get_referable_fields(model: BaseModel):
+    model_fields = []
+    for field_name, field_info in model.model_fields.items():
+        if field_info.annotation is Reference:
+            model_fields.append(field_name)
+    return model_fields
 
 
 class Referable(BaseModel):
@@ -18,7 +35,7 @@ class Referable(BaseModel):
     id_short: str
     description: Optional[str]
 
-    @validator("description", always=True)
+    @field_validator("description")
     def set_default_description(cls, v, values, **kwargs):
         if v is None:
             return ""
@@ -35,7 +52,7 @@ class Identifiable(Referable):
     """
     id: str
 
-    @root_validator(pre=True)
+    @model_validator(mode="before")
     def set_default_id_short(cls, values):
         if "id_short" not in values and "id" in values:
             values["id_short"] = values["id"]
@@ -52,7 +69,7 @@ class HasSemantics(BaseModel):
     """
     semantic_id: Optional[str]
 
-    @validator("semantic_id", always=True)
+    @field_validator("semantic_id")
     def set_default_description(cls, v, values, **kwargs):
         if v is None:
             return ""

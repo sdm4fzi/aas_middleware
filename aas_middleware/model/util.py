@@ -1,19 +1,50 @@
 from __future__ import annotations
 from enum import Enum
-
+import re
 from typing import Any, List, Union, TYPE_CHECKING, Optional, TypeVar
 
-from aas2openapi.models.base import Referable
-from aas2openapi.util.convert_util import convert_camel_case_to_underscrore_str
+from aas_middleware.model.core import Referable
 from pydantic import BaseModel, create_model
 
 
 if TYPE_CHECKING:
-    from aas_middleware.data_model.data_model import DataModel
+    from aas_middleware.model.data_model import DataModel
 
 
 BASIC_TYPE = Union[str, int, float, bool, None]
 T = TypeVar("T", bound=Referable)
+
+def convert_camel_case_to_underscrore_str(came_case_string: str) -> str:
+    """
+    Convert a camel case string to an underscore seperated string.
+
+    Args:
+        class_name (str): The camel case string to convert.
+
+    Returns:
+        str: The underscore seperated string.
+    """
+    came_case_string = came_case_string[0].lower() + came_case_string[1:]
+    new_class_name = re.sub(r"(?<!^)(?=[A-Z])", "_", came_case_string).lower()
+    if all(len(el) == 1 for el in new_class_name.split('_')):
+        new_class_name = new_class_name.replace('_', '')
+    return new_class_name
+
+def convert_under_score_to_camel_case_str(underscore_str: str) -> str:
+    """
+    Convert a underscore seperated string to a camel case string.
+
+    Args:
+        class_name (str): The underscore seperated string to convert.
+
+    Returns:
+        str: The camel case string.
+    """
+    words = underscore_str.split('_')
+    camel_case_str = ''.join(word.title() for word in words)
+    return camel_case_str
+
+
 
 
 def assure_id_short_attribute(model: Any) -> Any:

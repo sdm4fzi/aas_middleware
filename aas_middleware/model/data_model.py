@@ -4,13 +4,14 @@ import json
 from typing import Dict, List, Set, TypeVar, Union, Any, Type
 from datetime import datetime
 
-from aas2openapi.models.base import Referable
-from aas2openapi.util.convert_util import (
+from aas_middleware.model.core import Referable
+
+from aas_middleware.model.util import (
     convert_under_score_to_camel_case_str,
     convert_camel_case_to_underscrore_str,
 )
 
-from aas_middleware.data_model.util import (
+from aas_middleware.model.util import (
     get_all_contained_referables,
     get_referable_attributes_of_model,
     assure_id_short_attribute,

@@ -1,5 +1,5 @@
 from typing import Protocol, Optional, Type, TypeVar
-from aas_middleware.data_model import base
+from aas_middleware.model import core
 
 class Connector(Protocol):
     async def connect(self):
@@ -14,8 +14,8 @@ class Connector(Protocol):
     async def receive(self) -> str:
         ...
 
-D = TypeVar("D", bound=base.Identifiable)
-D2 = TypeVar("D2", bound=base.Identifiable)
+D = TypeVar("D", bound=core.Identifiable)
+D2 = TypeVar("D2", bound=core.Identifiable)
 
 class Actor(Protocol[D]):
     def set_model(self, model: Type[D]):

@@ -14,7 +14,7 @@ import aas_middleware
 # from aas_middleware.middleware.model_registry_api import generate_model_api
 # from aas_middleware.util.convert_util import set_example_values, get_pydantic_model_from_dict, get_pydantic_models_from_instances
 from aas_middleware.middleware.workflow_router import generate_workflow_endpoint
-from aas_middleware.workflows.workflow import Workflow
+from aas_middleware.connect.workflows.workflow import Workflow
 
 class Middleware:
     """

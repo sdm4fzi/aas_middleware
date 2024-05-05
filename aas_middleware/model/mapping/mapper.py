@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
 from pydantic import PrivateAttr
-from aas_middleware.data_model.data_model import ORIGIN_DATA_MODEL, REFERABLE_MODEL
+from aas_middleware.model.data_model import ORIGIN_DATA_MODEL, REFERABLE_MODEL
 
 
 class Mapper(ABC):

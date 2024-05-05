@@ -1,9 +1,9 @@
 from typing import Any, Awaitable, Coroutine, TypeVar, Generic, Type
 from aas_middleware.core import Connector
-from aas_middleware.data_model import base
+from aas_middleware.model import core
 
 C = TypeVar("C", bound=Connector)
-D = TypeVar("D", bound=base.Referable)
+D = TypeVar("D", bound=core.Referable)
 
 class ConnectorProvider(Generic[D]):
     def __init__(self, connector: Connector, data_model: Type[D]) -> None:
