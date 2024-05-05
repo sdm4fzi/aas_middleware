@@ -6,8 +6,12 @@ import uvicorn
 
 
 
-from aas_middleware import Middleware
+from aas_middleware import Middleware, VERSION
 middleware = Middleware()
+
+print(VERSION)
+
+
 
 from aas_middleware.connect.connectors.http_request_connector import HttpRequestConnector
 from aas_middleware.connect.providers.base_provider import ConnectorProvider

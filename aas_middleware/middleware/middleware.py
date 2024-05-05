@@ -52,12 +52,13 @@ class Middleware:
     @property
     def app(self):
         if not self._app:
+            # TODO: update the meta data
             description = """
-             The aas2openapi middleware allows to convert aas models to pydantic models and generate a REST or GraphQL API from them.
+             The aas-middleware allows to convert aas models to pydantic models and generate a REST or GraphQL API from them.
                 """
 
             app = FastAPI(
-                title="aas2openapi",
+                title="aas-middelware",
                 description=description,
                 version=aas_middleware.VERSION,
                 contact={
