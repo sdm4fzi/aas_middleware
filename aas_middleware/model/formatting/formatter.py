@@ -1,1 +1,0 @@
-# TODO: implement base class for all formatters

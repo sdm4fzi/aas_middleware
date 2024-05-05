@@ -38,7 +38,10 @@ class DataModel:
     Args:
         *models (Union[List[Referable], Referable]): The models to load into the data model.
     """
-
+    # TODO: change that models can also be objects, however, when inserting them, their are checked if they are identifiable
+    # TODO: make Data model to be a BaseModel, to easily define other data models based on this by inheritance (similar to pydantic BaseModels)
+    # TODO: if DataModels are passed to the data model init, their attributes are used.
+    # TODO: build a graph with the models and their references to each other -> make referencing, referenced search easier
     def __init__(self, *models: Union[List[Referable], Referable]):
         self._models_key_id: Dict[str, Referable] = {}
 
