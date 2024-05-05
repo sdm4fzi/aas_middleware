@@ -18,6 +18,7 @@ class WebHookClientConnector:
         connected_subscriber (Optional[str]): adress of the subscriber that is connected to the webhook
         received_data (str): data received from the webhook
     """
+
     def __init__(self, web_hook_url: str):
         """
         Args:
@@ -69,9 +70,9 @@ class WebHookClientConnector:
 
     async def disconnect(self):
         """
-        Function disconnects from the webhook. 
+        Function disconnects from the webhook.
         """
-        # TODO: either remove the hookevent from the provider or set it to false or 
+        # TODO: either remove the hookevent from the provider or set it to false or
         # remove the callback from the endpoint of the provider
 
     async def send(self, body: str) -> str:

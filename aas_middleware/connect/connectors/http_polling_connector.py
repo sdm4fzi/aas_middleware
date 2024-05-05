@@ -1,4 +1,4 @@
-# TODO: check, if the polling could be timed with an asyncio event 
+# TODO: check, if the polling could be timed with an asyncio event
 # -> then polling could be implemented with the same interface as event driven http_reqest_connector
 
 import aiohttp

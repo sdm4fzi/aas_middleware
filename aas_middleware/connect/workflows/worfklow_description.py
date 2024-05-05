@@ -17,6 +17,7 @@ class WorkflowDescription(BaseModel):
         providers (List[str]): List of providers the workflow consumes data from.
         consumers (List[str]): List of consumers the workflow provides data to.
     """
+
     name: str
     running: bool
     on_startup: bool

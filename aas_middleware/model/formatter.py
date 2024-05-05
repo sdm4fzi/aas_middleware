@@ -7,12 +7,13 @@ class Formatter(Protocol):
     """
     Protocol for all formatters that are used to serialize and deserialize data models.
     """
+
     def serialize(self, data: DataModel) -> Any:
         """
         Serialize a DataModel object to the specific format of the formatter.
 
         Args:
-            data (DataModel): A data model 
+            data (DataModel): A data model
 
         Returns:
             Any: A string in the specific format of the formatter.
@@ -30,5 +31,3 @@ class Formatter(Protocol):
             DataModel: A data model that holds the objects that were deserialized
         """
         ...
-
-    

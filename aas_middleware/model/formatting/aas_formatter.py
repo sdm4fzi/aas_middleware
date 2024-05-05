@@ -9,10 +9,12 @@ BasyxModels = AssetAdministrationShell | Submodel | DictObjectStore
 
 # TODO: use here the classes from data_model for the AAS (Referable etc.)
 
+
 class AASFormatter:
     """
     Allows to serialize and deserialize Basyx AAS objects (AssetAdministrationShells, Submodels or Containers of both) to a DataModel.
     """
+
     def serialize(self, data: DataModel) -> BasyxModels:
         """
         Serialize a DataModel object to the specific format of the formatter.
@@ -44,5 +46,3 @@ class AASFormatter:
         # TODO: Implement the deserialization
         # 1. check at first if meta data is available in the aas for transformation (either concept description or administrative information or submodel template)
         # 2. convert at submodels, then aas
-
-    

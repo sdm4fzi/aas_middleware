@@ -23,6 +23,7 @@ from aas_middleware.model.util import (
 NESTED_DICT = Dict[str, Union[Any, "NESTED_DICT"]]
 T = TypeVar("T", bound=Referable)
 
+
 class DateTimeEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, datetime):
@@ -38,6 +39,7 @@ class DataModel:
     Args:
         *models (Union[List[Referable], Referable]): The models to load into the data model.
     """
+
     # TODO: change that models can also be objects, however, when inserting them, their are checked if they are identifiable
     # TODO: make Data model to be a BaseModel, to easily define other data models based on this by inheritance (similar to pydantic BaseModels)
     # TODO: if DataModels are passed to the data model init, their attributes are used.
@@ -272,7 +274,10 @@ class DataModel:
         """
         if not model_type_name in self._models_key_type:
             raise ValueError(f"Model type {model_type_name} not supported.")
-        return [self.get_model(model_id) for model_id in self._models_key_type[model_type_name]]
+        return [
+            self.get_model(model_id)
+            for model_id in self._models_key_type[model_type_name]
+        ]
 
     def get_models_of_type(self, model_type: Type[T]) -> List[T]:
         """

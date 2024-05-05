@@ -3,6 +3,7 @@ import aiohttp
 import anyio
 from fastapi import HTTPException
 
+
 class WebHookServerConnector:
     def __init__(self):
         self.hook: anyio.Event = anyio.Event()
@@ -70,7 +71,9 @@ class WebHookServerConnector:
         self.hook.set()
         for subscriber in self.connected_subscribers:
             async with aiohttp.ClientSession() as session:
-                async with session.post(subscriber, data=self.received_data) as response:
+                async with session.post(
+                    subscriber, data=self.received_data
+                ) as response:
                     await response.text()
         return "Webhook message sent"
 

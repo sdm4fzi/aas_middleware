@@ -16,6 +16,7 @@ def get_identifiable_fields(model: BaseModel):
             model_fields.append(field_name)
     return model_fields
 
+
 def get_referable_fields(model: BaseModel):
     model_fields = []
     for field_name, field_info in model.model_fields.items():
@@ -32,6 +33,7 @@ class Referable(BaseModel):
         id_short (str): Local id of the object.
         description (str, optional): Description of the object. Defaults to None.
     """
+
     id_short: str
     description: Optional[str]
 
@@ -40,6 +42,7 @@ class Referable(BaseModel):
         if v is None:
             return ""
         return v
+
 
 class Identifiable(Referable):
     """
@@ -50,6 +53,7 @@ class Identifiable(Referable):
         id_short (str): Local id of the object.
         description (str, optional): Description of the object. Defaults to None.
     """
+
     id: str
 
     @model_validator(mode="before")
@@ -58,7 +62,7 @@ class Identifiable(Referable):
             values["id_short"] = values["id"]
             return values
         return values
-    
+
 
 class HasSemantics(BaseModel):
     """
@@ -67,6 +71,7 @@ class HasSemantics(BaseModel):
     Args:
         semantic_id (str, optional): Semantic id of the object. Defaults to None.
     """
+
     semantic_id: Optional[str]
 
     @field_validator("semantic_id")
@@ -74,6 +79,7 @@ class HasSemantics(BaseModel):
         if v is None:
             return ""
         return v
+
 
 class AAS(Identifiable):
     """
@@ -84,7 +90,9 @@ class AAS(Identifiable):
         id_short (str): Local id of the object.
         description (str, optional): Description of the object. Defaults to None.
     """
+
     pass
+
 
 class Submodel(HasSemantics, Identifiable):
     """
@@ -96,7 +104,9 @@ class Submodel(HasSemantics, Identifiable):
         description (str, optional): Description of the object. Defaults to None.
         semantic_id (str, optional): Semantic id of the object. Defaults to None.
     """
+
     pass
+
 
 class SubmodelElementCollection(HasSemantics, Referable):
     """
@@ -107,4 +117,5 @@ class SubmodelElementCollection(HasSemantics, Referable):
         description (str, optional): Description of the object. Defaults to None.
         semantic_id (str, optional): Semantic id of the object. Defaults to None.
     """
+
     pass

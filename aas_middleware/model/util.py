@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 BASIC_TYPE = Union[str, int, float, bool, None]
 T = TypeVar("T", bound=Referable)
 
+
 def convert_camel_case_to_underscrore_str(came_case_string: str) -> str:
     """
     Convert a camel case string to an underscore seperated string.
@@ -26,9 +27,10 @@ def convert_camel_case_to_underscrore_str(came_case_string: str) -> str:
     """
     came_case_string = came_case_string[0].lower() + came_case_string[1:]
     new_class_name = re.sub(r"(?<!^)(?=[A-Z])", "_", came_case_string).lower()
-    if all(len(el) == 1 for el in new_class_name.split('_')):
-        new_class_name = new_class_name.replace('_', '')
+    if all(len(el) == 1 for el in new_class_name.split("_")):
+        new_class_name = new_class_name.replace("_", "")
     return new_class_name
+
 
 def convert_under_score_to_camel_case_str(underscore_str: str) -> str:
     """
@@ -40,11 +42,9 @@ def convert_under_score_to_camel_case_str(underscore_str: str) -> str:
     Returns:
         str: The camel case string.
     """
-    words = underscore_str.split('_')
-    camel_case_str = ''.join(word.title() for word in words)
+    words = underscore_str.split("_")
+    camel_case_str = "".join(word.title() for word in words)
     return camel_case_str
-
-
 
 
 def assure_id_short_attribute(model: Any) -> Any:
@@ -55,7 +55,15 @@ def assure_id_short_attribute(model: Any) -> Any:
         or not model
     ):
         return model
-    id_attributes = ["id", "Id", "ID", "Identifier", "identifier", "Identity", "identity"]
+    id_attributes = [
+        "id",
+        "Id",
+        "ID",
+        "Identifier",
+        "identifier",
+        "Identity",
+        "identity",
+    ]
     for attr in id_attributes:
         if hasattr(model, attr) and isinstance(getattr(model, attr), str):
             id_short = getattr(model, attr)
@@ -69,20 +77,22 @@ def assure_id_short_attribute(model: Any) -> Any:
             # raise ValueError(
             #     f"Model {model} has no id_short attribute and no id, Id or ID attribute. It is not a BaseModel and therefore cannot be used as a referable."
             # )
-    
+
     if not isinstance(model, BaseModel):
         model.id_short = id_short
         return model
 
     class_name = model.__class__.__name__.split(".")[-1]
-    new_model = create_model(class_name, __base__=model.__class__, id_short= (str, ...))
-    
+    new_model = create_model(class_name, __base__=model.__class__, id_short=(str, ...))
+
     model_dict = vars(model)
     model_dict["id_short"] = id_short
     return new_model(**model_dict)
 
+
 def assure_id_short_attribute_of_list(model_list: List[Any]) -> List[Any]:
     return [assure_id_short_attribute(model) for model in model_list]
+
 
 def is_referable(potential_referable: Any) -> bool:
     return hasattr(potential_referable, "id_short")

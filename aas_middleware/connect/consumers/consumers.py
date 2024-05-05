@@ -6,6 +6,7 @@ from aas_middleware.model import core
 C = TypeVar("C", bound=Connector)
 D = TypeVar("D", bound=core.Identifiable)
 
+
 class Consumer(Generic[C, D]):
     def __init__(self, connector: C, data_model: Type[D]) -> None:
         self.connector = connector
@@ -16,13 +17,13 @@ class Consumer(Generic[C, D]):
 
     async def get_connector(self) -> C:
         return self.connector
-    
+
     async def set_model(self, model: Type[D]):
         self.data_model = model
 
     async def get_model(self) -> Type[D]:
         return self.data_model
-    
+
     async def execute(self, data: D):
         # TODO: make validation of data
         body = data.json()

@@ -18,7 +18,9 @@ class WebSocketServerConnector:
         self.connectable = False
 
     async def start_server(self) -> None:
-        self.server = await websockets.serve(self.handle_websocket, self.host, self.port)
+        self.server = await websockets.serve(
+            self.handle_websocket, self.host, self.port
+        )
 
     async def handle_websocket(
         self, websocket: websockets.WebSocketServerProtocol, path: str

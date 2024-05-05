@@ -14,7 +14,11 @@ class HttpRequestConnector:
 
     async def send(self, body: str) -> str:
         async with aiohttp.ClientSession() as session:
-            async with session.post(self.url, data=body, headers={"Content-Type": "application/json; charset=utf-8"}) as response:
+            async with session.post(
+                self.url,
+                data=body,
+                headers={"Content-Type": "application/json; charset=utf-8"},
+            ) as response:
                 return await response.text()
 
     async def receive(self) -> str:
