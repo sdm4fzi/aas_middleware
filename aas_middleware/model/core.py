@@ -1,8 +1,8 @@
 from __future__ import annotations
-from typing import Optional, Dict, Union, TypeVar
+from typing import Annotated, Any, Optional, Dict, Self, Union, TypeVar
 from uuid import UUID
 
-from pydantic import BaseModel, field_validator, model_validator, root_validator
+from pydantic import BaseModel, BeforeValidator, field_validator, model_validator, root_validator
 
 Identifier = TypeVar("Identifier", bound=str | int | UUID)
 Reference = TypeVar("Reference", bound=str | int | UUID)
@@ -24,24 +24,27 @@ def get_referable_fields(model: BaseModel):
             model_fields.append(field_name)
     return model_fields
 
+def string_is_not_empty(v: str):
+    assert v, "value must not be an empty string"
+    return v
+
+def string_does_start_with_a_character(v: str):
+    assert v[0].isalpha(), "value must start with a character"
+    return v
+
+IdString = Annotated[str, BeforeValidator(string_is_not_empty), BeforeValidator(string_does_start_with_a_character)]
 
 class Referable(BaseModel):
     """
     Base class for all referable classes. A Referable is an object with a local id (id_short) and a description.
 
     Args:
-        id_short (str): Local id of the object.
-        description (str, optional): Description of the object. Defaults to None.
+        id_short (IdString): Local id of the object.
+        description (str): Description of the object. Defaults to None.
     """
 
-    id_short: str
-    description: Optional[str]
-
-    @field_validator("description")
-    def set_default_description(cls, v, values, **kwargs):
-        if v is None:
-            return ""
-        return v
+    id_short: IdString
+    description: str = ""
 
 
 class Identifiable(Referable):
@@ -54,31 +57,35 @@ class Identifiable(Referable):
         description (str, optional): Description of the object. Defaults to None.
     """
 
-    id: str
+    id: IdString
 
     @model_validator(mode="before")
-    def set_default_id_short(cls, values):
-        if "id_short" not in values and "id" in values:
-            values["id_short"] = values["id"]
-            return values
-        return values
-
+    @classmethod
+    def check_id_and_id_short(cls, data: Any) -> Any:
+        if isinstance(data, BaseModel):
+            data = data.model_dump()
+        elif not isinstance(data, dict):
+            # TODO: also make here some validation that similarly named values are renamed...
+            data = {
+                "id": getattr(data, "id", ""),
+                "id_short": getattr(data, "id_short", "")
+            }
+        assert "id" in data or "id_short" in data, "Either id or id_short must be set"
+        if "id_short" not in data:
+            data["id_short"] = data["id"]
+        if "id" not in data:
+            data["id"] = data["id_short"]
+        return data
 
 class HasSemantics(BaseModel):
     """
     Base class for all classes that have semantics. Semantics are defined by a semantic id, which reference the semantic definition of the object.
 
     Args:
-        semantic_id (str, optional): Semantic id of the object. Defaults to None.
+        semantic_id (str): Semantic id of the object. Defaults to None.
     """
 
-    semantic_id: Optional[str]
-
-    @field_validator("semantic_id")
-    def set_default_description(cls, v, values, **kwargs):
-        if v is None:
-            return ""
-        return v
+    semantic_id: str = ""
 
 
 class AAS(Identifiable):
@@ -91,7 +98,13 @@ class AAS(Identifiable):
         description (str, optional): Description of the object. Defaults to None.
     """
 
-    pass
+    @model_validator(mode="after")
+    def check_submodels(self) -> Self:
+        for field_name in self.model_fields:
+            if field_name in ["id", "id_short", "description"]:
+                continue
+            assert Submodel.model_validate(getattr(self, field_name)), f"All attributes of an AAS must be of type Submodel or inherit from Submodel"
+        return self
 
 
 class Submodel(HasSemantics, Identifiable):
@@ -104,8 +117,9 @@ class Submodel(HasSemantics, Identifiable):
         description (str, optional): Description of the object. Defaults to None.
         semantic_id (str, optional): Semantic id of the object. Defaults to None.
     """
-
-    pass
+    # TODO: add here a check that all attributes (or attributes in list) validate the SubmodelElementCollection
+    # if not primitive
+    # TODO: also consider operations as callables...
 
 
 class SubmodelElementCollection(HasSemantics, Referable):
@@ -117,5 +131,5 @@ class SubmodelElementCollection(HasSemantics, Referable):
         description (str, optional): Description of the object. Defaults to None.
         semantic_id (str, optional): Semantic id of the object. Defaults to None.
     """
-
-    pass
+    # TODO: add here a check that all attributes (or attributes in list) validate the SubmodelElementCollection
+    # if not primitive values

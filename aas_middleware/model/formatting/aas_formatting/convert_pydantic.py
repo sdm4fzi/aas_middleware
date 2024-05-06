@@ -272,3 +272,17 @@ def remove_empty_lists(dictionary: dict) -> None:
             keys_to_remove.append(key)
     for key in keys_to_remove:
         del dictionary[key]
+
+
+if __name__ == "__main__":
+    from typing import List
+    class Person(core.Submodel):
+        name: str
+        age: int
+        aliases: List[str]
+
+    # TODO: resolve problem with speciyfying id
+    person = Person(id="john_1238959392", id_short="john_1238959392", semantic_id=None, description=None, name="John", age=30, aliases=["Johnny", "Johny"])
+    print(person)
+    submodel = convert_pydantic_model_to_submodel(person)
+    print(submodel)
