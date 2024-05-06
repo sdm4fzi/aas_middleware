@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import Optional, Dict, Union, TypeVar
 from uuid import UUID
 
-from pydantic import BaseModel, field_validator, model_validator
+from pydantic import BaseModel, field_validator, model_validator, root_validator
 
 Identifier = TypeVar("Identifier", bound=str | int | UUID)
 Reference = TypeVar("Reference", bound=str | int | UUID)
