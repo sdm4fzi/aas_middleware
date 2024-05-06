@@ -113,7 +113,7 @@ def convert_submodel_to_pydantic_model(sm: model.Submodel) -> core.Submodel:
         description=convert_util.get_str_description(sm.description),
         semantic_id=get_semantic_id_value_of_model(sm)
     )
-    dict_pydantic_core_submodel = pydantic_core_aas.dict()
+    dict_pydantic_core_submodel = pydantic_core_aas.model_dump()
     for sm_element in sm.submodel_element:
         dict_sme = convert_submodel_element_to_named_dict(sm_element)
         dict_pydantic_core_submodel.update(dict_sme)
@@ -132,7 +132,7 @@ def convert_submodel_collection_to_pydantic_model(sm_element: model.SubmodelElem
         description=convert_util.get_str_description(sm_element.description),
         semantic_id=get_semantic_id_value_of_model(sm_element)
     )
-    dict_pydantic_core_submodel = sme_pydantic_model.dict()
+    dict_pydantic_core_submodel = sme_pydantic_model.model_dump()
     for sm_element in sm_element.value:
         dict_sme = convert_submodel_element_to_named_dict(sm_element)
         dict_pydantic_core_submodel.update(dict_sme)

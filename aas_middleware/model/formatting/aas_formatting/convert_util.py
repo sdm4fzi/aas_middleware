@@ -4,7 +4,7 @@ from typing import List, Type, Dict
 from basyx.aas import model
 import ast
 
-from pydantic import BaseModel, create_model, BaseConfig
+from pydantic import BaseModel, ConfigDict, create_model
 import typing
 
 from pydantic.fields import FieldInfo
@@ -186,9 +186,9 @@ def get_all_submodels_from_model(model: Type[BaseModel]) -> List[Type[core.Submo
         List[Type[model.Submodel]]: A list of all submodel types in the pydantic model
     """
     submodels = []
-    for field in model.__fields__.values():
-        if issubclass(field.type_, core.Submodel):
-            submodels.append(field.type_)
+    for fieldinfo in model.model_fields.values():
+        if issubclass(fieldinfo.annotation, core.Submodel):
+            submodels.append(fieldinfo.annotation)
     return submodels
 
 
@@ -203,9 +203,9 @@ def get_all_submodel_elements_from_submodel(model: Type[core.Submodel]) -> Dict[
         List[core.SubmodelElementCollection | list | str | bool | float | int]: A list of all submodel elements in the pydantic submodel
     """
     submodel_elements = {}
-    for field in model.__fields__.values():
-        if field.name != "description" and field.name != "id_short" and field.name != "semantic_id" and field.name != "id":
-            submodel_elements[field.name] = field.outer_type_
+    for field_name, field_info in model.model_fields.items():
+        if field_name != "description" and field_name != "id_short" and field_name != "semantic_id" and field_name != "id":
+            submodel_elements[field_info.alias] = field_info.annotation
     return submodel_elements
 
 
@@ -226,29 +226,29 @@ def get_all_submodels_from_object_store(
     return submodels
 
 
-def get_field_default_value(field: ModelField) -> typing.Any:
+def get_field_default_value(fieldinfo: FieldInfo) -> typing.Any:
     """
     Function to get the default values of a pydantic model field. If no default is given, the function tries to infer a default cored on the type.
 
     Args:
-        field (ModelField): Pydantic model field.
+        fieldinfo (FieldInfo): Pydantic model field.
     
     Returns:
         typing.Any: Missing default value.
     """
-    if field.default:
-        return field.default
-    elif field.default_factory:
-        return field.default_factory()
-    elif field.type_ == str:
+    if fieldinfo.default:
+        return fieldinfo.default
+    elif fieldinfo.default_factory:
+        return fieldinfo.default_factory()
+    elif fieldinfo.annotation == str:
         return "string"
-    elif field.type_ == bool:
+    elif fieldinfo.annotation == bool:
         return False
-    elif field.type_ == int:
+    elif fieldinfo.annotation == int:
         return 1
-    elif field.type_ == float:
+    elif fieldinfo.annotation == float:
         return 1.0
-    elif field.type_ == list:
+    elif fieldinfo.annotation == list:
         return []
 
 def set_example_values(model: Type[BaseModel]) -> Type[BaseModel]:
@@ -262,40 +262,34 @@ def set_example_values(model: Type[BaseModel]) -> Type[BaseModel]:
         Type[BaseModel]: Pydantic model with the example values set.
     """
     example_dict = {}
-    for field_name, field in model.__fields__.items():
-        if isinstance(field.default, BaseModel) or issubclass(field.type_, BaseModel):
-            class NewSMConfig(BaseConfig):
-                schema_extra = {"example": field.default.json()}
-            model.__fields__[field_name].type_.Config = NewSMConfig
-            model.__fields__[field_name].type_.__config__ = NewSMConfig
-            model.__fields__[field_name].outer_type_.Config = NewSMConfig
-            model.__fields__[field_name].outer_type_.__config = NewSMConfig
-        example_dict[field_name] = get_field_default_value(field)
-    serialized_example = model(**example_dict).json()
-    class NewConfig(BaseConfig):
-        schema_extra = {"example": serialized_example}
-    model.Config = NewConfig
-    model.__config__ = NewConfig
+    for field_name, fieldinfo in model.model_fields.items():
+        if issubclass(fieldinfo.annotation, BaseModel):
+            config_dict = ConfigDict(json_schema_extra={"examples": [fieldinfo.default.model_dump_json()]})
+            fieldinfo.annotation.model_config = config_dict
+        example_dict[field_name] = get_field_default_value(fieldinfo)
+    serialized_example = model(**example_dict).model_dump_json()
+    config_dict = ConfigDict(json_schema_extra={"examples": [serialized_example]})
+    model.model_config = config_dict
     return model
 
-def core_model_check(field: ModelField) -> bool:
+def core_model_check(fieldinfo: FieldInfo) -> bool:
     """
     Checks if a pydantic model field is a core model.
 
     Args:
-        field (ModelField): Pydantic model field.
+        fieldinfo (FieldInfo): Pydantic model field.
 
     Returns:
         bool: If the model field is a core model.
     """
-    if isinstance(field.default, BaseModel):
+    if isinstance(fieldinfo.default, BaseModel):
         return True
-    if typing.get_origin(field.type_) is typing.Union:
-        args = typing.get_args(field.type_)
+    if typing.get_origin(fieldinfo.annotation) is typing.Union:
+        args = typing.get_args(fieldinfo.annotation)
         if all(issubclass(arg, BaseModel) for arg in args):
             return True
     else:
-        if issubclass(field.type_, BaseModel):
+        if issubclass(fieldinfo.annotation, BaseModel):
             return True
         
 
@@ -318,17 +312,17 @@ def union_type_check(model: Type) -> bool:
     else:
         return False
         
-def union_type_field_check(field: ModelField) -> bool:
+def union_type_field_check(fieldinfo: FieldInfo) -> bool:
     """
     Checks if a pydantic model field is a union type.
 
     Args:
-        field (ModelField): Pydantic model field.
+        fieldinfo (FieldInfo): Pydantic model field.
 
     Returns:
         bool: If the model field is a union type.
     """
-    return union_type_check(field.type_)
+    return union_type_check(fieldinfo.annotation)
 
 
 def set_required_fields(
@@ -344,21 +338,22 @@ def set_required_fields(
     Returns:
         Type[BaseModel]: Pydantic model with the required fields set.
     """
-    for field_name, field in origin_model.__fields__.items():
-        if union_type_field_check(field):
-            original_sub_types = typing.get_args(field.type_)
-            model_sub_types = typing.get_args(model.__fields__[field_name].type_)
+    for field_name, fieldinfo in origin_model.model_fields.items():
+        if union_type_field_check(fieldinfo):
+            original_sub_types = typing.get_args(fieldinfo.annotation)
+            model_sub_types = typing.get_args(model.model_fields[field_name].annotation)
             new_types = []
             for original_sub_type, model_sub_type in zip(original_sub_types, model_sub_types):
                 new_type = set_required_fields(model_sub_type, original_sub_type)
                 new_types.append(new_type)
             # TODO: rework this with typing.Union[*new_types] for python 3.11
-            model.__fields__[field_name].type_ = typing.Union[tuple(new_types)]
-        elif core_model_check(field):
-            new_type = set_required_fields(model.__fields__[field_name].type_, field.type_)
-            model.__fields__[field_name].type_ = new_type
-        if field.required:
-            model.__fields__[field_name].required = True          
+            model.model_fields[field_name].annotation = typing.Union[tuple(new_types)]
+        elif core_model_check(fieldinfo):
+            new_type = set_required_fields(model.model_fields[field_name].annotation, fieldinfo.annotation)
+            model.model_fields[field_name].annotation = new_type
+        if fieldinfo.is_required():
+            model.model_fields[field_name].default = None
+            model.model_fields[field_name].default_factory = True
     return model
 
 
@@ -374,37 +369,35 @@ def set_default_values(
     Returns:
         Type[BaseModel]: Pydantic model with the default values set.
     """
-    for field_name, field in origin_model.__fields__.items():
-        if union_type_field_check(field):
-            original_sub_types = typing.get_args(field.type_)
-            model_sub_types = typing.get_args(model.__fields__[field_name].type_)
+    for field_name, fieldinfo in origin_model.model_fields.items():
+        if union_type_field_check(fieldinfo):
+            original_sub_types = typing.get_args(fieldinfo.annotation)
+            model_sub_types = typing.get_args(model.model_fields[field_name].annotation)
             new_types = []
             for original_sub_type, model_sub_type in zip(original_sub_types, model_sub_types):
                 new_type = set_default_values(model_sub_type, original_sub_type)
                 new_types.append(new_type)
-            model.__fields__[field_name].type_ = typing.Union[tuple(new_types)]
-        elif core_model_check(field):
-            new_type = set_default_values(model.__fields__[field_name].type_, field.type_)
-            model.__fields__[field_name].type_ = new_type
-        if not field.required and (
-            field.default
-            or field.default == ""
-            or field.default == 0
-            or field.default == 0.0
-            or field.default == False
-            or field.default == []
-            or field.default == {}
+            model.model_fields[field_name].annotation = typing.Union[tuple(new_types)]
+        elif core_model_check(fieldinfo):
+            new_type = set_default_values(model.model_fields[field_name].annotation, fieldinfo.annotation)
+            model.model_fields[field_name].annotation = new_type
+        if not fieldinfo.is_required() and (
+            fieldinfo.default
+            or fieldinfo.default == ""
+            or fieldinfo.default == 0
+            or fieldinfo.default == 0.0
+            or fieldinfo.default == False
+            or fieldinfo.default == []
+            or fieldinfo.default == {}
         ):
-            model.__fields__[field_name].default = field.default
-            model.__fields__[field_name].field_info = FieldInfo(default=field.default)
+            model.model_fields[field_name].default = fieldinfo.default
         else:
-            model.__fields__[field_name].default = None
-            model.__fields__[field_name].field_info = FieldInfo(default=None)
+            model.model_fields[field_name].default = None
 
-        if not field.required and field.default_factory:
-            model.__fields__[field_name].default_factory = field.default_factory
+        if not fieldinfo.is_required() and fieldinfo.default_factory:
+            model.model_fields[field_name].default_factory = fieldinfo.default_factory
         else:
-            model.__fields__[field_name].default_factory = None
+            model.model_fields[field_name].default_factory = None
     return model
 
 
@@ -472,10 +465,8 @@ def get_pydantic_model_from_dict(
     pydantic_model = recusrive_model_creation(model_name, dict_values)
     pydantic_model = set_example_values(pydantic_model)
     if all_fields_required:
-        for field_name, field in pydantic_model.__fields__.items():
-            field.required = True
-            field.default = None
-            field.field_info = FieldInfo(default=None)
+        for field_name, field_info in pydantic_model.model_fields.items():
+            field_info.default = None
     return pydantic_model
 
 
