@@ -3,13 +3,13 @@ from __future__ import annotations
 import typing
 from pydantic import create_model
 
-from aas_middleware.model import core
+from aas_middleware.model.formatting.aas import aas_model
 from basyx.aas import model
 
 
 from aas_middleware.model.formatting.aas import convert_util
 
-def convert_object_store_to_pydantic_models(obj_store: model.DictObjectStore) -> typing.List[core.AAS]:
+def convert_object_store_to_pydantic_models(obj_store: model.DictObjectStore) -> typing.List[aas_model.AAS]:
     """
     Converts an object store with AAS and submodels to pydantic models, representing the original data structure.
 
@@ -17,15 +17,15 @@ def convert_object_store_to_pydantic_models(obj_store: model.DictObjectStore) ->
         obj_store (model.DictObjectStore): Object store with AAS and submodels
 
     Returns:
-        typing.List[core.AAS]: List of pydantic models
+        typing.List[aas_model.AAS]: List of pydantic models
     """
-    pydantic_submodels: typing.List[core.Submodel] = []
+    pydantic_submodels: typing.List[aas_model.Submodel] = []
     for identifiable in obj_store:
         if isinstance(identifiable, model.Submodel):
             pydantic_submodel = convert_submodel_to_pydantic_model(identifiable)
             pydantic_submodels.append(pydantic_submodel)
 
-    pydantic_aas_list: typing.List[core.AAS] = []
+    pydantic_aas_list: typing.List[aas_model.AAS] = []
     for identifiable in obj_store:
         if isinstance(identifiable, model.AssetAdministrationShell):
             pydantic_aas = convert_aas_to_pydantic_model(identifiable, pydantic_submodels)
@@ -33,7 +33,7 @@ def convert_object_store_to_pydantic_models(obj_store: model.DictObjectStore) ->
 
     return pydantic_aas_list
 
-def convert_aas_to_pydantic_model(aas: model.AssetAdministrationShell, pydantic_submodels: typing.List[core.Submodel]) -> core.AAS:
+def convert_aas_to_pydantic_model(aas: model.AssetAdministrationShell, pydantic_submodels: typing.List[aas_model.Submodel]) -> aas_model.AAS:
     """
     Converts an AAS to a Pydantic model.
 
@@ -41,11 +41,11 @@ def convert_aas_to_pydantic_model(aas: model.AssetAdministrationShell, pydantic_
         aas (model.AssetAdministrationShell): AAS to convert
 
     Returns:
-        core.AAS: Pydantic model of the asset administration shell
+        aas_model.AAS: Pydantic model of the asset administration shell
     """
     # TODO: rework here if information in data specification changes
     aas_class_name = convert_util.get_class_name_from_basyx_model(aas)
-    pydantic_core_aas = core.AAS(
+    pydantic_core_aas = aas_model.AAS(
         id=str(aas.id),
         id_short=aas.id_short,
         description=convert_util.get_str_description(aas.description),
@@ -60,7 +60,7 @@ def convert_aas_to_pydantic_model(aas: model.AssetAdministrationShell, pydantic_
             dict_pydantic_core_aas.update({
                 attribute_name_of_submodel: sm
                 })
-    model_type = create_model(aas_class_name, **dict_pydantic_core_aas, __core__=core.AAS)
+    model_type = create_model(aas_class_name, **dict_pydantic_core_aas, __core__=aas_model.AAS)
     return model_type(**dict_pydantic_core_aas)
 
 
@@ -102,12 +102,12 @@ def get_semantic_id_value_of_model(sm: typing.Union[model.Submodel, model.Submod
     else:
         raise NotImplementedError("Type not implemented:", type(sm))
             
-def convert_submodel_to_pydantic_model(sm: model.Submodel) -> core.Submodel:
+def convert_submodel_to_pydantic_model(sm: model.Submodel) -> aas_model.Submodel:
     """
     Converts a Submodel to a Pydantic model.
     """
     class_name = convert_util.get_class_name_from_basyx_model(sm)
-    pydantic_core_aas = core.Submodel(
+    pydantic_core_aas = aas_model.Submodel(
         id=str(sm.id),
         id_short=sm.id_short,
         description=convert_util.get_str_description(sm.description),
@@ -117,17 +117,17 @@ def convert_submodel_to_pydantic_model(sm: model.Submodel) -> core.Submodel:
     for sm_element in sm.submodel_element:
         dict_sme = convert_submodel_element_to_named_dict(sm_element)
         dict_pydantic_core_submodel.update(dict_sme)
-    model_type = create_model(class_name, **dict_pydantic_core_submodel, __core__=core.Submodel)
+    model_type = create_model(class_name, **dict_pydantic_core_submodel, __core__=aas_model.Submodel)
     return model_type(**dict_pydantic_core_submodel)
 
 
-def convert_submodel_collection_to_pydantic_model(sm_element: model.SubmodelElementCollection) -> core.SubmodelElementCollection:
+def convert_submodel_collection_to_pydantic_model(sm_element: model.SubmodelElementCollection) -> aas_model.SubmodelElementCollection:
     """
     Converts a SubmodelElementCollection to a Pydantic model.
     """
     attribute_name = convert_util.get_attribute_name_of_basyx_model(sm_element)
     class_name = convert_util.convert_under_score_to_camel_case_str(attribute_name)
-    sme_pydantic_model = core.SubmodelElementCollection(
+    sme_pydantic_model = aas_model.SubmodelElementCollection(
         id_short=sm_element.id_short,
         description=convert_util.get_str_description(sm_element.description),
         semantic_id=get_semantic_id_value_of_model(sm_element)
@@ -136,11 +136,11 @@ def convert_submodel_collection_to_pydantic_model(sm_element: model.SubmodelElem
     for sm_element in sm_element.value:
         dict_sme = convert_submodel_element_to_named_dict(sm_element)
         dict_pydantic_core_submodel.update(dict_sme)
-    model_type = create_model(class_name, **dict_pydantic_core_submodel, __core__=core.SubmodelElementCollection)
+    model_type = create_model(class_name, **dict_pydantic_core_submodel, __core__=aas_model.SubmodelElementCollection)
     modelo = model_type(**dict_pydantic_core_submodel)
     return modelo
 
-def convert_submodel_list_to_pydantic_model(sm_element: model.SubmodelElementList) -> typing.List[typing.Union[core.SubmodelElementCollection, str, int, float, bool, list, tuple, set]]:
+def convert_submodel_list_to_pydantic_model(sm_element: model.SubmodelElementList) -> typing.List[typing.Union[aas_model.SubmodelElementCollection, str, int, float, bool, list, tuple, set]]:
     """
     Converts a SubmodelElementList to a Pydantic model.
     """

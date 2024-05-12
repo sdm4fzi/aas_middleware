@@ -8,21 +8,20 @@ from enum import Enum
 from basyx.aas import model
 
 from typing import Union
-from pydantic import BaseModel
-from aas_middleware.model.formatting.aas import convert_util
+from pydantic import BaseModel, ConfigDict
+from aas_middleware.model.formatting.aas import convert_util, aas_model
 
-from aas_middleware.model import core
 from aas_middleware.model.formatting.aas.convert_util import get_vars
 
 
 def convert_pydantic_model_to_aas(
-    pydantic_aas: core.AAS,
+    pydantic_aas: aas_model.AAS,
 ) -> model.DictObjectStore[model.Identifiable]:
     """
     Convert a pydantic model to an AssetAdministrationShell and return it as a DictObjectStore with all Submodels
 
     Args:
-        pydantic_aas (core.AAS): pydantic model to convert
+        pydantic_aas (aas_model.AAS): pydantic model to convert
 
     Returns:
         model.DictObjectStore[model.Identifiable]: DictObjectStore with all Submodels
@@ -30,7 +29,7 @@ def convert_pydantic_model_to_aas(
     aas_attributes = get_vars(pydantic_aas)
     aas_submodels = []  # placeholder for submodels created
     for attribute_value in aas_attributes.values():
-        if isinstance(attribute_value, core.Submodel):
+        if isinstance(attribute_value, aas_model.Submodel):
             tempsubmodel = convert_pydantic_model_to_submodel(
                 pydantic_submodel=attribute_value
             )
@@ -59,13 +58,13 @@ def convert_pydantic_model_to_aas(
     return obj_store
 
 
-def get_id_short(element: Union[core.AAS, core.Submodel, core.SubmodelElementCollection]) -> str:
+def get_id_short(element: Union[aas_model.AAS, aas_model.Submodel, aas_model.SubmodelElementCollection]) -> str:
     if element.id_short:
         return element.id_short
     else:
         return element.id
 
-def get_semantic_id(pydantic_model: core.Submodel | core.SubmodelElementCollection) -> str | None:
+def get_semantic_id(pydantic_model: aas_model.Submodel | aas_model.SubmodelElementCollection) -> str | None:
     if pydantic_model.semantic_id:
         semantic_id = model.ExternalReference(
             key=(model.Key(model.KeyTypes.GLOBAL_REFERENCE, pydantic_model.semantic_id), )
@@ -75,7 +74,7 @@ def get_semantic_id(pydantic_model: core.Submodel | core.SubmodelElementCollecti
     return semantic_id
 
 def convert_pydantic_model_to_submodel(
-    pydantic_submodel: core.Submodel,
+    pydantic_submodel: aas_model.Submodel,
 ) -> model.Submodel:
     basyx_submodel = model.Submodel(
         id_short=get_id_short(pydantic_submodel),
@@ -100,7 +99,7 @@ def convert_pydantic_model_to_submodel(
 def create_submodel_element(
     attribute_name: str,
     attribute_value: Union[
-        core.SubmodelElementCollection, str, float, int, bool, tuple, list, set
+        aas_model.SubmodelElementCollection, str, float, int, bool, tuple, list, set
     ]
 ) -> model.SubmodelElement:
     """
@@ -108,13 +107,13 @@ def create_submodel_element(
 
     Args:
         attribute_name (str): Name of the attribute that is used for ID and id_short
-        attribute_value (Union[ core.SubmodelElementCollection, str, float, int, bool, tuple, list, set ]): Value of the attribute
+        attribute_value (Union[ aas_model.SubmodelElementCollection, str, float, int, bool, tuple, list, set ]): Value of the attribute
 
 
     Returns:
         model.SubmodelElement: basyx SubmodelElement
     """
-    if isinstance(attribute_value, core.SubmodelElementCollection):
+    if isinstance(attribute_value, aas_model.SubmodelElementCollection):
         smc = create_submodel_element_collection(attribute_value, attribute_name)
         return smc
     elif isinstance(attribute_value, list) or isinstance(attribute_value, tuple):
@@ -181,7 +180,7 @@ def create_property(
 
 
 def create_submodel_element_collection(
-    pydantic_submodel_element_collection: core.SubmodelElementCollection, name: str, 
+    pydantic_submodel_element_collection: aas_model.SubmodelElementCollection, name: str, 
 ) -> model.SubmodelElementCollection:
     value = []
     smc_attributes = get_vars(pydantic_submodel_element_collection)
@@ -243,8 +242,7 @@ import basyx.aas.adapter.json.json_serialization
 class ClientModel(BaseModel):
     basyx_object: Union[model.AssetAdministrationShell, model.Submodel]
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def to_dict(self) -> dict:
         basyx_json_string = json.dumps(
@@ -276,7 +274,7 @@ def remove_empty_lists(dictionary: dict) -> None:
 
 if __name__ == "__main__":
     from typing import List
-    class Person(core.Submodel):
+    class Person(aas_model.Submodel):
         name: str
         age: int
         aliases: List[str]

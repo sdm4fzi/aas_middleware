@@ -2,14 +2,12 @@ import json
 import re
 from typing import List, Type, Dict
 from basyx.aas import model
-import ast
 
 from pydantic import BaseModel, ConfigDict, create_model
 import typing
 
 from pydantic.fields import FieldInfo
-
-from aas_middleware.model import core
+from aas_middleware.model.formatting.aas import aas_model
 
 # TODO: clarify location of these functions... Either here or in model/util.py
 def convert_camel_case_to_underscrore_str(came_case_string: str) -> str:
@@ -47,12 +45,12 @@ def save_model_list_with_schema(model_list: typing.List[BaseModel], path: str):
     """
     Saves a list of pydantic models to a json file.
     Args:
-        model_list (typing.List[core.AAS]): List of pydantic models
+        model_list (typing.List[aas_model.AAS]): List of pydantic models
         path (str): Path to the json file
     """
     save_dict = {
-        "models": [model.dict() for model in model_list],
-        "schema": [model.schema() for model in model_list],
+        "models": [model.model_dump() for model in model_list],
+        "schema": [model.model_json_schema() for model in model_list],
     }
 
     with open(path, "w", encoding="utf-8") as json_file:
@@ -115,7 +113,7 @@ def get_str_description(langstring_set: model.LangStringSet) -> str:
     return str(dict_description)
 
 
-def get_basyx_description_from_pydantic_model(pydantic_model: core.AAS | core.Submodel | core.SubmodelElementCollection) -> model.LangStringSet:
+def get_basyx_description_from_pydantic_model(pydantic_model: aas_model.AAS | aas_model.Submodel | aas_model.SubmodelElementCollection) -> model.LangStringSet:
     """
     Crreates a LangStringSet from a pydantic model.
     Args:
@@ -177,7 +175,7 @@ def get_data_specification_for_attribute_name(
     )
 
 
-def get_all_submodels_from_model(model: Type[BaseModel]) -> List[Type[core.Submodel]]:
+def get_all_submodels_from_model(model: Type[BaseModel]) -> List[Type[aas_model.Submodel]]:
     """
     Function to get all submodels from a pydantic model
     Args:
@@ -187,12 +185,12 @@ def get_all_submodels_from_model(model: Type[BaseModel]) -> List[Type[core.Submo
     """
     submodels = []
     for fieldinfo in model.model_fields.values():
-        if issubclass(fieldinfo.annotation, core.Submodel):
+        if issubclass(fieldinfo.annotation, aas_model.Submodel):
             submodels.append(fieldinfo.annotation)
     return submodels
 
 
-def get_all_submodel_elements_from_submodel(model: Type[core.Submodel]) -> Dict[str, Type[core.SubmodelElementCollection | list | str | bool | float | int]]:
+def get_all_submodel_elements_from_submodel(model: Type[aas_model.Submodel]) -> Dict[str, Type[aas_model.SubmodelElementCollection | list | str | bool | float | int]]:
     """
     Function to get all submodel elements from a pydantic submodel
 
@@ -200,7 +198,7 @@ def get_all_submodel_elements_from_submodel(model: Type[core.Submodel]) -> Dict[
         model (Type[BaseModel]): The pydantic submodel to get the submodel elements from
 
     Returns:
-        List[core.SubmodelElementCollection | list | str | bool | float | int]: A list of all submodel elements in the pydantic submodel
+        List[aas_model.SubmodelElementCollection | list | str | bool | float | int]: A list of all submodel elements in the pydantic submodel
     """
     submodel_elements = {}
     for field_name, field_info in model.model_fields.items():
@@ -441,11 +439,11 @@ def recusrive_model_creation(model_name, dict_values, depth=0):
             created_model = recusrive_model_creation(class_name, attribute_values, depth=depth+1)
             dict_values[attribute_name] = created_model(**attribute_values)
     if depth == 0:
-        core_class = core.AAS
+        core_class = aas_model.AAS
     elif depth == 1:
-        core_class = core.Submodel
+        core_class = aas_model.Submodel
     else:
-        core_class = core.SubmodelElementCollection
+        core_class = aas_model.SubmodelElementCollection
     return create_model(model_name, **dict_values, __core__=core_class)
 
 
