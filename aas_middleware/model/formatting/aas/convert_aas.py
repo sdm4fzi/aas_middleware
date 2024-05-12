@@ -7,7 +7,7 @@ from aas_middleware.model import core
 from basyx.aas import model
 
 
-from aas_middleware.model.formatting.aas_formatting import convert_util
+from aas_middleware.model.formatting.aas import convert_util
 
 def convert_object_store_to_pydantic_models(obj_store: model.DictObjectStore) -> typing.List[core.AAS]:
     """

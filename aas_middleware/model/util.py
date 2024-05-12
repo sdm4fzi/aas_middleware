@@ -2,8 +2,9 @@ from __future__ import annotations
 from enum import Enum
 import re
 from typing import Any, List, Union, TYPE_CHECKING, Optional, TypeVar
+from uuid import UUID
 
-from aas_middleware.model.core import Referable
+from aas_middleware.model.core import Identifier, Referable
 from pydantic import BaseModel, create_model
 
 
@@ -48,6 +49,7 @@ def convert_under_score_to_camel_case_str(underscore_str: str) -> str:
 
 
 def assure_id_short_attribute(model: Any) -> Any:
+    # TODO: use get_id function above and if None is returned -> patch model with id attribute
     if (
         not hasattr(model, "__dict__")
         or hasattr(model, "id_short")
@@ -69,14 +71,10 @@ def assure_id_short_attribute(model: Any) -> Any:
             id_short = getattr(model, attr)
             break
     else:
-        # TODO: add also Reference to specify the type of the id_short
         if isinstance(model, BaseModel):
             id_short = str(id(model))
         else:
             return model
-            # raise ValueError(
-            #     f"Model {model} has no id_short attribute and no id, Id or ID attribute. It is not a BaseModel and therefore cannot be used as a referable."
-            # )
 
     if not isinstance(model, BaseModel):
         model.id_short = id_short

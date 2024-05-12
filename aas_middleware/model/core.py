@@ -1,15 +1,76 @@
 from __future__ import annotations
-from typing import Annotated, Any, Optional, Dict, Self, Union, TypeVar
+from enum import Enum
+from typing import Annotated, List, TypeVar, Any
 from uuid import UUID
+import inspect
 
-from pydantic import BaseModel, BeforeValidator, field_validator, model_validator, root_validator
+
+from pydantic import BaseModel, BeforeValidator, model_validator
+
 
 Identifier = TypeVar("Identifier", bound=str | int | UUID)
 Reference = TypeVar("Reference", bound=str | int | UUID)
 
 
-# TODO: move these function to the util
-def get_identifiable_fields(model: BaseModel):
+def get_id(model: Any) -> str | int | UUID:
+    """
+    Function to get the id attribute of an arbitrary model.
+
+    Args:
+        model (Any): The model.
+
+    Returns:
+        Optional[str | int | UUID]: The id attribute.
+    
+    Raises:
+        ValueError: if the model is not an object, BaseModel or dict or if no id attribute is available
+    """
+    if isinstance(model, str | int | float | bool | None | UUID | Enum | list | tuple | set | type):
+        raise ValueError("Model is a basic type and has no id attribute.")
+    
+    if isinstance(model, BaseModel):
+        identifiable_fields = get_identifiable_fields(model)
+        if len(identifiable_fields) > 1:
+            raise ValueError(f"Model has multiple Identifier attributes: {model}")
+        if identifiable_fields:
+            return getattr(model, identifiable_fields[0])
+    elif hasattr(model, "__dict__"):
+        sig = inspect.signature(type(model).__init__)
+        potential_identifier = []
+        for param in sig.parameters.values():
+            if param.annotation is Identifier:
+                potential_identifier.append(param.name)
+        if len(potential_identifier) > 1:
+            raise ValueError(f"Model {model} has multiple Identifier attributes.")
+        if potential_identifier:
+            return getattr(model, potential_identifier[0])
+
+    if isinstance(model, BaseModel):
+        data = model.model_dump()
+    elif isinstance(model, dict):
+        data = model
+    else:
+        data = vars(model)
+    potential_id_attributes = ["id", "id_short", "Id", "ID", "Identifier", "identifier", "Identity", "identity"]
+    for id_attribute in potential_id_attributes:
+        if id_attribute in data and isinstance(data[id_attribute], str | int | UUID):
+            return data[id_attribute]
+ 
+    raise ValueError(f"Model {model} has no attribute that can be used as id attribute.")
+
+
+
+# TODO: move these function to the util and use them in the data model
+def get_identifiable_fields(model: BaseModel) -> List[str]:
+    """
+    Function to get the fields of a model that are of type Identifier.
+
+    Args:
+        model (BaseModel): A Basemodel that is checked for identifier fields
+
+    Returns:
+        List[str]: The field names that are Identifiers
+    """
     model_fields = []
     for field_name, field_info in model.model_fields.items():
         if field_info.annotation is Identifier:
@@ -28,33 +89,17 @@ def string_is_not_empty(v: str):
     assert v, "value must not be an empty string"
     return v
 
-def string_does_start_with_a_character(v: str):
-    assert v[0].isalpha(), "value must start with a character"
-    return v
+IdString = Annotated[str | int | UUID, BeforeValidator(string_is_not_empty)]
 
-IdString = Annotated[str, BeforeValidator(string_is_not_empty), BeforeValidator(string_does_start_with_a_character)]
 
-class Referable(BaseModel):
+class Identifiable(BaseModel):
     """
-    Base class for all referable classes. A Referable is an object with a local id (id_short) and a description.
+    Base class for all identifiable classes that have an identifier, that allows to identify these objects. 
 
-    Args:
-        id_short (IdString): Local id of the object.
-        description (str): Description of the object. Defaults to None.
-    """
-
-    id_short: IdString
-    description: str = ""
-
-
-class Identifiable(Referable):
-    """
-    Base class for all identifiable classes. An Identifiable is a Referable with a global id (id_).
+    If no id is set, the id function of the python object is used. Otherwise, a uuid is generated.
 
     Args:
         id (str): Global id of the object.
-        id_short (str): Local id of the object.
-        description (str, optional): Description of the object. Defaults to None.
     """
 
     id: IdString
@@ -62,74 +107,7 @@ class Identifiable(Referable):
     @model_validator(mode="before")
     @classmethod
     def check_id_and_id_short(cls, data: Any) -> Any:
-        if isinstance(data, BaseModel):
-            data = data.model_dump()
-        elif not isinstance(data, dict):
-            # TODO: also make here some validation that similarly named values are renamed...
-            data = {
-                "id": getattr(data, "id", ""),
-                "id_short": getattr(data, "id_short", "")
-            }
-        assert "id" in data or "id_short" in data, "Either id or id_short must be set"
-        if "id_short" not in data:
-            data["id_short"] = data["id"]
-        if "id" not in data:
-            data["id"] = data["id_short"]
-        return data
-
-class HasSemantics(BaseModel):
-    """
-    Base class for all classes that have semantics. Semantics are defined by a semantic id, which reference the semantic definition of the object.
-
-    Args:
-        semantic_id (str): Semantic id of the object. Defaults to None.
-    """
-
-    semantic_id: str = ""
-
-
-class AAS(Identifiable):
-    """
-    Base class for all Asset Administration Shells (AAS).
-
-    Args:
-        id (str): Global id of the object.
-        id_short (str): Local id of the object.
-        description (str, optional): Description of the object. Defaults to None.
-    """
-
-    @model_validator(mode="after")
-    def check_submodels(self) -> Self:
-        for field_name in self.model_fields:
-            if field_name in ["id", "id_short", "description"]:
-                continue
-            assert Submodel.model_validate(getattr(self, field_name)), f"All attributes of an AAS must be of type Submodel or inherit from Submodel"
-        return self
-
-
-class Submodel(HasSemantics, Identifiable):
-    """
-    Base class for all submodels.
-
-    Args:
-        id (str): Global id of the object.
-        id_short (str): Local id of the object.
-        description (str, optional): Description of the object. Defaults to None.
-        semantic_id (str, optional): Semantic id of the object. Defaults to None.
-    """
-    # TODO: add here a check that all attributes (or attributes in list) validate the SubmodelElementCollection
-    # if not primitive
-    # TODO: also consider operations as callables...
-
-
-class SubmodelElementCollection(HasSemantics, Referable):
-    """
-    Base class for all submodel element collections.
-
-    Args:
-        id_short (str): Local id of the object.
-        description (str, optional): Description of the object. Defaults to None.
-        semantic_id (str, optional): Semantic id of the object. Defaults to None.
-    """
-    # TODO: add here a check that all attributes (or attributes in list) validate the SubmodelElementCollection
-    # if not primitive values
+        potential_id = get_id(data)
+        assert potential_id, "Either id or id_short must be set"
+        print("_________________Correct assertion")
+        return {"id": potential_id}

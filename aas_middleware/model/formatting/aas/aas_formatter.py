@@ -1,11 +1,11 @@
+from __future__ import annotations
 from typing import Any
 
 import basyx.aas
 from aas_middleware.model.data_model import DataModel
 
-from basyx.aas.model import AssetAdministrationShell, Submodel, DictObjectStore
 
-BasyxModels = AssetAdministrationShell | Submodel | DictObjectStore
+from aas_middleware.model.formatting.aas.aas_model import BasyxModels
 
 # TODO: use here the classes from data_model for the AAS (Referable etc.)
 

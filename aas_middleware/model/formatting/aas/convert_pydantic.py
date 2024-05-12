@@ -9,10 +9,10 @@ from basyx.aas import model
 
 from typing import Union
 from pydantic import BaseModel
-from aas_middleware.model.formatting.aas_formatting import convert_util
+from aas_middleware.model.formatting.aas import convert_util
 
 from aas_middleware.model import core
-from aas_middleware.model.formatting.aas_formatting.convert_util import get_vars
+from aas_middleware.model.formatting.aas.convert_util import get_vars
 
 
 def convert_pydantic_model_to_aas(
