@@ -9,6 +9,7 @@ from basyx.aas import model
 
 
 from aas_middleware.model.formatting.aas import convert_util
+from aas_middleware.model.formatting.aas.convert_util import get_semantic_id_value_of_model
 
 def convert_object_store_to_pydantic_models(obj_store: model.DictObjectStore) -> typing.List[aas_model.AAS]:
     """
@@ -120,23 +121,6 @@ def get_model_instantiation_dict_from_submodel_element(attribute_name: str, sm_e
         attribute_name: attribute_value
     }
 
-
-def get_semantic_id_value_of_model(basyx_model: typing.Union[model.Submodel, model.SubmodelElement]) -> str:
-    """
-    Returns the semantic id of a submodel or submodel element.
-
-    Args:
-        basyx_model (model.Submodel | model.SubmodelElement): Basyx model to get the semantic id from.
-
-    Returns:
-        str: Semantic id of the model.
-    """
-    if not isinstance(basyx_model, model.HasSemantics):
-        raise NotImplementedError("Type not implemented:", type(basyx_model))
-    if not basyx_model.semantic_id:
-        return ""
-    return basyx_model.semantic_id.key[0].value
-    
 
 def get_initial_dict_for_dynamic_model_creation(basyx_model: model.Submodel | model.AssetAdministrationShell | model.SubmodelElementCollection) -> typing.Dict[str, typing.Any]:
     """

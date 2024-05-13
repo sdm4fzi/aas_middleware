@@ -11,7 +11,7 @@ from typing import Union
 from pydantic import BaseModel, ConfigDict
 from aas_middleware.model.formatting.aas import convert_util, aas_model
 
-from aas_middleware.model.formatting.aas.convert_util import get_vars
+from aas_middleware.model.formatting.aas.convert_util import get_attribute_dict, get_id_short, get_semantic_id, get_value_type_of_attribute
 
 
 def convert_pydantic_model_to_aas(
@@ -26,7 +26,7 @@ def convert_pydantic_model_to_aas(
     Returns:
         model.DictObjectStore[model.Identifiable]: DictObjectStore with all Submodels
     """
-    aas_attributes = get_vars(pydantic_aas)
+    aas_attributes = get_attribute_dict(pydantic_aas)
     aas_submodels = []  # placeholder for submodels created
     aas_submodel_data_specifications = []
     for attribute_name, attribute_value in aas_attributes.items():
@@ -64,25 +64,10 @@ def convert_pydantic_model_to_aas(
     return obj_store
 
 
-def get_id_short(element: Union[aas_model.AAS, aas_model.Submodel, aas_model.SubmodelElementCollection]) -> str:
-    if element.id_short:
-        return element.id_short
-    else:
-        return element.id
-
-def get_semantic_id(pydantic_model: aas_model.Submodel | aas_model.SubmodelElementCollection) -> str | None:
-    if pydantic_model.semantic_id:
-        semantic_id = model.ExternalReference(
-            key=(model.Key(model.KeyTypes.GLOBAL_REFERENCE, pydantic_model.semantic_id), )
-        )
-    else:
-        semantic_id = None
-    return semantic_id
-
 def convert_pydantic_model_to_submodel(
     pydantic_submodel: aas_model.Submodel,
 ) -> model.Submodel:
-    submodel_attributes = get_vars(pydantic_submodel)
+    submodel_attributes = get_attribute_dict(pydantic_submodel)
     submodel_elements = []
     submodel_element_data_specifications = []
 
@@ -160,18 +145,6 @@ def create_submodel_element(
         return property
 
 
-def get_value_type_of_attribute(
-    attribute: Union[str, int, float, bool]
-) -> model.datatypes:
-    if isinstance(attribute, bool):
-        return model.datatypes.Boolean
-    elif isinstance(attribute, int):
-        return model.datatypes.Integer
-    elif isinstance(attribute, float):
-        return model.datatypes.Double
-    else:
-        return model.datatypes.String
-
 def create_property(
     attribute_name: str, attribute_value: Union[str, int, float, bool],
 ) -> model.Property:
@@ -190,7 +163,7 @@ def create_submodel_element_collection(
     pydantic_submodel_element_collection: aas_model.SubmodelElementCollection, name: str, 
 ) -> model.SubmodelElementCollection:
     value = []
-    smc_attributes = get_vars(pydantic_submodel_element_collection)
+    smc_attributes = get_attribute_dict(pydantic_submodel_element_collection)
     submodel_element_data_specifications = []
 
     for attribute_name, attribute_value in smc_attributes.items():
@@ -260,22 +233,3 @@ class ClientModel(BaseModel):
         data: dict = json.loads(basyx_json_string)
                 
         return data
-
-
-def remove_empty_lists(dictionary: dict) -> None:
-    keys_to_remove = []
-    for key, value in dictionary.items():
-        if isinstance(value, dict):
-            # Recursively process nested dictionaries
-            remove_empty_lists(value)
-            # if not value:
-            #     keys_to_remove.append(key)
-        elif isinstance(value, list) and value:
-            # Recursively process nested lists
-            for item in value:
-                if isinstance(item, dict):
-                    remove_empty_lists(item)
-        elif isinstance(value, list) and not value:
-            keys_to_remove.append(key)
-    for key in keys_to_remove:
-        del dictionary[key]
