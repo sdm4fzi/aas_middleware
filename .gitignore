@@ -50,3 +50,6 @@ venv.bak/
 
 # pyenv
 .python-version
+
+# Vscode
+.vscode/

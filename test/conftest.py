@@ -8,14 +8,14 @@ from aas_middleware.model.core import Identifier, Identifiable, get_id
 from aas_middleware.model.formatting.aas.aas_model import AAS, Submodel, SubmodelElementCollection
 
 
-class ProductVersionInfo(SubmodelElementCollection):
+class Version(SubmodelElementCollection):
     version: str
     product_type: str
 
 class ProductInfo(Submodel):
     product_name: str
     manufacturer: str
-    version: ProductVersionInfo
+    version: Version
 
 class SubmodelBom(Submodel):
     components: List[str]
@@ -23,8 +23,8 @@ class SubmodelBom(Submodel):
 
 
 class ProductAas(AAS):
-    bill_of_material: SubmodelBom
-    info: ProductInfo
+    submodel_bom: SubmodelBom
+    product_info: ProductInfo
 
 class FaultyAas(AAS):
     example_string_value: str
@@ -61,7 +61,7 @@ def faulty_aas() -> Type[FaultyAas]:
 
 @pytest.fixture(scope="function")
 def example_submodel_collection() -> SubmodelElementCollection:
-    return ProductVersionInfo(
+    return Version(
         id_short="version_info",
         version="1.2.2",
         product_type="type1"
@@ -73,7 +73,7 @@ def example_submodel() -> Submodel:
         id_short="product_info",
         product_name="product1",
         manufacturer="manufacturer1",
-        version=ProductVersionInfo(
+        version=Version(
             id_short="version_info",
             version="1.2.2",
             product_type="type1"
@@ -85,16 +85,16 @@ def example_submodel() -> Submodel:
 def example_aas() -> AAS:
     return ProductAas(
         id_short="product_aas",
-        bill_of_material=SubmodelBom(
+        submodel_bom=SubmodelBom(
             id_short="bom",
             components=["comp1", "comp2"],
             num_components=2
         ),
-        info=ProductInfo(
+        product_info=ProductInfo(
             id_short="product_info",
             product_name="product1",
             manufacturer="manufacturer1",
-            version=ProductVersionInfo(
+            version=Version(
                 id_short="version_info",
                 version="1.2.2",
                 product_type="type1"
