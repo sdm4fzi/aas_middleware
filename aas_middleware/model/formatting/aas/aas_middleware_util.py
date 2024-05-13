@@ -9,6 +9,7 @@ import typing
 from pydantic.fields import FieldInfo
 from aas_middleware.model.formatting.aas import aas_model
 
+
 def convert_under_score_to_camel_case_str(underscore_str: str) -> str:
     """
     Convert a underscore seperated string to a camel case string.
@@ -19,9 +20,10 @@ def convert_under_score_to_camel_case_str(underscore_str: str) -> str:
     Returns:
         str: The camel case string.
     """
-    words = underscore_str.split('_')
-    camel_case_str = ''.join(word.title() for word in words)
+    words = underscore_str.split("_")
+    camel_case_str = "".join(word.title() for word in words)
     return camel_case_str
+
 
 def save_model_list_with_schema(model_list: typing.List[BaseModel], path: str):
     """
@@ -38,7 +40,10 @@ def save_model_list_with_schema(model_list: typing.List[BaseModel], path: str):
     with open(path, "w", encoding="utf-8") as json_file:
         json.dump(save_dict, json_file, indent=4)
 
-def get_all_submodels_from_model(model: Type[BaseModel]) -> List[Type[aas_model.Submodel]]:
+
+def get_all_submodels_from_model(
+    model: Type[BaseModel],
+) -> List[Type[aas_model.Submodel]]:
     """
     Function to get all submodels from a pydantic model
     Args:
@@ -53,7 +58,11 @@ def get_all_submodels_from_model(model: Type[BaseModel]) -> List[Type[aas_model.
     return submodels
 
 
-def get_all_submodel_elements_from_submodel(model: Type[aas_model.Submodel]) -> Dict[str, Type[aas_model.SubmodelElementCollection | list | str | bool | float | int]]:
+def get_all_submodel_elements_from_submodel(
+    model: Type[aas_model.Submodel],
+) -> Dict[
+    str, Type[aas_model.SubmodelElementCollection | list | str | bool | float | int]
+]:
     """
     Function to get all submodel elements from a pydantic submodel
 
@@ -65,7 +74,12 @@ def get_all_submodel_elements_from_submodel(model: Type[aas_model.Submodel]) -> 
     """
     submodel_elements = {}
     for field_name, field_info in model.model_fields.items():
-        if field_name != "description" and field_name != "id_short" and field_name != "semantic_id" and field_name != "id":
+        if (
+            field_name != "description"
+            and field_name != "id_short"
+            and field_name != "semantic_id"
+            and field_name != "id"
+        ):
             submodel_elements[field_info.alias] = field_info.annotation
     return submodel_elements
 
@@ -86,13 +100,14 @@ def get_all_submodels_from_object_store(
             submodels.append(item)
     return submodels
 
+
 def get_field_default_value(fieldinfo: FieldInfo) -> typing.Any:
     """
     Function to get the default values of a pydantic model field. If no default is given, the function tries to infer a default cored on the type.
 
     Args:
         fieldinfo (FieldInfo): Pydantic model field.
-    
+
     Returns:
         typing.Any: Missing default value.
     """
@@ -111,6 +126,7 @@ def get_field_default_value(fieldinfo: FieldInfo) -> typing.Any:
     elif fieldinfo.annotation == list:
         return []
 
+
 def set_example_values(model: Type[BaseModel]) -> Type[BaseModel]:
     """
     Sets the example values of a pydantic model cored on its default values.
@@ -125,13 +141,16 @@ def set_example_values(model: Type[BaseModel]) -> Type[BaseModel]:
     example_dict = {}
     for field_name, fieldinfo in model.model_fields.items():
         if issubclass(fieldinfo.annotation, BaseModel):
-            config_dict = ConfigDict(json_schema_extra={"examples": [fieldinfo.default.model_dump_json()]})
+            config_dict = ConfigDict(
+                json_schema_extra={"examples": [fieldinfo.default.model_dump_json()]}
+            )
             fieldinfo.annotation.model_config = config_dict
         example_dict[field_name] = get_field_default_value(fieldinfo)
     serialized_example = model(**example_dict).model_dump_json()
     config_dict = ConfigDict(json_schema_extra={"examples": [serialized_example]})
     model.model_config = config_dict
     return model
+
 
 def core_model_check(fieldinfo: FieldInfo) -> bool:
     """
@@ -152,7 +171,7 @@ def core_model_check(fieldinfo: FieldInfo) -> bool:
     else:
         if issubclass(fieldinfo.annotation, BaseModel):
             return True
-        
+
 
 def union_type_check(model: Type) -> bool:
     """
@@ -172,7 +191,8 @@ def union_type_check(model: Type) -> bool:
             False
     else:
         return False
-        
+
+
 def union_type_field_check(fieldinfo: FieldInfo) -> bool:
     """
     Checks if a pydantic model field is a union type.
@@ -205,13 +225,17 @@ def set_required_fields(
             original_sub_types = typing.get_args(fieldinfo.annotation)
             model_sub_types = typing.get_args(model.model_fields[field_name].annotation)
             new_types = []
-            for original_sub_type, model_sub_type in zip(original_sub_types, model_sub_types):
+            for original_sub_type, model_sub_type in zip(
+                original_sub_types, model_sub_types
+            ):
                 new_type = set_required_fields(model_sub_type, original_sub_type)
                 new_types.append(new_type)
             # TODO: rework this with typing.Union[*new_types] for python 3.11
             model.model_fields[field_name].annotation = typing.Union[tuple(new_types)]
         elif core_model_check(fieldinfo):
-            new_type = set_required_fields(model.model_fields[field_name].annotation, fieldinfo.annotation)
+            new_type = set_required_fields(
+                model.model_fields[field_name].annotation, fieldinfo.annotation
+            )
             model.model_fields[field_name].annotation = new_type
         if fieldinfo.is_required():
             model.model_fields[field_name].default = None
@@ -237,12 +261,16 @@ def set_default_values(
             original_sub_types = typing.get_args(fieldinfo.annotation)
             model_sub_types = typing.get_args(model.model_fields[field_name].annotation)
             new_types = []
-            for original_sub_type, model_sub_type in zip(original_sub_types, model_sub_types):
+            for original_sub_type, model_sub_type in zip(
+                original_sub_types, model_sub_types
+            ):
                 new_type = set_default_values(model_sub_type, original_sub_type)
                 new_types.append(new_type)
             model.model_fields[field_name].annotation = typing.Union[tuple(new_types)]
         elif core_model_check(fieldinfo):
-            new_type = set_default_values(model.model_fields[field_name].annotation, fieldinfo.annotation)
+            new_type = set_default_values(
+                model.model_fields[field_name].annotation, fieldinfo.annotation
+            )
             model.model_fields[field_name].annotation = new_type
         if not fieldinfo.is_required() and (
             fieldinfo.default
@@ -288,6 +316,7 @@ def get_pydantic_models_from_instances(
         models.append(pydantic_model)
     return models
 
+
 def recusrive_model_creation(model_name, dict_values, depth=0):
     """
     Function that creates a pydantic model from a dict.
@@ -303,7 +332,9 @@ def recusrive_model_creation(model_name, dict_values, depth=0):
     for attribute_name, attribute_values in dict_values.items():
         if isinstance(attribute_values, dict):
             class_name = convert_under_score_to_camel_case_str(attribute_name)
-            created_model = recusrive_model_creation(class_name, attribute_values, depth=depth+1)
+            created_model = recusrive_model_creation(
+                class_name, attribute_values, depth=depth + 1
+            )
             dict_values[attribute_name] = created_model(**attribute_values)
     if depth == 0:
         core_class = aas_model.AAS

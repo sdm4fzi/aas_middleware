@@ -11,7 +11,14 @@ from typing import Union
 from pydantic import BaseModel, ConfigDict
 from aas_middleware.model.formatting.aas import convert_util, aas_model
 
-from aas_middleware.model.formatting.aas.convert_util import get_attribute_dict, get_id_short, get_semantic_id, get_value_type_of_attribute
+from aas_middleware.model.formatting.aas.convert_util import (
+    get_attribute_dict,
+    get_id_short,
+    get_semantic_id,
+    get_value_type_of_attribute,
+)
+
+import basyx.aas.adapter.json.json_serialization
 
 
 def convert_pydantic_model_to_aas(
@@ -35,9 +42,10 @@ def convert_pydantic_model_to_aas(
                 pydantic_submodel=attribute_value
             )
             aas_submodels.append(tempsubmodel)
-            aas_submodel_data_specification = convert_util.get_data_specification_for_attribute(
-                attribute_name,
-                attribute_value.id
+            aas_submodel_data_specification = (
+                convert_util.get_data_specification_for_attribute(
+                    attribute_name, attribute_value.id
+                )
             )
             aas_submodel_data_specifications.append(aas_submodel_data_specification)
 
@@ -49,13 +57,16 @@ def convert_pydantic_model_to_aas(
         asset_information=asset_information,
         id_short=get_id_short(pydantic_aas),
         id_=model.Identifier(pydantic_aas.id),
-        description=convert_util.get_basyx_description_from_pydantic_model(pydantic_aas),
+        description=convert_util.get_basyx_description_from_pydantic_model(
+            pydantic_aas
+        ),
         submodel={
             model.ModelReference.from_referable(submodel) for submodel in aas_submodels
         },
         embedded_data_specifications=[
             convert_util.get_data_specification_for_model(pydantic_aas)
-        ] + aas_submodel_data_specifications,
+        ]
+        + aas_submodel_data_specifications,
     )
     obj_store: model.DictObjectStore[model.Identifiable] = model.DictObjectStore()
     obj_store.add(basyx_aas)
@@ -76,20 +87,25 @@ def convert_pydantic_model_to_submodel(
             sm_attribute_name, sm_attribute_value
         )
         submodel_elements.append(submodel_element)
-        submodel_element_data_specification = convert_util.get_data_specification_for_attribute(
-            sm_attribute_name, submodel_element.id_short
+        submodel_element_data_specification = (
+            convert_util.get_data_specification_for_attribute(
+                sm_attribute_name, submodel_element.id_short
+            )
         )
         submodel_element_data_specifications.append(submodel_element_data_specification)
 
     basyx_submodel = model.Submodel(
         id_short=get_id_short(pydantic_submodel),
         id_=model.Identifier(pydantic_submodel.id),
-        description=convert_util.get_basyx_description_from_pydantic_model(pydantic_submodel),
+        description=convert_util.get_basyx_description_from_pydantic_model(
+            pydantic_submodel
+        ),
         embedded_data_specifications=[
             convert_util.get_data_specification_for_model(pydantic_submodel)
-        ] + submodel_element_data_specifications,
+        ]
+        + submodel_element_data_specifications,
         semantic_id=get_semantic_id(pydantic_submodel),
-        submodel_element=submodel_elements
+        submodel_element=submodel_elements,
     )
     return basyx_submodel
 
@@ -98,7 +114,7 @@ def create_submodel_element(
     attribute_name: str,
     attribute_value: Union[
         aas_model.SubmodelElementCollection, str, float, int, bool, tuple, list, set
-    ]
+    ],
 ) -> model.SubmodelElement:
     """
     Create a basyx SubmodelElement from a pydantic SubmodelElementCollection or a primitive type
@@ -146,7 +162,8 @@ def create_submodel_element(
 
 
 def create_property(
-    attribute_name: str, attribute_value: Union[str, int, float, bool],
+    attribute_name: str,
+    attribute_value: Union[str, int, float, bool],
 ) -> model.Property:
     if isinstance(attribute_value, Enum):
         attribute_value = attribute_value.value
@@ -160,7 +177,8 @@ def create_property(
 
 
 def create_submodel_element_collection(
-    pydantic_submodel_element_collection: aas_model.SubmodelElementCollection, name: str, 
+    pydantic_submodel_element_collection: aas_model.SubmodelElementCollection,
+    name: str,
 ) -> model.SubmodelElementCollection:
     value = []
     smc_attributes = get_attribute_dict(pydantic_submodel_element_collection)
@@ -169,9 +187,10 @@ def create_submodel_element_collection(
     for attribute_name, attribute_value in smc_attributes.items():
         sme = create_submodel_element(attribute_name, attribute_value)
         value.append(sme)
-        submodel_element_data_specfication = convert_util.get_data_specification_for_attribute(
-            attribute_name,
-            sme.id_short
+        submodel_element_data_specfication = (
+            convert_util.get_data_specification_for_attribute(
+                attribute_name, sme.id_short
+            )
         )
         submodel_element_data_specifications.append(submodel_element_data_specfication)
 
@@ -180,10 +199,15 @@ def create_submodel_element_collection(
     smc = model.SubmodelElementCollection(
         id_short=id_short,
         value=value,
-        description=convert_util.get_basyx_description_from_pydantic_model(pydantic_submodel_element_collection),
+        description=convert_util.get_basyx_description_from_pydantic_model(
+            pydantic_submodel_element_collection
+        ),
         embedded_data_specifications=[
-            convert_util.get_data_specification_for_model(pydantic_submodel_element_collection)
-        ] + submodel_element_data_specifications,
+            convert_util.get_data_specification_for_model(
+                pydantic_submodel_element_collection
+            )
+        ]
+        + submodel_element_data_specifications,
         semantic_id=get_semantic_id(pydantic_submodel_element_collection),
     )
     return smc
@@ -199,10 +223,12 @@ def create_submodel_element_list(
         submodel_elements.append(submodel_element)
 
     if submodel_elements and isinstance(submodel_elements[0], model.Property):
-        value_type_list_element =type(value[0])
-        type_value_list_element=type(submodel_elements[0])
-    elif submodel_elements and isinstance(submodel_elements[0], model.Reference | model.SubmodelElementCollection):
-        type_value_list_element=type(submodel_elements[0])
+        value_type_list_element = type(value[0])
+        type_value_list_element = type(submodel_elements[0])
+    elif submodel_elements and isinstance(
+        submodel_elements[0], model.Reference | model.SubmodelElementCollection
+    ):
+        type_value_list_element = type(submodel_elements[0])
         value_type_list_element = None
     else:
         value_type_list_element = str
@@ -213,13 +239,9 @@ def create_submodel_element_list(
         type_value_list_element=type_value_list_element,
         value_type_list_element=value_type_list_element,
         value=submodel_elements,
-        order_relevant=ordered
+        order_relevant=ordered,
     )
     return sml
-
-
-import basyx.aas.adapter.json.json_serialization
-
 
 class ClientModel(BaseModel):
     basyx_object: Union[model.AssetAdministrationShell, model.Submodel]
@@ -231,5 +253,5 @@ class ClientModel(BaseModel):
             self.basyx_object, cls=basyx.aas.adapter.json.AASToJsonEncoder
         )
         data: dict = json.loads(basyx_json_string)
-                
+
         return data

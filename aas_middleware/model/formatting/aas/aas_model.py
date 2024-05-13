@@ -8,12 +8,15 @@ from pydantic import BaseModel, BeforeValidator, model_validator
 
 BasyxModels = AssetAdministrationShell | Submodel | DictObjectStore
 
+
 def string_does_start_with_a_character(v: str):
     assert v, "value must not be an empty string"
     assert v[0].isalpha(), "value must start with a character"
     return v
 
+
 AasIdString = Annotated[str, BeforeValidator(string_does_start_with_a_character)]
+
 
 class Referable(BaseModel):
     """
@@ -48,7 +51,7 @@ class Identifiable(Referable):
         elif not isinstance(data, dict):
             data = {
                 "id": getattr(data, "id", ""),
-                "id_short": getattr(data, "id_short", "")
+                "id_short": getattr(data, "id_short", ""),
             }
         assert "id" in data or "id_short" in data, "Either id or id_short must be set"
         if "id_short" not in data:
@@ -56,6 +59,7 @@ class Identifiable(Referable):
         if "id" not in data:
             data["id"] = data["id_short"]
         return data
+
 
 class HasSemantics(BaseModel):
     """
@@ -83,9 +87,11 @@ class AAS(Identifiable):
         for field_name in self.model_fields:
             if field_name in ["id", "id_short", "description"]:
                 continue
-            assert Submodel.model_validate(getattr(self, field_name)), f"All attributes of an AAS must be of type Submodel or inherit from Submodel"
+            assert Submodel.model_validate(
+                getattr(self, field_name)
+            ), f"All attributes of an AAS must be of type Submodel or inherit from Submodel"
         return self
-    
+
 
 def is_valid_submodel_element(submodel_element: Any) -> bool:
     if isinstance(submodel_element, PrimitiveSubmodelElement):
@@ -101,7 +107,7 @@ def is_valid_submodel_element(submodel_element: Any) -> bool:
         SubmodelElementCollection.model_validate(submodel_element)
     except:
         return False
-    
+
 
 class SubmodelElementCollection(HasSemantics, Referable):
     """
@@ -112,14 +118,17 @@ class SubmodelElementCollection(HasSemantics, Referable):
         description (str, optional): Description of the object. Defaults to None.
         semantic_id (str, optional): Semantic id of the object. Defaults to None.
     """
+
     @model_validator(mode="after")
     def check_submodel_elements(self) -> Self:
         for field_name in self.model_fields:
             if field_name in ["id", "id_short", "description", "semantic_id"]:
                 continue
-            assert is_valid_submodel_element(getattr(self, field_name)), f"All attributes of a SubmodelElementCollection must be valid SubmodelElements."
+            assert is_valid_submodel_element(
+                getattr(self, field_name)
+            ), f"All attributes of a SubmodelElementCollection must be valid SubmodelElements."
         return self
-    
+
 
 class Operation(HasSemantics, Referable):
     input_variables: List[SubmodelElement]
@@ -130,7 +139,13 @@ class Operation(HasSemantics, Referable):
 
 
 PrimitiveSubmodelElement = int | float | str | bool
-SubmodelElement = PrimitiveSubmodelElement | SubmodelElementCollection | List["SubmodelElement"] | Operation
+SubmodelElement = (
+    PrimitiveSubmodelElement
+    | SubmodelElementCollection
+    | List["SubmodelElement"]
+    | Operation
+)
+
 
 class Submodel(HasSemantics, Identifiable):
     """
@@ -142,13 +157,13 @@ class Submodel(HasSemantics, Identifiable):
         description (str, optional): Description of the object. Defaults to None.
         semantic_id (str, optional): Semantic id of the object. Defaults to None.
     """
+
     @model_validator(mode="after")
     def check_submodel_elements(self) -> Self:
         for field_name in self.model_fields:
             if field_name in ["id", "id_short", "description", "semantic_id"]:
                 continue
-            assert is_valid_submodel_element(getattr(self, field_name)), f"All attributes of a Submodel must be valid SubmodelElements."
+            assert is_valid_submodel_element(
+                getattr(self, field_name)
+            ), f"All attributes of a Submodel must be valid SubmodelElements."
         return self
-
-
-

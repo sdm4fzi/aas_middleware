@@ -21,13 +21,15 @@ def get_id(model: Any) -> str | int | UUID:
 
     Returns:
         Optional[str | int | UUID]: The id attribute.
-    
+
     Raises:
         ValueError: if the model is not an object, BaseModel or dict or if no id attribute is available
     """
-    if isinstance(model, str | int | float | bool | None | UUID | Enum | list | tuple | set | type):
+    if isinstance(
+        model, str | int | float | bool | None | UUID | Enum | list | tuple | set | type
+    ):
         raise ValueError("Model is a basic type and has no id attribute.")
-    
+
     if isinstance(model, BaseModel):
         identifiable_fields = get_identifiable_fields(model)
         if len(identifiable_fields) > 1:
@@ -51,13 +53,23 @@ def get_id(model: Any) -> str | int | UUID:
         data = model
     else:
         data = vars(model)
-    potential_id_attributes = ["id", "id_short", "Id", "ID", "Identifier", "identifier", "Identity", "identity"]
+    potential_id_attributes = [
+        "id",
+        "id_short",
+        "Id",
+        "ID",
+        "Identifier",
+        "identifier",
+        "Identity",
+        "identity",
+    ]
     for id_attribute in potential_id_attributes:
         if id_attribute in data and isinstance(data[id_attribute], str | int | UUID):
             return data[id_attribute]
- 
-    raise ValueError(f"Model {model} has no attribute that can be used as id attribute.")
 
+    raise ValueError(
+        f"Model {model} has no attribute that can be used as id attribute."
+    )
 
 
 # TODO: move these function to the util and use them in the data model
@@ -85,16 +97,18 @@ def get_referable_fields(model: BaseModel):
             model_fields.append(field_name)
     return model_fields
 
+
 def string_is_not_empty(v: str):
     assert v, "value must not be an empty string"
     return v
+
 
 IdString = Annotated[str | int | UUID, BeforeValidator(string_is_not_empty)]
 
 
 class Identifiable(BaseModel):
     """
-    Base class for all identifiable classes that have an identifier, that allows to identify these objects. 
+    Base class for all identifiable classes that have an identifier, that allows to identify these objects.
 
     If no id is set, the id function of the python object is used. Otherwise, a uuid is generated.
 
