@@ -14,6 +14,9 @@ def test_convert_simple_aas(example_aas: AAS):
     pydantic_model = pydantic_models[0]
     assert pydantic_model.model_dump() == example_aas.model_dump()
 
+
+# TODO: add more complex tests with Unions, Enums, Literals etc.
+
 # def test_convert_special_submodel(example_special_sm_instance1: Submodel, example_special_sm_instance2: Submodel):
 #     basyx_aas_submodel = convert_pydantic.convert_pydantic_model_to_submodel(example_special_sm_instance1)
 #     pydantic_model = convert_aas.convert_submodel_to_pydantic_model(basyx_aas_submodel)
