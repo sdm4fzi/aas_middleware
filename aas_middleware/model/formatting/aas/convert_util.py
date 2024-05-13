@@ -57,11 +57,16 @@ def save_model_list_with_schema(model_list: typing.List[BaseModel], path: str):
         json.dump(save_dict, json_file, indent=4)
 
 
-def get_class_name_from_basyx_model(item: model.HasDataSpecification) -> str:
+def get_class_name_from_basyx_model(item: typing.Union[model.AssetAdministrationShell, model.Submodel, model.SubmodelElementCollection]) -> str:
     """
     Returns the class name of an basyx model from the data specifications.
+
     Args:
         item (model.HasDataSpecification): Basyx model to get the class name from
+
+    Raises:
+        ValueError: If no data specifications are found in the item or if no class name is found
+
     Returns:
         str: Class name of the basyx model
     """
@@ -69,32 +74,42 @@ def get_class_name_from_basyx_model(item: model.HasDataSpecification) -> str:
         raise ValueError("No data specifications found in item:", item)
     for data_spec in item.embedded_data_specifications:
         content = data_spec.data_specification_content
-        if isinstance(content, model.DataSpecificationIEC61360):
-            for value in content.preferred_name.values():
-                if value == "class_name":
-                    return content.value
-    raise ValueError("No class name found in item:", item, type(item), item.id_short)
+        if not isinstance(content, model.DataSpecificationIEC61360):
+            continue
+        if not any(key.value == item.id_short for key in data_spec.data_specification.key):
+            continue
+        if not content.preferred_name.get("en") == "class":
+            continue
+        return content.value
+    raise ValueError(f"No class name found in item with id {item.id_short} and type {type(item)}")
 
 
-def get_attribute_name_of_basyx_model(item: model.HasDataSpecification) -> str:
+def get_attribute_name_from_basyx_model(item: typing.Union[model.AssetAdministrationShell, model.Submodel, model.SubmodelElementCollection], referenced_item_id: str) -> str:
     """
-    Returns the attribute name of an basyx model from the data specifications. The attribute name is used as the name of the attribute in the pydantic model, required for conversion of references, properties and submodel element lists.
+    Returns the attribute name of the referenced element of the item.
+
     Args:
-        item (model.HasDataSpecification): Basyx model to get the attribute name from
+        item (typing.Union[model.AssetAdministrationShell, model.Submodel, model.SubmodelElementCollection]): The container of the refernced item
+        referenced_item_id (str): The id of the referenced item
+
     Raises:
-        ValueError: If no data specifications are found in the basyx model
+        ValueError: If not data specifications are found in the item or if no attribute name is found
+
     Returns:
-        str: Attribute name of the basyx model
+        str: The attribute name of the referenced item
     """
     if not item.embedded_data_specifications:
         raise ValueError("No data specifications found in item:", item)
     for data_spec in item.embedded_data_specifications:
         content = data_spec.data_specification_content
-        if isinstance(content, model.DataSpecificationIEC61360):
-            for value in content.preferred_name.values():
-                if value == "attribute_name":
-                    return content.value
-    raise ValueError("No attribute name found in item:", item)
+        if not isinstance(content, model.DataSpecificationIEC61360):
+            continue
+        if not any(key.value == referenced_item_id for key in data_spec.data_specification.key):
+            continue
+        if not content.preferred_name.get("en") == "attribute":
+            continue
+        return content.value
+    raise ValueError(f"Attribute reference to {referenced_item_id} could not be found in {item.id_short} of type {type(item)}")
 
 
 def get_str_description(langstring_set: model.LangStringSet) -> str:
@@ -135,41 +150,40 @@ def get_basyx_description_from_pydantic_model(pydantic_model: aas_model.AAS | aa
 
 
 
-def get_data_specification_for_pydantic_model(
-    pydantic_model: BaseModel,
+def get_data_specification_for_model(
+    item: typing.Union[aas_model.AAS, aas_model.Submodel, aas_model.SubmodelElementCollection],
 ) -> model.EmbeddedDataSpecification:
     return model.EmbeddedDataSpecification(
         data_specification=model.ExternalReference(
             key=(
                 model.Key(
                     type_=model.KeyTypes.GLOBAL_REFERENCE,
-                    value=pydantic_model.__class__.__name__,
+                    value=item.id if isinstance(item, typing.Union[aas_model.AAS, aas_model.Submodel]) else item.id_short,
                 ),
             ),
         ),
         data_specification_content=model.DataSpecificationIEC61360(
-            preferred_name=model.LangStringSet({"en": "class_name"}),
-            # TODO: embed here all information from the pydantic model (class name, attribute name, attribute required, ...). Also for union types allow list. 
-            value=pydantic_model.__class__.__name__,
+            preferred_name=model.LangStringSet({"en": "class"}),
+            # TODO: use only the last element of . seperated class name
+            value=item.__class__.__name__,
         ),
     )
 
 
-def get_data_specification_for_attribute_name(
-    attribute_name: str,
+def get_data_specification_for_attribute(
+    attribute_name: str, attribute_id: str
 ) -> model.EmbeddedDataSpecification:
-    # TODO: Remove this after not needed anymore
     return model.EmbeddedDataSpecification(
         data_specification=model.ExternalReference(
             key=(
                 model.Key(
                     type_=model.KeyTypes.GLOBAL_REFERENCE,
-                    value=attribute_name,
+                    value=attribute_id,
                 ),
             ),
         ),
         data_specification_content=model.DataSpecificationIEC61360(
-            preferred_name=model.LangStringSet({"en": "attribute_name"}),
+            preferred_name=model.LangStringSet({"en": "attribute"}),
             value=attribute_name,
         ),
     )
@@ -259,6 +273,7 @@ def set_example_values(model: Type[BaseModel]) -> Type[BaseModel]:
     Returns:
         Type[BaseModel]: Pydantic model with the example values set.
     """
+    # TODO: potentially delete this method, since not required...
     example_dict = {}
     for field_name, fieldinfo in model.model_fields.items():
         if issubclass(fieldinfo.annotation, BaseModel):

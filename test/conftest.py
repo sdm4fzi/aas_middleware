@@ -15,7 +15,7 @@ class Version(SubmodelElementCollection):
 class ProductInfo(Submodel):
     product_name: str
     manufacturer: str
-    version: Version
+    product_version: Version
 
 class SubmodelBom(Submodel):
     components: List[str]
@@ -23,8 +23,8 @@ class SubmodelBom(Submodel):
 
 
 class ProductAas(AAS):
-    submodel_bom: SubmodelBom
-    product_info: ProductInfo
+    example_submodel: SubmodelBom
+    info: ProductInfo
 
 class FaultyAas(AAS):
     example_string_value: str
@@ -73,7 +73,7 @@ def example_submodel() -> Submodel:
         id_short="product_info",
         product_name="product1",
         manufacturer="manufacturer1",
-        version=Version(
+        product_version=Version(
             id_short="version_info",
             version="1.2.2",
             product_type="type1"
@@ -85,16 +85,16 @@ def example_submodel() -> Submodel:
 def example_aas() -> AAS:
     return ProductAas(
         id_short="product_aas",
-        submodel_bom=SubmodelBom(
+        example_submodel=SubmodelBom(
             id_short="bom",
             components=["comp1", "comp2"],
             num_components=2
         ),
-        product_info=ProductInfo(
+        info=ProductInfo(
             id_short="product_info",
             product_name="product1",
             manufacturer="manufacturer1",
-            version=Version(
+            product_version=Version(
                 id_short="version_info",
                 version="1.2.2",
                 product_type="type1"

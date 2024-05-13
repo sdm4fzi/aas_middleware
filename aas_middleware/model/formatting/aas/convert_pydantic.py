@@ -28,12 +28,18 @@ def convert_pydantic_model_to_aas(
     """
     aas_attributes = get_vars(pydantic_aas)
     aas_submodels = []  # placeholder for submodels created
-    for attribute_value in aas_attributes.values():
+    aas_submodel_data_specifications = []
+    for attribute_name, attribute_value in aas_attributes.items():
         if isinstance(attribute_value, aas_model.Submodel):
             tempsubmodel = convert_pydantic_model_to_submodel(
                 pydantic_submodel=attribute_value
             )
             aas_submodels.append(tempsubmodel)
+            aas_submodel_data_specification = convert_util.get_data_specification_for_attribute(
+                attribute_name,
+                attribute_value.id
+            )
+            aas_submodel_data_specifications.append(aas_submodel_data_specification)
 
     asset_information = model.AssetInformation(
         global_asset_id=model.Identifier(pydantic_aas.id),
@@ -48,8 +54,8 @@ def convert_pydantic_model_to_aas(
             model.ModelReference.from_referable(submodel) for submodel in aas_submodels
         },
         embedded_data_specifications=[
-            convert_util.get_data_specification_for_pydantic_model(pydantic_aas)
-        ],
+            convert_util.get_data_specification_for_model(pydantic_aas)
+        ] + aas_submodel_data_specifications,
     )
     obj_store: model.DictObjectStore[model.Identifiable] = model.DictObjectStore()
     obj_store.add(basyx_aas)
@@ -76,23 +82,30 @@ def get_semantic_id(pydantic_model: aas_model.Submodel | aas_model.SubmodelEleme
 def convert_pydantic_model_to_submodel(
     pydantic_submodel: aas_model.Submodel,
 ) -> model.Submodel:
-    basyx_submodel = model.Submodel(
-        id_short=get_id_short(pydantic_submodel),
-        id_=model.Identifier(pydantic_submodel.id),
-        description=convert_util.get_basyx_description_from_pydantic_model(pydantic_submodel),
-        embedded_data_specifications=[
-            convert_util.get_data_specification_for_pydantic_model(pydantic_submodel)
-        ],
-        semantic_id=get_semantic_id(pydantic_submodel),
-    )
-
     submodel_attributes = get_vars(pydantic_submodel)
+    submodel_elements = []
+    submodel_element_data_specifications = []
 
     for sm_attribute_name, sm_attribute_value in submodel_attributes.items():
         submodel_element = create_submodel_element(
             sm_attribute_name, sm_attribute_value
         )
-        basyx_submodel.submodel_element.add(submodel_element)
+        submodel_elements.append(submodel_element)
+        submodel_element_data_specification = convert_util.get_data_specification_for_attribute(
+            sm_attribute_name, submodel_element.id_short
+        )
+        submodel_element_data_specifications.append(submodel_element_data_specification)
+
+    basyx_submodel = model.Submodel(
+        id_short=get_id_short(pydantic_submodel),
+        id_=model.Identifier(pydantic_submodel.id),
+        description=convert_util.get_basyx_description_from_pydantic_model(pydantic_submodel),
+        embedded_data_specifications=[
+            convert_util.get_data_specification_for_model(pydantic_submodel)
+        ] + submodel_element_data_specifications,
+        semantic_id=get_semantic_id(pydantic_submodel),
+        submodel_element=submodel_elements
+    )
     return basyx_submodel
 
 
@@ -139,9 +152,6 @@ def create_submodel_element(
         reference_element = model.ReferenceElement(
             id_short=attribute_name,
             value=reference,
-            embedded_data_specifications=[
-                convert_util.get_data_specification_for_attribute_name(attribute_name)
-            ],
         )
         return reference_element
     else:
@@ -172,9 +182,6 @@ def create_property(
         id_short=attribute_name,
         value_type=get_value_type_of_attribute(attribute_value),
         value=attribute_value,
-        embedded_data_specifications=[
-            convert_util.get_data_specification_for_attribute_name(attribute_name)
-        ],
     )
     return property
 
@@ -184,10 +191,16 @@ def create_submodel_element_collection(
 ) -> model.SubmodelElementCollection:
     value = []
     smc_attributes = get_vars(pydantic_submodel_element_collection)
+    submodel_element_data_specifications = []
 
     for attribute_name, attribute_value in smc_attributes.items():
         sme = create_submodel_element(attribute_name, attribute_value)
         value.append(sme)
+        submodel_element_data_specfication = convert_util.get_data_specification_for_attribute(
+            attribute_name,
+            sme.id_short
+        )
+        submodel_element_data_specifications.append(submodel_element_data_specfication)
 
     id_short = get_id_short(pydantic_submodel_element_collection)
 
@@ -196,8 +209,8 @@ def create_submodel_element_collection(
         value=value,
         description=convert_util.get_basyx_description_from_pydantic_model(pydantic_submodel_element_collection),
         embedded_data_specifications=[
-            convert_util.get_data_specification_for_attribute_name(name)
-        ],
+            convert_util.get_data_specification_for_model(pydantic_submodel_element_collection)
+        ] + submodel_element_data_specifications,
         semantic_id=get_semantic_id(pydantic_submodel_element_collection),
     )
     return smc
@@ -209,7 +222,6 @@ def create_submodel_element_list(
     submodel_elements = []
     for el in value:
         submodel_element = create_submodel_element(name, el)
-        # TODO: save id_short in data specifications or make it optional for reverse transformation!
         submodel_element.id_short = None
         submodel_elements.append(submodel_element)
 
@@ -228,10 +240,7 @@ def create_submodel_element_list(
         type_value_list_element=type_value_list_element,
         value_type_list_element=value_type_list_element,
         value=submodel_elements,
-        order_relevant=ordered,
-        embedded_data_specifications=[
-            convert_util.get_data_specification_for_attribute_name(name)
-        ],
+        order_relevant=ordered
     )
     return sml
 
@@ -270,17 +279,3 @@ def remove_empty_lists(dictionary: dict) -> None:
             keys_to_remove.append(key)
     for key in keys_to_remove:
         del dictionary[key]
-
-
-if __name__ == "__main__":
-    from typing import List
-    class Person(aas_model.Submodel):
-        name: str
-        age: int
-        aliases: List[str]
-
-    # TODO: resolve problem with speciyfying id
-    person = Person(id="john_1238959392", id_short="john_1238959392", semantic_id=None, description=None, name="John", age=30, aliases=["Johnny", "Johny"])
-    print(person)
-    submodel = convert_pydantic_model_to_submodel(person)
-    print(submodel)
