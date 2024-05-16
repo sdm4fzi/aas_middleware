@@ -34,8 +34,9 @@ def infere_aas_structure(data: DataModel) -> Tuple[List[aas_model.AAS], List[aas
     """
     aas_models = []
     submodel_models = []
-    # 1.1 AAS only have other objects or references to them as attributes
-    # 1.2 Submodels can have objects and primitive attributes, however, they never are without a parent aas
+    # 1.1 AAS have no primitive attributes -> all of their attributes are submodels
+    # 1.2 all objects of submodels are submodel collection, if they are not submodels or aas from 1.1 -> then a reference is used
+    # 1.3 if an object is neither a declared aas (due to its attributes) nor a submodel element collection, it is inferred as a submodel
     # 1.3 all references have to be resolved to the actual object or it is an external link (valid URL)
     raise NotImplementedError
 

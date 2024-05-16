@@ -84,3 +84,5 @@ def test_more_complex_example(
     assert len(data_model.get_referenced_models(example_submodel_with_product_association)) == 2
     
 # TODO: add tests to rebuild data model with direct / indirect references
+# TODO: also add tests for subclassing Dataclass and making mixed use as data model and basemodel
+# TODO: also add tests for adding / removing model instances from data model

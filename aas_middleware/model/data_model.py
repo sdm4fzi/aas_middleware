@@ -7,7 +7,6 @@ from datetime import datetime
 from pydantic import BaseModel, ValidationError
 
 from aas_middleware.model.core import Identifiable
-from aas_middleware.model.formatting.aas.aas_model import Referable
 
 from aas_middleware.model.reference_finder import ReferenceFinder, ReferenceInfo
 from aas_middleware.model.util import (
@@ -22,7 +21,7 @@ from aas_middleware.model.util import (
 
 
 NESTED_DICT = Dict[str, Union[Any, "NESTED_DICT"]]
-T = TypeVar("T", bound=Referable)
+T = TypeVar("T")
 
 
 class DateTimeEncoder(json.JSONEncoder):
@@ -107,7 +106,7 @@ class DataModel(BaseModel):
         Method to add models to the data model.
 
         Args:
-            *models (Tuple[Referable]): The models to load into the data model.
+            *models (Tuple[Identifiable]): The models to load into the data model.
         """
         for model in models:
             self.add_model(model)
@@ -117,7 +116,7 @@ class DataModel(BaseModel):
         Method to load a model of the data model.
 
         Args:
-            model (Referable): The model to load.
+            model (Identifiable): The model to load.
         """
         Identifiable.model_validate(model)
         model_id = get_id_with_patch(model)
@@ -131,12 +130,12 @@ class DataModel(BaseModel):
         self._add_references_to_referencing_models_dict(reference_infos)
 
 
-    def check_different_model_with_same_id_contained(self, model: Referable) -> bool:
+    def check_different_model_with_same_id_contained(self, model: Identifiable) -> bool:
         """
         Method to check if a model is already contained in the data model.
 
         Args:
-            model (Referable): The model to check.
+            model (Identifiable): The model to check.
 
         Returns:
             bool: True if the model is already contained, False otherwise.
@@ -149,13 +148,14 @@ class DataModel(BaseModel):
         return False
 
     def _add_contained_models(
-        self, top_level_model: Referable, contained_models: List[Referable]
+        self, top_level_model: Identifiable, contained_models: List[Identifiable]
     ) -> None:
         """
         Method to load all contained models of a model.
 
         Args:
-            model (Referable): The model to load the contained models for.
+            top_level_model (Identifiable): The top level model to load.
+            contained_models (List[Identifiable]): The contained models to load.
         """
         for contained_model in contained_models:
             contained_model_id = get_id_with_patch(contained_model)
@@ -176,7 +176,7 @@ class DataModel(BaseModel):
         Method to add information about referencing model ids of the input model.
 
         Args:
-            model (Referable): The model to add the information for.
+            model (Identifiable): The model to add the information for.
         """
         for reference_info in reference_infos:
             referencing_model_id = reference_info.identifiable_id
@@ -192,12 +192,12 @@ class DataModel(BaseModel):
                 referencing_model_id
             ] = reference_info
 
-    def _add_model(self, model: Referable) -> None:
+    def _add_model(self, model: Identifiable) -> None:
         """
         Method to add a model to the data model.
 
         Args:
-            model (Referable): The model to add.
+            model (Identifiable): The model to add.
         """
         model_id = get_id_with_patch(model)
         if model_id in self.model_ids:
@@ -208,12 +208,12 @@ class DataModel(BaseModel):
             self._models_key_type[type_name] = []
         self._models_key_type[type_name].append(model_id)
 
-    def _add_top_level_model(self, model: Referable) -> None:
+    def _add_top_level_model(self, model: Identifiable) -> None:
         """
         Method to add a model to the data model.
 
         Args:
-            model (Referable): The model to add.
+            model (Identifiable): The model to add.
         """
         type_name = model.__class__.__name__.split(".")[-1]
         underscore_type_name = convert_camel_case_to_underscrore_str(type_name)
@@ -261,15 +261,16 @@ class DataModel(BaseModel):
         """
         nested_dict = {}
         for attribute_name, attribute_value in self.get_top_level_models().items():
-            nested_dict[attribute_name] = [model.dict() for model in attribute_value]
+            # TODO: if a non-BaseModel object is loaded, this breakds down -> adjust this
+            nested_dict[attribute_name] = [model.model_dump() for model in attribute_value]
         return json.dumps(nested_dict, indent=4, cls=DateTimeEncoder)
 
-    def get_top_level_models(self) -> Dict[str, List[Referable]]:
+    def get_top_level_models(self) -> Dict[str, List[Identifiable]]:
         """
         Method to get all models of the data model.
 
         Returns:
-            Dict[str, List[Referable]]: The dictionary of models.
+            Dict[str, List[Identifiable]]: The dictionary of models.
         """
         top_level_models = {}
         for top_level_model_name, top_level_model_ids in self._top_level_models.items():
@@ -278,7 +279,7 @@ class DataModel(BaseModel):
             ]
         return top_level_models
 
-    def get_models_of_type_name(self, model_type_name: str) -> List[Referable]:
+    def get_models_of_type_name(self, model_type_name: str) -> List[Identifiable]:
         """
         Method to get all models of a specific type.
 
@@ -286,7 +287,7 @@ class DataModel(BaseModel):
             model_type (str): The type of the models to get.
 
         Returns:
-            List[Referable]: The list of models of the type.
+            List[Identifiable]: The list of models of the type.
         """
         if not model_type_name in self._models_key_type:
             raise ValueError(f"Model type {model_type_name} not supported.")
@@ -300,35 +301,47 @@ class DataModel(BaseModel):
         Method to get all models of a specific type.
 
         Args:
-            model_type (str): The type of the models to get.
+            model_type (Type[T]): The type of the models to get.
 
         Returns:
-            List[Referable]: The list of models of the type.
+            List[T]: The list of models of the type.
         """
         type_name = model_type.__name__.split(".")[-1]
         return self.get_models_of_type_name(type_name)
 
-    def get_contained_models(self) -> List[Referable]:
+    def get_contained_models(self) -> List[Identifiable]:
         """
         Method to get all models that are contained in the data model.
 
-        Args:
-            model_type (str): The type of the models to get.
-
         Returns:
-            List[Referable]: The list of models of the type.
+            List[Identifiable]: The list of models.
         """
         return list(self._models_key_id.values())
+    
+    def get_referencing_info(self, referenced_model: Identifiable) -> List[ReferenceInfo]:
+        """
+        Method to get all reference infos of a model.
+
+        Args:
+            referenced_model (Identifiable): The model to get the reference infos for.
+
+        Returns:
+            List[ReferenceInfo]: The list of reference infos.
+        """
+        referenced_model_id = get_id_with_patch(referenced_model)
+        if not referenced_model_id in self._reference_info_dict_for_referenced:
+            return []
+        return list(self._reference_info_dict_for_referenced[referenced_model_id].values())
 
     def get_referencing_models(self, referenced_model: Identifiable) -> List[Identifiable]:
         """
         Method to get all models that reference a specific model directly as an attribute or by its id.
 
         Args:
-            model (Referable): The model to get the referencing models for.
+            referenced_model (Identifiable): The model to get the referencing models for.
 
         Returns:
-            List[Referable]: The list of referencing models of the mode.
+            List[Identifiable]: The list of referencing models of the model.
         """
         referenced_model_id = get_id_with_patch(referenced_model)
         if not referenced_model_id in self._reference_info_dict_for_referenced:
@@ -339,16 +352,17 @@ class DataModel(BaseModel):
         return [self.get_model(model_id) for model_id in referencing_model_dict]
 
     def get_referencing_models_of_type(
-        self, referenced_model: Referable, referencing_model_type: Type[T]
+        self, referenced_model: Identifiable, referencing_model_type: Type[T]
     ) -> List[T]:
         """
         Method to get all models that reference a specific model directly as an attribute or by its id.
 
         Args:
-            model (Referable): The model to get the referencing models for.
+            referenced_model (Identifiable): The model to get the referencing models for.
+            referencing_model_type (Type[T]): The type of the referencing models to get.
 
         Returns:
-            List[Referable]: The list of referencing models of the mode.
+            List[T]: The list of referencing models of the model.
         """
         referenced_model_id = get_id_with_patch(referenced_model)
         if not referenced_model_id in self._reference_info_dict_for_referenced:
@@ -362,15 +376,30 @@ class DataModel(BaseModel):
             if isinstance(self.get_model(model_id), referencing_model_type)
         ]
     
+    def get_referenced_info(self, referencing_model: Identifiable) -> List[ReferenceInfo]:
+        """
+        Method to get all reference infos of a model.
+
+        Args:
+            referencing_model (Identifiable): The model to get the reference infos for.
+
+        Returns:
+            List[ReferenceInfo]: The list of reference infos.
+        """
+        referencing_model_id = get_id_with_patch(referencing_model)
+        if not referencing_model_id in self._reference_info_dict_for_referencing:
+            return []
+        return list(self._reference_info_dict_for_referencing[referencing_model_id].values())
+        
     def get_referenced_models(self, referencing_model: Identifiable) -> List[Identifiable]:
         """
         Method to get all models that are referenced by a specific model directly as an attribute or by its id.
 
         Args:
-            model (Referable): The model to get the referenced models for.
+            referencing_model (Identifiable): The model to get the referenced models for.
 
         Returns:
-            List[Referable]: The list of referenced models of the mode.
+            List[Identifiable]: The list of referenced models of the model.
         """
         referencing_model_id = get_id_with_patch(referencing_model)
         if not referencing_model_id in self._reference_info_dict_for_referencing:
@@ -381,16 +410,17 @@ class DataModel(BaseModel):
         return [self.get_model(model_id) for model_id in referenced_model_dict]
     
     def get_referenced_models_of_type(
-        self, referencing_model: Referable, referenced_model_type: Type[T]
+        self, referencing_model: Identifiable, referenced_model_type: Type[T]
     ) -> List[T]:
         """
         Method to get all models that are referenced by a specific model directly as an attribute or by its id.
 
         Args:
-            model (Referable): The model to get the referenced models for.
+            referencing_model (Identifiable): The model to get the referenced models for.
+            referenced_model_type (Type[T]): The type of the referenced models to get.
 
         Returns:
-            List[Referable]: The list of referenced models of the mode.
+            List[T]: The list of referenced models of the model.
         """
         referencing_model_id = get_id_with_patch(referencing_model)
         if not referencing_model_id in self._reference_info_dict_for_referencing:
@@ -404,7 +434,7 @@ class DataModel(BaseModel):
             if isinstance(self.get_model(model_id), referenced_model_type)
         ]
 
-    def get_model(self, model_id: str) -> Referable:
+    def get_model(self, model_id: str) -> Identifiable:
         """
         Method to get a model by its id.
 
@@ -412,7 +442,7 @@ class DataModel(BaseModel):
             model_id (str): The id of the model to get.
 
         Returns:
-            Referable: The model.
+            Identifiable: The model.
         """
         if model_id not in self.model_ids:
             return None
@@ -431,7 +461,3 @@ class DataModel(BaseModel):
         if self.get_model(model_id) is not None:
             return True
         return False
-
-
-ORIGIN_DATA_MODEL = TypeVar("ORIGIN_DATA_MODEL")
-REFERABLE_MODEL = TypeVar("REFERABLE_MODEL", Referable, List[Referable], DataModel)
