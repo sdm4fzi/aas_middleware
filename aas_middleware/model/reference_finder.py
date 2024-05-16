@@ -7,6 +7,7 @@ from aas_middleware.model.util import (
     get_all_contained_identifiables,
     get_id_with_patch,
     get_referenced_ids_of_model,
+    get_identifiable_attributes_of_model
 )
 
 
@@ -38,8 +39,10 @@ def get_reference_infos_of_model(model: Identifiable) -> List[ReferenceInfo]:
         List[ReferenceInfo]: The list of reference infos.
     """
     reference_infos = []
-    identifiables_of_model = get_all_contained_identifiables(model)
+    identifiables_of_model = get_identifiable_attributes_of_model(model)
     for identifiable in identifiables_of_model:
+        if identifiable == model:
+            continue
         reference_info = ReferenceInfo(
             identifiable_id=get_id_with_patch(model),
             reference_id=get_id_with_patch(identifiable),

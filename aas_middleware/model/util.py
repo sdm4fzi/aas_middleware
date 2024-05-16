@@ -310,7 +310,7 @@ def get_attribute_name_encoded_references(model: Identifiable) -> List[str]:
     referenced_ids = []
     for attribute_name, attribute_value in vars(model).items():
         if not any(
-            attribute_name.endswith(suffix) and not attribute_name == suffix for suffix in REFERENCE_ATTRIBUTE_NAMES_SUFFIXES
+            attribute_name.endswith(suffix) and not attribute_name == suffix and not attribute_name == "semantic_id" for suffix in REFERENCE_ATTRIBUTE_NAMES_SUFFIXES
         ):
             continue
         if isinstance(attribute_value, str | int | UUID):

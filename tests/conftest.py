@@ -29,7 +29,8 @@ class SubmodelBomWithIdReferenceComponents(Submodel):
     component_ids: List[str]
     num_components: int
 
-class SubmodelBomWithProductAssociation(Submodel):
+class SubmodelBomWithProductAssociation(BaseModel):
+    id_short: str
     components: List[ProductAas]
     num_components: int
 
@@ -94,8 +95,25 @@ def example_submodel() -> Submodel:
 @pytest.fixture(scope="function")
 def example_submodel_with_reference_components() -> SubmodelBomWithReferenceComponents:
     return SubmodelBomWithReferenceComponents(
-        id_short="bom",
+        id_short="example_submodel_with_reference_components_id",
         components=["comp1", "comp2"],
+        num_components=2
+    )
+
+
+@pytest.fixture(scope="function")
+def example_submodel_with_id_reference_components() -> SubmodelBomWithIdReferenceComponents:
+    return SubmodelBomWithIdReferenceComponents(
+        id_short="example_submodel_with_id_reference_components_id",
+        component_ids=["comp1", "comp2"],
+        num_components=2
+    )
+
+@pytest.fixture(scope="function")
+def example_submodel_with_product_association(example_aas_comp1: ProductAas, example_aas_comp2: ProductAas) -> SubmodelBomWithProductAssociation:
+    return SubmodelBomWithProductAssociation(
+        id_short="example_submodel_with_product_association_id",
+        components=[example_aas_comp1, example_aas_comp2],
         num_components=2
     )
 
@@ -165,21 +183,21 @@ def example_aas_comp2() -> AAS:
 
 @pytest.fixture(scope="function")
 def example_submodel_bom() -> SubmodelBom:
-    return SubmodelBom(id="object_id", components=["comp1", "comp2"], num_components=2)
+    return SubmodelBom(id="example_submodel_bom_id", components=["comp1", "comp2"], num_components=2)
 
 @pytest.fixture(scope="function")
 def example_basemodel_bom_with_id() -> BaseModelBomWithId:
-    return BaseModelBomWithId(id="object_id", components=["comp1", "comp2"], num_components=2)
+    return BaseModelBomWithId(id="example_basemodel_bom_with_id", components=["comp1", "comp2"], num_components=2)
 
 @pytest.fixture(scope="function")
 def example_object_bom_with_id() -> ObjectBomWithId:
-    return ObjectBomWithId(id="object_id", components=["comp1", "comp2"], num_components=2)
+    return ObjectBomWithId(id="example_object_bom_with_id", components=["comp1", "comp2"], num_components=2)
 
 @pytest.fixture(scope="function")
 def example_basemodel_bom_with_identifier_attribute() -> BaseModelBomWithIdentifierAttribute:
-    return BaseModelBomWithIdentifierAttribute(other_name_id_attribute="object_id", components=["comp1", "comp2"], num_components=2, id="id_named_attribute")
+    return BaseModelBomWithIdentifierAttribute(other_name_id_attribute="example_basemodel_bom_with_identifier_attribute_id", components=["comp1", "comp2"], num_components=2, id="id_named_attribute")
 
 @pytest.fixture(scope="function")
 def example_object_with_identifier_attribute() -> ObjectBomWithIdentifierAttribute:
-    return ObjectBomWithIdentifierAttribute(other_name_id_attribute="object_id", components=["comp1", "comp2"], num_components=2, id="id_named_attribute")
+    return ObjectBomWithIdentifierAttribute(other_name_id_attribute="example_object_with_identifier_attribute_id", components=["comp1", "comp2"], num_components=2, id="id_named_attribute")
 

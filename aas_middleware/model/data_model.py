@@ -320,7 +320,7 @@ class DataModel(BaseModel):
         """
         return list(self._models_key_id.values())
 
-    def get_referencing_models(self, referenced_model: Referable) -> List[Referable]:
+    def get_referencing_models(self, referenced_model: Identifiable) -> List[Identifiable]:
         """
         Method to get all models that reference a specific model directly as an attribute or by its id.
 
@@ -360,6 +360,48 @@ class DataModel(BaseModel):
             self.get_model(model_id)
             for model_id in referencing_model_dict
             if isinstance(self.get_model(model_id), referencing_model_type)
+        ]
+    
+    def get_referenced_models(self, referencing_model: Identifiable) -> List[Identifiable]:
+        """
+        Method to get all models that are referenced by a specific model directly as an attribute or by its id.
+
+        Args:
+            model (Referable): The model to get the referenced models for.
+
+        Returns:
+            List[Referable]: The list of referenced models of the mode.
+        """
+        referencing_model_id = get_id_with_patch(referencing_model)
+        if not referencing_model_id in self._reference_info_dict_for_referencing:
+            return []
+        referenced_model_dict = self._reference_info_dict_for_referencing[
+            referencing_model_id
+        ]
+        return [self.get_model(model_id) for model_id in referenced_model_dict]
+    
+    def get_referenced_models_of_type(
+        self, referencing_model: Referable, referenced_model_type: Type[T]
+    ) -> List[T]:
+        """
+        Method to get all models that are referenced by a specific model directly as an attribute or by its id.
+
+        Args:
+            model (Referable): The model to get the referenced models for.
+
+        Returns:
+            List[Referable]: The list of referenced models of the mode.
+        """
+        referencing_model_id = get_id_with_patch(referencing_model)
+        if not referencing_model_id in self._reference_info_dict_for_referencing:
+            return []
+        referenced_model_dict = self._reference_info_dict_for_referencing[
+            referencing_model_id
+        ]
+        return [
+            self.get_model(model_id)
+            for model_id in referenced_model_dict
+            if isinstance(self.get_model(model_id), referenced_model_type)
         ]
 
     def get_model(self, model_id: str) -> Referable:
