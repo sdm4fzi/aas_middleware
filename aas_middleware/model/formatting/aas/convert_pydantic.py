@@ -10,6 +10,7 @@ from basyx.aas import model
 from typing import List, Tuple, Union
 from pydantic import BaseModel, ConfigDict
 from aas_middleware.model.data_model import DataModel
+from aas_middleware.model.data_model_rebuilder import DataModelRebuilder
 from aas_middleware.model.formatting.aas import convert_util, aas_model
 
 from aas_middleware.model.formatting.aas.convert_util import (
@@ -20,7 +21,9 @@ from aas_middleware.model.formatting.aas.convert_util import (
 )
 
 import basyx.aas.adapter.json.json_serialization
+import logging
 
+logger = logging.getLogger(__name__)
 
 def infere_aas_structure(data: DataModel) -> Tuple[List[aas_model.AAS], List[aas_model.Submodel]]:
     """
@@ -30,18 +33,18 @@ def infere_aas_structure(data: DataModel) -> Tuple[List[aas_model.AAS], List[aas
         data (DataModel): The Data Model containing the objects that should be transformed to AAS models
 
     Returns:
-        # TODO: add the return
+        Tuple[List[aas_model.AAS], List[aas_model.Submodel]]: Tuple with AAS models and Submodel models
     """
-    aas_models = []
-    submodel_models = []
-    # 1.1 AAS have no primitive attributes -> all of their attributes are submodels
-    # 1.2 all objects of submodels are submodel collection, if they are not submodels or aas from 1.1 -> then a reference is used
-    # 1.3 if an object is neither a declared aas (due to its attributes) nor a submodel element collection, it is inferred as a submodel
-    # 1.3 all references have to be resolved to the actual object or it is an external link (valid URL)
-    raise NotImplementedError
-
-
-
+    if all(isinstance(model, aas_model.AAS) for model in data.get_top_level_models()):
+        return data.get_top_level_models(), []
+    logger.warning("The data model does not contain only AAS models. Trying to infer the AAS structure by rebuilding the data model.")
+    new_data_model = DataModelRebuilder(data).rebuild_data_model_for_AAS_structure()
+    top_level_models_list = []
+    for models in data.get_top_level_models().values():
+        top_level_models_list += models
+    aas_models = [model for model in top_level_models_list if isinstance(model, aas_model.AAS)]
+    submodel_models = [model for model in top_level_models_list if isinstance(model, aas_model.Submodel)]
+    return aas_models, submodel_models
 
 def convert_pydantic_model_to_aas(
     pydantic_aas: aas_model.AAS,

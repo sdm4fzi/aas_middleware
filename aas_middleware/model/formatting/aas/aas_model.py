@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Annotated, Any, Callable, List, Self
 
 from basyx.aas.model import AssetAdministrationShell, DictObjectStore, Submodel
-from pydantic import BaseModel, BeforeValidator, model_validator
+from pydantic import BaseModel, BeforeValidator, ValidationError, model_validator
 
 
 BasyxModels = AssetAdministrationShell | Submodel | DictObjectStore
@@ -87,9 +87,12 @@ class AAS(Identifiable):
         for field_name in self.model_fields:
             if field_name in ["id", "id_short", "description"]:
                 continue
-            assert Submodel.model_validate(
+            try:
+                Submodel.model_validate(
                 getattr(self, field_name)
-            ), f"All attributes of an AAS must be of type Submodel or inherit from Submodel"
+            )
+            except ValidationError:
+                assert False, f"All attributes of an AAS must be of type Submodel or inherit from Submodel"
         return self
 
 
@@ -103,7 +106,6 @@ def is_valid_submodel_element(submodel_element: Any) -> bool:
     elif isinstance(submodel_element, Operation):
         return True
     try:
-        # TODO: maybe try SubmodelELementCOllection.model_validate here instead
         SubmodelElementCollection.model_validate(submodel_element)
     except:
         return False

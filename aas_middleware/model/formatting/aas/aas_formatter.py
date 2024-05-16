@@ -29,13 +29,18 @@ class AASFormatter:
             Objectstore: the basyx object store contain all AAS elements
         """
         aas_models, submodel_models = infere_aas_structure(data)
+        print(len(aas_models), len(submodel_models))
         obj_store = DictObjectStore()
         for aas in aas_models:
             obj_store_to_add = convert_pydantic_model_to_aas(aas)
             for identifiable in obj_store_to_add:
+                if obj_store.get(identifiable.id_short) is not None:
+                    continue
                 obj_store.add(identifiable)
         for submodel in submodel_models:
             submodel_to_add = convert_pydantic_model_to_submodel(submodel)
+            if obj_store.get(submodel_to_add.id_short) is not None:
+                continue
             obj_store.add(submodel_to_add)
         return obj_store
     

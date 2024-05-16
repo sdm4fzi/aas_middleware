@@ -1,7 +1,7 @@
 from __future__ import annotations
 import inspect
 import re
-from typing import Any, List, Set, Optional
+from typing import Any, Dict, List, Set, Optional
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -145,7 +145,7 @@ def get_id_with_patch(model: Any) -> str:
     try:
         return str(get_id(model))
     except ValueError:
-        return str(id(model))
+        return "id_" + str(id(model))
 
 
 def is_identifiable_container(model: Any) -> bool:
@@ -309,8 +309,10 @@ def get_attribute_name_encoded_references(model: Identifiable) -> List[str]:
     """
     referenced_ids = []
     for attribute_name, attribute_value in vars(model).items():
+        if attribute_name in STANDARD_AAS_FIELDS:
+            continue
         if not any(
-            attribute_name.endswith(suffix) and not attribute_name == suffix and not attribute_name == "semantic_id" for suffix in REFERENCE_ATTRIBUTE_NAMES_SUFFIXES
+            attribute_name.endswith(suffix) for suffix in REFERENCE_ATTRIBUTE_NAMES_SUFFIXES
         ):
             continue
         if isinstance(attribute_value, str | int | UUID):
@@ -340,3 +342,50 @@ def replace_attribute_with_model(model: Identifiable, existing_model: Identifiab
                     attribute_value[i] = existing_model
                 else:
                     replace_attribute_with_model(item, existing_model)
+
+
+STANDARD_AAS_FIELDS = {"id", "description", "id_short", "semantic_id"}
+
+def get_value_attributes(obj: object) -> Dict[str, Any]:
+    """
+    Function to get an dict of all attributes of an object without the private attributes and standard AAS attributes.
+
+    Args:
+        obj (object): The object.
+
+    Returns:
+        dict: The value attributes.
+    """
+    vars_dict = {}
+    object_id = get_id_with_patch(obj)
+    
+    for attribute_name, attribute_value in vars(obj).items():
+        if attribute_name.startswith("_"):
+            continue
+        if attribute_name in STANDARD_AAS_FIELDS:
+            continue
+        if attribute_value == object_id:
+            continue
+        if attribute_value is None:
+            continue
+        vars_dict[attribute_name] = attribute_value
+    return vars_dict
+
+
+def models_are_equal(model1: Identifiable, model2: Identifiable) -> bool:
+    """
+    Function to compare two models for equality.
+
+    Args:
+        model1 (Identifiable): The first model.
+        model2 (Identifiable): The second model.
+
+    Returns:
+        bool: True if the models are equal, False otherwise.
+    """
+    model1_attributes = get_value_attributes(model1)
+    model2_attributes = get_value_attributes(model2)
+    # TODO: maybe to this recurrently
+    if model1_attributes != model2_attributes:
+        return False
+    return True

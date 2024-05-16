@@ -13,6 +13,7 @@ from aas_middleware.model.util import (
     convert_under_score_to_camel_case_str,
     convert_camel_case_to_underscrore_str,
     get_id_with_patch,
+    models_are_equal,
 )
 
 from aas_middleware.model.util import (
@@ -161,7 +162,7 @@ class DataModel(BaseModel):
             contained_model_id = get_id_with_patch(contained_model)
             if contained_model_id in self.model_ids:
                 same_id_model = self.get_model(contained_model_id)
-                if not same_id_model == contained_model:
+                if not models_are_equal(same_id_model, contained_model):
                     raise ValueError(
                         f"Model with id {contained_model_id} already loaded but with different content. Make sure to only load models with unique ids."
                     )
