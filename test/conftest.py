@@ -1,12 +1,12 @@
+from __future__ import annotations
 from typing import List, Type
 
 from pydantic import BaseModel
 import pytest
 
-from aas_middleware.model.core import Identifier, Identifiable, get_id
+from aas_middleware.model.core import Identifier, Reference
 
 from aas_middleware.model.formatting.aas.aas_model import AAS, Submodel, SubmodelElementCollection
-
 
 class Version(SubmodelElementCollection):
     version: str
@@ -21,6 +21,17 @@ class SubmodelBom(Submodel):
     components: List[str]
     num_components: int
 
+class SubmodelBomWithReferenceComponents(Submodel):
+    components: List[Reference]
+    num_components: int
+
+class SubmodelBomWithIdReferenceComponents(Submodel):
+    component_ids: List[str]
+    num_components: int
+
+class SubmodelBomWithProductAssociation(Submodel):
+    components: List[ProductAas]
+    num_components: int
 
 class ProductAas(AAS):
     example_submodel: SubmodelBom
@@ -80,6 +91,14 @@ def example_submodel() -> Submodel:
         )
     )
 
+@pytest.fixture(scope="function")
+def example_submodel_with_reference_components() -> SubmodelBomWithReferenceComponents:
+    return SubmodelBomWithReferenceComponents(
+        id_short="bom",
+        components=["comp1", "comp2"],
+        num_components=2
+    )
+
 
 @pytest.fixture(scope="function")
 def example_aas() -> AAS:
@@ -102,6 +121,47 @@ def example_aas() -> AAS:
         )
     )
 
+@pytest.fixture(scope="function")
+def example_aas_comp1() -> AAS:
+    return ProductAas(
+        id_short="comp1",
+        example_submodel=SubmodelBom(
+            id_short="bom_comp1",
+            components=[],
+            num_components=0
+        ),
+        info=ProductInfo(
+            id_short="product_info_comp1",
+            product_name="productcomp1",
+            manufacturer="manufacturer1",
+            product_version=Version(
+                id_short="version_info_comp1",
+                version="1.2.2",
+                product_type="type1"
+            )
+        )
+    )
+
+@pytest.fixture(scope="function")
+def example_aas_comp2() -> AAS:
+    return ProductAas(
+        id_short="comp2",
+        example_submodel=SubmodelBom(
+            id_short="bom_comp2",
+            components=[],
+            num_components=0
+        ),
+        info=ProductInfo(
+            id_short="product_info_comp2",
+            product_name="productcomp2",
+            manufacturer="manufacturer1",
+            product_version=Version(
+                id_short="version_info_comp2",
+                version="1.2.2",
+                product_type="type1"
+            )
+        )
+    )
 
 @pytest.fixture(scope="function")
 def example_submodel_bom() -> SubmodelBom:

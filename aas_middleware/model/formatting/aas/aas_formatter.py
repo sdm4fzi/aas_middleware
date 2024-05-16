@@ -1,13 +1,16 @@
 from __future__ import annotations
-from typing import Any
+from typing import Any, List
 
 import basyx.aas
 from aas_middleware.model.data_model import DataModel
 
 
 from aas_middleware.model.formatting.aas.aas_model import BasyxModels
+from basyx.aas.model import DictObjectStore
+from basyx.aas import model
 
-# TODO: use here the classes from data_model for the AAS (Referable etc.)
+from aas_middleware.model.formatting.aas.convert_aas import convert_aas_to_pydantic_model, convert_object_store_to_pydantic_models
+from aas_middleware.model.formatting.aas.convert_pydantic import convert_pydantic_model_to_aas, convert_pydantic_model_to_submodel, infere_aas_structure
 
 
 class AASFormatter:
@@ -15,7 +18,7 @@ class AASFormatter:
     Allows to serialize and deserialize Basyx AAS objects (AssetAdministrationShells, Submodels or Containers of both) to a DataModel.
     """
 
-    def serialize(self, data: DataModel) -> BasyxModels:
+    def serialize(self, data: DataModel) -> DictObjectStore[model.Identifiable]:
         """
         Serialize a DataModel object to the specific format of the formatter.
 
@@ -23,15 +26,19 @@ class AASFormatter:
             data (DataModel): A data model
 
         Returns:
-            Any: A string in the specific format of the formatter.
+            Objectstore: the basyx object store contain all AAS elements
         """
-        # TODO: Implement the serialization
-        # 1. check at first if the aas data structure can be inferred from the data model (either use correct types or data structure allows to infer the type (AAS, SM or SME))
-        # 1.1 AAS only have other objects or references to them as attributes
-        # 1.2 Submodels can have objects and primitive attributes, however, they never are without a parent aas
-        # 1.3 all references have to be resolved to the actual object or it is an external link (valid URL)
-        # 2. convert at first submodels, then aas
-        pass
+        aas_models, submodel_models = infere_aas_structure(data)
+        obj_store = DictObjectStore()
+        for aas in aas_models:
+            obj_store_to_add = convert_pydantic_model_to_aas(aas)
+            for identifiable in obj_store_to_add:
+                obj_store.add(identifiable)
+        for submodel in submodel_models:
+            submodel_to_add = convert_pydantic_model_to_submodel(submodel)
+            obj_store.add(submodel_to_add)
+        return obj_store
+    
 
     def deserialize(self, data: BasyxModels) -> DataModel:
         """
@@ -43,6 +50,7 @@ class AASFormatter:
         Returns:
             DataModel: A data model that holds the objects that were deserialized
         """
-        # TODO: Implement the deserialization
-        # 1. check at first if meta data is available in the aas for transformation (either concept description or administrative information or submodel template)
-        # 2. convert at submodels, then aas
+        if not isinstance(data, DictObjectStore):
+            data = DictObjectStore(data)
+        models = convert_object_store_to_pydantic_models(data)
+        return DataModel(*models)

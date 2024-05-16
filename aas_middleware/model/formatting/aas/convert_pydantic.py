@@ -7,8 +7,9 @@ from enum import Enum
 
 from basyx.aas import model
 
-from typing import Union
+from typing import List, Tuple, Union
 from pydantic import BaseModel, ConfigDict
+from aas_middleware.model.data_model import DataModel
 from aas_middleware.model.formatting.aas import convert_util, aas_model
 
 from aas_middleware.model.formatting.aas.convert_util import (
@@ -19,6 +20,26 @@ from aas_middleware.model.formatting.aas.convert_util import (
 )
 
 import basyx.aas.adapter.json.json_serialization
+
+
+def infere_aas_structure(data: DataModel) -> Tuple[List[aas_model.AAS], List[aas_model.Submodel]]:
+    """
+    The function assert that the data contained in the data model fulfills the aas meta model structure.
+
+    Args:
+        data (DataModel): The Data Model containing the objects that should be transformed to AAS models
+
+    Returns:
+        # TODO: add the return
+    """
+    aas_models = []
+    submodel_models = []
+    # 1.1 AAS only have other objects or references to them as attributes
+    # 1.2 Submodels can have objects and primitive attributes, however, they never are without a parent aas
+    # 1.3 all references have to be resolved to the actual object or it is an external link (valid URL)
+    raise NotImplementedError
+
+
 
 
 def convert_pydantic_model_to_aas(
@@ -33,6 +54,7 @@ def convert_pydantic_model_to_aas(
     Returns:
         model.DictObjectStore[model.Identifiable]: DictObjectStore with all Submodels
     """
+    # TODO: rename pydantic naming in functions to only model
     aas_attributes = get_attribute_dict(pydantic_aas)
     aas_submodels = []  # placeholder for submodels created
     aas_submodel_data_specifications = []

@@ -1,20 +1,12 @@
 from __future__ import annotations
-from enum import Enum
+import inspect
 import re
-from typing import Any, List, Union, TYPE_CHECKING, Optional, TypeVar
+from typing import Any, List, Set, Optional
 from uuid import UUID
 
-from aas_middleware.model.core import Identifier, Referable
-from pydantic import BaseModel, create_model
+from pydantic import BaseModel
 
-
-if TYPE_CHECKING:
-    from aas_middleware.model.data_model import DataModel
-
-
-BASIC_TYPE = Union[str, int, float, bool, None]
-T = TypeVar("T", bound=Referable)
-
+from aas_middleware.model.core import Identifiable, Identifier, Reference, UnIdentifiable
 
 def convert_camel_case_to_underscrore_str(came_case_string: str) -> str:
     """
@@ -48,17 +40,80 @@ def convert_under_score_to_camel_case_str(underscore_str: str) -> str:
     return camel_case_str
 
 
-def assure_id_short_attribute(model: Any) -> Any:
-    # TODO: use get_id function above and if None is returned -> patch model with id attribute
-    if (
-        not hasattr(model, "__dict__")
-        or hasattr(model, "id_short")
-        or isinstance(model, Enum)
-        or not model
-    ):
-        return model
-    id_attributes = [
+def is_identifiable(model: Any) -> bool:
+    """
+    Function to check if a model is identifiable.
+
+    Args:
+        model (Any): The model.
+
+    Returns:
+        bool: True if the model is identifiable, False otherwise.
+    """
+    if isinstance(model, UnIdentifiable):
+        return False
+    return True
+
+
+def get_identifier_type_fields(model: BaseModel) -> List[str]:
+    """
+    Function to get the fields of a model that are of type Identifier.
+
+    Args:
+        model (BaseModel): A Basemodel that is checked for identifier fields
+
+    Returns:
+        List[str]: The field names that are Identifiers
+    """
+    model_fields = []
+    for field_name, field_info in model.model_fields.items():
+        if field_info.annotation is Identifier:
+            model_fields.append(field_name)
+    return model_fields
+
+
+def get_id(model: Any) -> str | int | UUID:
+    """
+    Function to get the id attribute of an arbitrary model.
+
+    Args:
+        model (Any): The model.
+
+    Returns:
+        Optional[str | int | UUID]: The id attribute.
+
+    Raises:
+        ValueError: if the model is not an object, BaseModel or dict or if no id attribute is available
+    """
+    if not is_identifiable(model):
+        raise ValueError("Model is a basic type and has no id attribute.")
+
+    if isinstance(model, BaseModel):
+        identifiable_fields = get_identifier_type_fields(model)
+        if len(identifiable_fields) > 1:
+            raise ValueError(f"Model has multiple Identifier attributes: {model}")
+        if identifiable_fields:
+            return getattr(model, identifiable_fields[0])
+    elif hasattr(model, "__dict__"):
+        sig = inspect.signature(type(model).__init__)
+        potential_identifier = []
+        for param in sig.parameters.values():
+            if param.annotation is Identifier or param.annotation is "Identifier":
+                potential_identifier.append(param.name)
+        if len(potential_identifier) > 1:
+            raise ValueError(f"Model {model} has multiple Identifier attributes.")
+        if potential_identifier:
+            return getattr(model, potential_identifier[0])
+
+    if isinstance(model, BaseModel):
+        data = model.model_dump()
+    elif isinstance(model, dict):
+        data = model
+    else:
+        data = vars(model)
+    potential_id_attributes = [
         "id",
+        "id_short",
         "Id",
         "ID",
         "Identifier",
@@ -66,105 +121,101 @@ def assure_id_short_attribute(model: Any) -> Any:
         "Identity",
         "identity",
     ]
-    for attr in id_attributes:
-        if hasattr(model, attr) and isinstance(getattr(model, attr), str):
-            id_short = getattr(model, attr)
-            break
-    else:
-        if isinstance(model, BaseModel):
-            id_short = str(id(model))
-        else:
-            return model
-
-    if not isinstance(model, BaseModel):
-        model.id_short = id_short
-        return model
-
-    class_name = model.__class__.__name__.split(".")[-1]
-    new_model = create_model(class_name, __base__=model.__class__, id_short=(str, ...))
-
-    model_dict = vars(model)
-    model_dict["id_short"] = id_short
-    return new_model(**model_dict)
-
-
-def assure_id_short_attribute_of_list(model_list: List[Any]) -> List[Any]:
-    return [assure_id_short_attribute(model) for model in model_list]
-
-
-def is_referable(potential_referable: Any) -> bool:
-    return hasattr(potential_referable, "id_short")
-
-
-def is_instance_of_referables_list(potential_referables_list: Any) -> bool:
-    return isinstance(potential_referables_list, (list, tuple, set)) and all(
-        is_referable(item) for item in potential_referables_list
+    for id_attribute in potential_id_attributes:
+        if id_attribute in data and isinstance(data[id_attribute], str | int | UUID):
+            return data[id_attribute]
+    
+    raise ValueError(
+        f"Model {model} has no attribute that can be used as id attribute."
     )
 
 
-def is_instance_of_basic_types_list(potential_basic_types_list: Any) -> bool:
-    return isinstance(potential_basic_types_list, (list, tuple, set)) and all(
-        isinstance(item, BASIC_TYPE) for item in potential_basic_types_list
-    )
+def get_id_with_patch(model: Any) -> str:
+    """
+    Function to get the id attribute of an arbitrary model.
+
+    Args:
+        model (Any): The model.
+
+    Returns:
+        Optional[str | int | UUID]: The id attribute.
+    """
+    if not is_identifiable(model):
+        raise ValueError("Not identifiable object supplied.")
+    try:
+        return str(get_id(model))
+    except ValueError:
+        return str(id(model))
 
 
-def get_underscore_class_name_from_model(model: Referable) -> str:
-    class_name = model.__class__.__name__.split(".")[-1]
-    attribute_name = convert_camel_case_to_underscrore_str(class_name)
-    return attribute_name
+def is_identifiable_container(model: Any) -> bool:
+    """
+    Function to check if a model is an identifiable container.
+
+    Args:
+        model (Any): The model.
+
+    Returns:
+        bool: True if the model is an identifiable container, False otherwise.
+    """
+    if not isinstance(model, list | tuple | set | dict):
+        return False
+    if isinstance(model, list | tuple | set) and not all(is_identifiable(element) for element in model):
+        return False
+    if isinstance(model, dict) and not all(is_identifiable(value) for value in model.values()):
+        # TODO: validate if keys should fulfill some criteria or dict is even needed...
+        return False
+    return True
 
 
-def get_referable_list_of_value(value: Any) -> Optional[List[Referable]]:
-    if isinstance(value, (list, tuple, set)):
-        value = assure_id_short_attribute_of_list(value)
-    else:
-        value = assure_id_short_attribute(value)
-    if is_referable(value):
+def get_values_as_identifiable_list(value: Any) -> List[Optional[Identifiable]]:
+    if is_identifiable(value):
         return [value]
-    elif is_instance_of_referables_list(value):
+    elif is_identifiable_container(value):
         return value
     else:
         return []
 
 
-def get_referable_attributes_of_model(
-    potential_referable_container: Union[Referable, List[Referable]]
-) -> List[Referable]:
+def get_identifiable_attributes_of_model(
+    potential_identifiable_container: Identifiable
+) -> List[Identifiable]:
     referable_values = []
-    if not hasattr(potential_referable_container, "__dict__"):
+    if not is_identifiable(potential_identifiable_container):
         return []
     else:
-        attribute_dict = vars(potential_referable_container)
+        attribute_dict = vars(potential_identifiable_container)
     for attribute_value in attribute_dict.values():
-        referable_values += get_referable_list_of_value(attribute_value)
+        referable_values += get_values_as_identifiable_list(attribute_value)
     return referable_values
 
 
-def add_non_redundant_referable(
-    referable: Referable, referables: List[Referable]
-) -> List[Referable]:
+def add_non_redundant_identifiable(
+    model: Identifiable, identifiables: List[Identifiable]
+) -> List[Identifiable]:
     """
-    Method to add a referable to a list of referables if it is not already in the list.
+    Method to add an Identifiable to a list of Identifiables if it is not already in the list.
 
     Args:
-        referable (Referable): The referable to add.
-        referables (List[Referable]): The list of referables.
+        model (Identifiable): The Identifiable to add.
+        identifiables (List[Identifiable]): The list of contained Identifiables.
 
     Returns:
-        List[Referable]: The list of referables with the added referable.
+        List[Identifiable]: The list of Identifiables with the added model.
     """
+    # TODO: maybe use directly a dict here to avoid iteration by using hashable ids
     if not any(
-        referable.id_short == other_referable.id_short for other_referable in referables
+        get_id_with_patch(model) == get_id_with_patch(other_referable) for other_referable in identifiables
     ):
-        referables.append(referable)
-    return referables
+        identifiables.append(model)
+    return identifiables
 
 
-def get_all_contained_referables(
-    model: Union[Referable, List[Referable]]
-) -> List[Referable]:
+def get_all_contained_identifiables(
+    model: Identifiable
+) -> List[Identifiable]:
     """
-    Method to iterate over a referable data model and get all referables.
+    Method to iterate over an Identifiable model and get all contained Identifiables.
 
     Args:
         model (REFERABLE_DATA_MODEL): The referable data model.
@@ -172,25 +223,81 @@ def get_all_contained_referables(
     Returns:
         List[Referable]: The list of referables.
     """
-    referables = []
-    referable_attributes = get_referable_attributes_of_model(model)
-    for referable_attribute in referable_attributes:
-        new_referables = get_all_contained_referables(referable_attribute)
-        for referable in new_referables:
-            add_non_redundant_referable(referable, referables)
-    if is_instance_of_referables_list(model):
-        model = assure_id_short_attribute_of_list(model)
+    contained_identifiables = []
+    identifiable_attributes = get_identifiable_attributes_of_model(model)
+    for identifiable_attribute in identifiable_attributes:
+        in_attribute_contained_identifiables = get_all_contained_identifiables(identifiable_attribute)
+        for identifiable in in_attribute_contained_identifiables:
+            add_non_redundant_identifiable(identifiable, contained_identifiables)
+    if is_identifiable_container(model):
         for item in model:
-            new_referables = get_all_contained_referables(item)
-            for referable in new_referables:
-                add_non_redundant_referable(referable, referables)
-    elif is_referable(model):
-        model = assure_id_short_attribute(model)
-        add_non_redundant_referable(model, referables)
-    return referables
+            in_attribute_contained_identifiables = get_all_contained_identifiables(item)
+            for identifiable in in_attribute_contained_identifiables:
+                add_non_redundant_identifiable(identifiable, contained_identifiables)
+    elif is_identifiable(model):
+        add_non_redundant_identifiable(model, contained_identifiables)
+    return contained_identifiables
 
 
-def get_referenced_ids_of_model(model: Referable) -> List[str]:
+def get_references_of_reference_type_for_basemodel(model: BaseModel) -> List[str]:
+    """
+    Function to get the references of a model that are of type Reference.
+
+    Args:
+        model (BaseModel): The model.
+
+    Returns:
+        List[str]: The reference fields.
+    """
+    references = []
+    for field_name, field_info in model.model_fields.items():
+        if field_info.annotation is Reference:
+            references.append(getattr(model, field_name))
+        if field_info.annotation is List[Reference]:
+            references += getattr(model, field_name)
+    return [str(ref) for ref in references if ref]
+
+def get_references_of_reference_type_for_object(model: object) -> List[str]:
+    """
+    Function to get the references of a model that are of type Reference.
+
+    Args:
+        model (BaseModel): The model.
+
+    Returns:
+        List[str]: The reference fields.
+    """
+    references = []
+    sig = inspect.signature(type(model).__init__)
+    for param in sig.parameters.values():
+        if param.annotation is Reference:
+            references.append(getattr(model, param.name))
+        if param.annotation is List[Reference]:
+            references += getattr(model, param.name)
+    return [str(ref) for ref in references if ref]
+
+def get_referenced_ids_of_model(model: Identifiable) -> Set[str]:
+    """
+    Function to get the referenced ids of a model by searching for type Reference and attribute names which suggest references.
+
+    Args:
+        model (Referable): The model to get the references from.
+
+    Returns:
+        List[str]: The referenced ids.
+    """
+    referenced_ids = []
+    if isinstance(model, BaseModel):
+        referenced_ids += get_references_of_reference_type_for_basemodel(model)
+    elif hasattr(model, "__dict__"):
+        referenced_ids += get_references_of_reference_type_for_object(model)
+    referenced_ids += get_attribute_name_encoded_references(model)
+    return set(referenced_ids)
+
+
+REFERENCE_ATTRIBUTE_NAMES_SUFFIXES = ["id", "ids", "Id", "Ids", "ID", "IDs", "Identifier", "Identifiers", "identity", "identities"]
+
+def get_attribute_name_encoded_references(model: Identifiable) -> List[str]:
     """
     Function to get the referenced ids of a model.
 
@@ -202,30 +309,32 @@ def get_referenced_ids_of_model(model: Referable) -> List[str]:
     """
     referenced_ids = []
     for attribute_name, attribute_value in vars(model).items():
-        if attribute_name.split("_")[-1] == "id" and attribute_name != "semantic_id":
-            if attribute_value:
-                referenced_ids.append(attribute_value)
-        elif attribute_name.split("_")[-1] == "ids":
-            if attribute_value:
-                referenced_ids += attribute_value
+        if not any(
+            attribute_name.endswith(suffix) and not attribute_name == suffix for suffix in REFERENCE_ATTRIBUTE_NAMES_SUFFIXES
+        ):
+            continue
+        if isinstance(attribute_value, str | int | UUID):
+            referenced_ids.append(str(attribute_value))
+        else:
+            referenced_ids += [str(item) for item in attribute_value if item]
     return referenced_ids
 
 
-def replace_attribute_with_model(model: Referable, existing_model: Referable):
+def replace_attribute_with_model(model: Identifiable, existing_model: Identifiable):
     """
     Function to replace an attribute with a model.
 
     Args:
-        model (Referable): The model.
-        existing_model (Referable): The existing model.
+        model (Identifiable): The model.
+        existing_model (Identifiable): The existing model.
     """
     for attribute_name, attribute_value in vars(model).items():
-        if is_referable(attribute_value):
+        if is_identifiable(attribute_value):
             if attribute_value == existing_model:
                 setattr(model, attribute_name, existing_model)
             else:
                 replace_attribute_with_model(attribute_value, existing_model)
-        elif is_instance_of_referables_list(attribute_value):
+        elif is_identifiable_container(attribute_value):
             for i, item in enumerate(attribute_value):
                 if item == existing_model:
                     attribute_value[i] = existing_model

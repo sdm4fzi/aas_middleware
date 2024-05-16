@@ -1,22 +1,23 @@
 from __future__ import annotations
 
 import json
-from typing import Dict, List, Set, TypeVar, Union, Any, Type
+from typing import Dict, List, Literal, Set, Tuple, TypeVar, Union, Any, Type
 from datetime import datetime
 
-from aas_middleware.model.core import Referable
+from pydantic import BaseModel, ValidationError
 
+from aas_middleware.model.core import Identifiable
+from aas_middleware.model.formatting.aas.aas_model import Referable
+
+from aas_middleware.model.reference_finder import ReferenceFinder, ReferenceInfo
 from aas_middleware.model.util import (
     convert_under_score_to_camel_case_str,
     convert_camel_case_to_underscrore_str,
+    get_id_with_patch,
 )
 
 from aas_middleware.model.util import (
-    get_all_contained_referables,
-    get_referable_attributes_of_model,
-    assure_id_short_attribute,
     replace_attribute_with_model,
-    get_referenced_ids_of_model,
 )
 
 
@@ -30,35 +31,57 @@ class DateTimeEncoder(json.JSONEncoder):
             return o.isoformat()
 
         return super().default(o)
-
-
-class DataModel:
+    
+class DataModel(BaseModel):
     """
     The data model is a container that allows to store all models of a data model and provides methods to access them easily by their id or type.
 
     Args:
-        *models (Union[List[Referable], Referable]): The models to load into the data model.
+        **data (Dict[str, Any]): The data to load into the data model (used by pydantic).
+
+    Attributes:
+        _models_key_id (Dict[str, Identifiable]): The dictionary of models with their id as key.
+        _top_level_models (Dict[str, List[str]]): The dictionary of top level models with their type as key.
+        _models_key_type (Dict[str, List[str]]): The dictionary of models with their type as key.
+        _reference_info_dict_for_referencing (Dict[str, Dict[str, ReferenceInfo]]): The dictionary of reference infos with keys from the referencing model to the referenced model.
+        _reference_info_dict_for_referenced (Dict[str, Dict[str, ReferenceInfo]]): The dictionary of reference infos with keys from the referenced model to the referencing model.
     """
+    _models_key_id: Dict[str, Identifiable] = {}
+    _top_level_models: Dict[str, List[str]] = {}
+    _models_key_type: Dict[str, List[str]] = {}
+    _reference_info_dict_for_referencing: Dict[str, Dict[str, ReferenceInfo]] = {}
+    _reference_info_dict_for_referenced: Dict[str, Dict[str, ReferenceInfo]] = {}
 
-    # TODO: change that models can also be objects, however, when inserting them, their are checked if they are identifiable
-    # TODO: make Data model to be a BaseModel, to easily define other data models based on this by inheritance (similar to pydantic BaseModels)
-    # TODO: if DataModels are passed to the data model init, their attributes are used.
-    # TODO: build a graph with the models and their references to each other -> make referencing, referenced search easier
-    def __init__(self, *models: Union[List[Referable], Referable]):
-        self._models_key_id: Dict[str, Referable] = {}
+    def __init__(self, **data: Dict[str, Any]):
+        super().__init__(**data)
+        try:
+            Identifiable.model_validate(self)
+            self.add_model(self)
+        except ValidationError:
+            for field_info in self.model_fields.values():
+                try:
+                    # TODO: check for list of models or adjust load_model method to load
+                    Identifiable.model_validate(field_info)
+                    self.add_model(field_info)
+                except ValidationError:
+                    pass
 
-        self._top_level_models: Dict[str, List[str]] = {}
-        self._models_key_type: Dict[str, List[str]] = {}
-        self._referencing_model_ids_key_id: Dict[str, List[str]] = {}
 
-        if models:
-            for model in models:
-                if not model:
-                    continue
-                if isinstance(model, list) or isinstance(model, tuple):
-                    self.load_models(model)
-                else:
-                    self.load_model(model)
+    @classmethod
+    def from_models(cls, *models: Tuple[Identifiable], **data: Dict[str, Any]) -> DataModel:
+        """
+        Method to create a data model from a list of provided models.
+
+        Args:
+            models (Tuple[Identifiable]): The models to load into the data model.
+            data (Dict[str, Any]): The data to load into the data model.
+
+        Returns:
+            DataModel: The data model with loaded models
+        """
+        data_model = cls(**data)
+        data_model.add(*models)
+        return data_model
 
     @property
     def model_ids(self) -> Set[str]:
@@ -79,15 +102,34 @@ class DataModel:
         """
         return self.model_ids
 
-    def load_models(self, models: List[Referable]) -> None:
+    def add(self, *models: Identifiable) -> None:
         """
-        Method to load all models of the data model.
+        Method to add models to the data model.
 
         Args:
-            models (List[Referable]): The list of models to load.
+            *models (Tuple[Referable]): The models to load into the data model.
         """
         for model in models:
-            self.load_model(model)
+            self.add_model(model)
+
+    def add_model(self, model: Identifiable) -> None:
+        """
+        Method to load a model of the data model.
+
+        Args:
+            model (Referable): The model to load.
+        """
+        Identifiable.model_validate(model)
+        model_id = get_id_with_patch(model)
+        if model_id in self.model_ids:
+            raise ValueError(
+                f"Model with id {model_id} already loaded."
+            )
+        all_identifiables, reference_infos = ReferenceFinder.find(model)
+        self._add_contained_models(model, all_identifiables)
+        self._add_top_level_model(model)
+        self._add_references_to_referencing_models_dict(reference_infos)
+
 
     def check_different_model_with_same_id_contained(self, model: Referable) -> bool:
         """
@@ -99,30 +141,14 @@ class DataModel:
         Returns:
             bool: True if the model is already contained, False otherwise.
         """
-        if model.id_short in self.model_ids:
-            same_id_model = self.get_model(model.id_short)
+        model_id = get_id_with_patch(model)
+        if model_id in self.model_ids:
+            same_id_model = self.get_model(model_id)
             if not same_id_model == model:
                 return True
         return False
 
-    def load_model(self, top_level_model: Referable) -> None:
-        """
-        Method to load a model of the data model.
-
-        Args:
-            model (Referable): The model to load.
-        """
-        top_level_model = assure_id_short_attribute(top_level_model)
-        if top_level_model.id_short in self.model_ids:
-            raise ValueError(
-                f"Model with id {top_level_model.id_short} already loaded."
-            )
-        all_referables = get_all_contained_referables(top_level_model)
-        self._load_contained_models(top_level_model, all_referables)
-        self._add_top_level_model(top_level_model)
-        self._add_references_to_referencing_models_dict(all_referables)
-
-    def _load_contained_models(
+    def _add_contained_models(
         self, top_level_model: Referable, contained_models: List[Referable]
     ) -> None:
         """
@@ -132,18 +158,19 @@ class DataModel:
             model (Referable): The model to load the contained models for.
         """
         for contained_model in contained_models:
-            if contained_model.id_short in self.model_ids:
-                same_id_model = self.get_model(contained_model.id_short)
+            contained_model_id = get_id_with_patch(contained_model)
+            if contained_model_id in self.model_ids:
+                same_id_model = self.get_model(contained_model_id)
                 if not same_id_model == contained_model:
                     raise ValueError(
-                        f"Model with id {contained_model.id_short} already loaded but with different content. Make sure to only load models with unique ids."
+                        f"Model with id {contained_model_id} already loaded but with different content. Make sure to only load models with unique ids."
                     )
                 replace_attribute_with_model(top_level_model, same_id_model)
                 continue
             self._add_model(contained_model)
 
     def _add_references_to_referencing_models_dict(
-        self, referables: List[Referable]
+        self, reference_infos: List[ReferenceInfo]
     ) -> None:
         """
         Method to add information about referencing model ids of the input model.
@@ -151,30 +178,19 @@ class DataModel:
         Args:
             model (Referable): The model to add the information for.
         """
-
-        def add_referencing_ids_to_referencing_models_dict(
-            referenced_id: str, contained_model_id: str
-        ) -> None:
-            for referenced_id in referenced_ids:
-                if referenced_id not in self._referencing_model_ids_key_id:
-                    self._referencing_model_ids_key_id[referenced_id] = []
-                if (
-                    contained_model_id
-                    not in self._referencing_model_ids_key_id[referenced_id]
-                ):
-                    self._referencing_model_ids_key_id[referenced_id].append(
-                        contained_model_id
-                    )
-
-        for contained_model in referables:
-            referenced_ids = get_referenced_ids_of_model(contained_model)
-            referenced_models = get_referable_attributes_of_model(contained_model)
-            referenced_ids += [
-                referenced_model.id_short for referenced_model in referenced_models
-            ]
-            add_referencing_ids_to_referencing_models_dict(
-                referenced_ids, contained_model.id_short
-            )
+        for reference_info in reference_infos:
+            referencing_model_id = reference_info.identifiable_id
+            referenced_model_id = reference_info.reference_id
+            if not referencing_model_id in self._reference_info_dict_for_referencing:
+                self._reference_info_dict_for_referencing[referencing_model_id] = {}
+            self._reference_info_dict_for_referencing[referencing_model_id][
+                referenced_model_id
+            ] = reference_info
+            if not referenced_model_id in self._reference_info_dict_for_referenced:
+                self._reference_info_dict_for_referenced[referenced_model_id] = {}
+            self._reference_info_dict_for_referenced[referenced_model_id][
+                referencing_model_id
+            ] = reference_info
 
     def _add_model(self, model: Referable) -> None:
         """
@@ -183,14 +199,14 @@ class DataModel:
         Args:
             model (Referable): The model to add.
         """
-        if model.id_short in self.model_ids:
-            raise ValueError(f"Model with id {model.id_short} already loaded.")
-        self._models_key_id[model.id_short] = model
-        # underscore_type_name = get_underscore_class_name_from_model(model)
+        model_id = get_id_with_patch(model)
+        if model_id in self.model_ids:
+            raise ValueError(f"Model with id {model_id} already loaded.")
+        self._models_key_id[model_id] = model
         type_name = model.__class__.__name__.split(".")[-1]
         if not type_name in self._models_key_type:
             self._models_key_type[type_name] = []
-        self._models_key_type[type_name].append(model.id_short)
+        self._models_key_type[type_name].append(model_id)
 
     def _add_top_level_model(self, model: Referable) -> None:
         """
@@ -203,7 +219,7 @@ class DataModel:
         underscore_type_name = convert_camel_case_to_underscrore_str(type_name)
         if not underscore_type_name in self._top_level_models:
             self._top_level_models[underscore_type_name] = []
-        self._top_level_models[underscore_type_name].append(model.id_short)
+        self._top_level_models[underscore_type_name].append(get_id_with_patch(model))
 
     def from_dict(self, data: NESTED_DICT, types: List[Type]) -> None:
         """
@@ -222,7 +238,7 @@ class DataModel:
                 raise ValueError(f"Type {class_name} not supported.")
             for model_dict in attribute_value:
                 model = type_for_attribute_values(**model_dict)
-                self.load_model(model)
+                self.add(model)
 
     def dict(self) -> NESTED_DICT:
         """
@@ -233,7 +249,7 @@ class DataModel:
         """
         nested_dict = {}
         for attribute_name, attribute_value in self.get_top_level_models().items():
-            nested_dict[attribute_name] = [model.dict() for model in attribute_value]
+            nested_dict[attribute_name] = [model.model_dump() for model in attribute_value]
         return nested_dict
 
     def json(self) -> str:
@@ -314,12 +330,13 @@ class DataModel:
         Returns:
             List[Referable]: The list of referencing models of the mode.
         """
-        if not referenced_model.id_short in self._referencing_model_ids_key_id:
+        referenced_model_id = get_id_with_patch(referenced_model)
+        if not referenced_model_id in self._reference_info_dict_for_referenced:
             return []
-        referencing_model_ids = self._referencing_model_ids_key_id[
-            referenced_model.id_short
+        referencing_model_dict = self._reference_info_dict_for_referenced[
+            referenced_model_id
         ]
-        return [self.get_model(model_id) for model_id in referencing_model_ids]
+        return [self.get_model(model_id) for model_id in referencing_model_dict]
 
     def get_referencing_models_of_type(
         self, referenced_model: Referable, referencing_model_type: Type[T]
@@ -333,18 +350,19 @@ class DataModel:
         Returns:
             List[Referable]: The list of referencing models of the mode.
         """
-        if not referenced_model.id_short in self._referencing_model_ids_key_id:
+        referenced_model_id = get_id_with_patch(referenced_model)
+        if not referenced_model_id in self._reference_info_dict_for_referenced:
             return []
-        referencing_model_ids = self._referencing_model_ids_key_id[
-            referenced_model.id_short
+        referencing_model_dict = self._reference_info_dict_for_referenced[
+            referenced_model_id
         ]
         return [
             self.get_model(model_id)
-            for model_id in referencing_model_ids
+            for model_id in referencing_model_dict
             if isinstance(self.get_model(model_id), referencing_model_type)
         ]
 
-    def get_model(self, id_short: str) -> Referable:
+    def get_model(self, model_id: str) -> Referable:
         """
         Method to get a model by its id.
 
@@ -354,21 +372,21 @@ class DataModel:
         Returns:
             Referable: The model.
         """
-        if id_short not in self.model_ids:
+        if model_id not in self.model_ids:
             return None
-        return self._models_key_id[id_short]
+        return self._models_key_id[model_id]
 
-    def contains_model(self, id_short: str) -> bool:
+    def contains_model(self, model_id: str) -> bool:
         """
         Method to check if a model is contained in the data model.
 
         Args:
-            id_short (str): The id of the model to check.
+            model_id (str): The id of the model to check.
 
         Returns:
             bool: True if the model is contained, False otherwise.
         """
-        if self.get_model(id_short) is not None:
+        if self.get_model(model_id) is not None:
             return True
         return False
 
