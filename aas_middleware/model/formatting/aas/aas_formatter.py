@@ -10,7 +10,7 @@ from basyx.aas.model import DictObjectStore
 from basyx.aas import model
 
 from aas_middleware.model.formatting.aas.convert_aas import convert_aas_to_pydantic_model, convert_object_store_to_pydantic_models
-from aas_middleware.model.formatting.aas.convert_pydantic import convert_pydantic_model_to_aas, convert_pydantic_model_to_submodel, infere_aas_structure
+from aas_middleware.model.formatting.aas.convert_pydantic import convert_model_to_aas, convert_model_to_submodel, infere_aas_structure
 
 
 class AASFormatter:
@@ -32,13 +32,13 @@ class AASFormatter:
         print(len(aas_models), len(submodel_models))
         obj_store = DictObjectStore()
         for aas in aas_models:
-            obj_store_to_add = convert_pydantic_model_to_aas(aas)
+            obj_store_to_add = convert_model_to_aas(aas)
             for identifiable in obj_store_to_add:
                 if obj_store.get(identifiable.id_short) is not None:
                     continue
                 obj_store.add(identifiable)
         for submodel in submodel_models:
-            submodel_to_add = convert_pydantic_model_to_submodel(submodel)
+            submodel_to_add = convert_model_to_submodel(submodel)
             if obj_store.get(submodel_to_add.id_short) is not None:
                 continue
             obj_store.add(submodel_to_add)

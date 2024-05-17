@@ -46,26 +46,25 @@ def infere_aas_structure(data: DataModel) -> Tuple[List[aas_model.AAS], List[aas
     submodel_models = [model for model in top_level_models_list if isinstance(model, aas_model.Submodel)]
     return aas_models, submodel_models
 
-def convert_pydantic_model_to_aas(
-    pydantic_aas: aas_model.AAS,
+def convert_model_to_aas(
+    model_aas: aas_model.AAS,
 ) -> model.DictObjectStore[model.Identifiable]:
     """
-    Convert a pydantic model to an AssetAdministrationShell and return it as a DictObjectStore with all Submodels
+    Convert a model aas to an Basyx AssetAdministrationShell and return it as a DictObjectStore with all Submodels
 
     Args:
-        pydantic_aas (aas_model.AAS): pydantic model to convert
+        model_aas (aas_model.AAS): model aas to convert
 
     Returns:
         model.DictObjectStore[model.Identifiable]: DictObjectStore with all Submodels
     """
-    # TODO: rename pydantic naming in functions to only model
-    aas_attributes = get_attribute_dict(pydantic_aas)
+    aas_attributes = get_attribute_dict(model_aas)
     aas_submodels = []  # placeholder for submodels created
     aas_submodel_data_specifications = []
     for attribute_name, attribute_value in aas_attributes.items():
         if isinstance(attribute_value, aas_model.Submodel):
-            tempsubmodel = convert_pydantic_model_to_submodel(
-                pydantic_submodel=attribute_value
+            tempsubmodel = convert_model_to_submodel(
+                model_submodel=attribute_value
             )
             aas_submodels.append(tempsubmodel)
             aas_submodel_data_specification = (
@@ -76,21 +75,21 @@ def convert_pydantic_model_to_aas(
             aas_submodel_data_specifications.append(aas_submodel_data_specification)
 
     asset_information = model.AssetInformation(
-        global_asset_id=model.Identifier(pydantic_aas.id),
+        global_asset_id=model.Identifier(model_aas.id),
     )
 
     basyx_aas = model.AssetAdministrationShell(
         asset_information=asset_information,
-        id_short=get_id_short(pydantic_aas),
-        id_=model.Identifier(pydantic_aas.id),
-        description=convert_util.get_basyx_description_from_pydantic_model(
-            pydantic_aas
+        id_short=get_id_short(model_aas),
+        id_=model.Identifier(model_aas.id),
+        description=convert_util.get_basyx_description_from_model(
+            model_aas
         ),
         submodel={
             model.ModelReference.from_referable(submodel) for submodel in aas_submodels
         },
         embedded_data_specifications=[
-            convert_util.get_data_specification_for_model(pydantic_aas)
+            convert_util.get_data_specification_for_model(model_aas)
         ]
         + aas_submodel_data_specifications,
     )
@@ -101,10 +100,10 @@ def convert_pydantic_model_to_aas(
     return obj_store
 
 
-def convert_pydantic_model_to_submodel(
-    pydantic_submodel: aas_model.Submodel,
+def convert_model_to_submodel(
+    model_submodel: aas_model.Submodel,
 ) -> model.Submodel:
-    submodel_attributes = get_attribute_dict(pydantic_submodel)
+    submodel_attributes = get_attribute_dict(model_submodel)
     submodel_elements = []
     submodel_element_data_specifications = []
 
@@ -121,16 +120,16 @@ def convert_pydantic_model_to_submodel(
         submodel_element_data_specifications.append(submodel_element_data_specification)
 
     basyx_submodel = model.Submodel(
-        id_short=get_id_short(pydantic_submodel),
-        id_=model.Identifier(pydantic_submodel.id),
-        description=convert_util.get_basyx_description_from_pydantic_model(
-            pydantic_submodel
+        id_short=get_id_short(model_submodel),
+        id_=model.Identifier(model_submodel.id),
+        description=convert_util.get_basyx_description_from_model(
+            model_submodel
         ),
         embedded_data_specifications=[
-            convert_util.get_data_specification_for_model(pydantic_submodel)
+            convert_util.get_data_specification_for_model(model_submodel)
         ]
         + submodel_element_data_specifications,
-        semantic_id=get_semantic_id(pydantic_submodel),
+        semantic_id=get_semantic_id(model_submodel),
         submodel_element=submodel_elements,
     )
     return basyx_submodel
@@ -143,7 +142,7 @@ def create_submodel_element(
     ],
 ) -> model.SubmodelElement:
     """
-    Create a basyx SubmodelElement from a pydantic SubmodelElementCollection or a primitive type
+    Create a basyx SubmodelElement from a model SubmodelElementCollection or a primitive type
 
     Args:
         attribute_name (str): Name of the attribute that is used for ID and id_short
@@ -154,7 +153,7 @@ def create_submodel_element(
         model.SubmodelElement: basyx SubmodelElement
     """
     if isinstance(attribute_value, aas_model.SubmodelElementCollection):
-        smc = create_submodel_element_collection(attribute_value, attribute_name)
+        smc = create_submodel_element_collection(attribute_value)
         return smc
     elif isinstance(attribute_value, list) or isinstance(attribute_value, tuple):
         sml = create_submodel_element_list(attribute_name, attribute_value)
@@ -203,11 +202,10 @@ def create_property(
 
 
 def create_submodel_element_collection(
-    pydantic_submodel_element_collection: aas_model.SubmodelElementCollection,
-    name: str,
+    model_sec: aas_model.SubmodelElementCollection,
 ) -> model.SubmodelElementCollection:
     value = []
-    smc_attributes = get_attribute_dict(pydantic_submodel_element_collection)
+    smc_attributes = get_attribute_dict(model_sec)
     submodel_element_data_specifications = []
 
     for attribute_name, attribute_value in smc_attributes.items():
@@ -220,21 +218,21 @@ def create_submodel_element_collection(
         )
         submodel_element_data_specifications.append(submodel_element_data_specfication)
 
-    id_short = get_id_short(pydantic_submodel_element_collection)
+    id_short = get_id_short(model_sec)
 
     smc = model.SubmodelElementCollection(
         id_short=id_short,
         value=value,
-        description=convert_util.get_basyx_description_from_pydantic_model(
-            pydantic_submodel_element_collection
+        description=convert_util.get_basyx_description_from_model(
+            model_sec
         ),
         embedded_data_specifications=[
             convert_util.get_data_specification_for_model(
-                pydantic_submodel_element_collection
+                model_sec
             )
         ]
         + submodel_element_data_specifications,
-        semantic_id=get_semantic_id(pydantic_submodel_element_collection),
+        semantic_id=get_semantic_id(model_sec),
     )
     return smc
 

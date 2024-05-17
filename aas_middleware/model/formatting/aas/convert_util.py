@@ -1,11 +1,9 @@
 import json
-from typing import Any, List, Type, Dict, Union
+from typing import Dict, Union
 from basyx.aas import model
 
-from pydantic import BaseModel, ConfigDict
 import typing
 
-from pydantic.fields import FieldInfo
 from aas_middleware.model.formatting.aas import aas_model
 
 
@@ -47,28 +45,28 @@ def get_str_description(langstring_set: model.LangStringSet) -> str:
     return str(dict_description)
 
 
-def get_basyx_description_from_pydantic_model(
-    pydantic_model: (
+def get_basyx_description_from_model(
+    model_object: (
         aas_model.AAS | aas_model.Submodel | aas_model.SubmodelElementCollection
     ),
 ) -> model.LangStringSet:
     """
-    Crreates a LangStringSet from a pydantic model.
+    Creates a LangStringSet from an aas model.
     Args:
-        pydantic_model (BaseModel): Pydantic model that contains the description
+        model_object (aas_model.AAS | aas_model.Submodel | aas_model.SubmodelElementCollection): The model to get the description from.
     Returns:
-        model.LangStringSet: LangStringSet description representation of the pydantic model
+        model.LangStringSet: LangStringSet description representation of the model object
     Raises:
-        ValueError: If the description of the pydantic model is not a dict or a string
+        ValueError: If the description of the model object is not a dict or a string
     """
-    if not pydantic_model.description:
+    if not model_object.description:
         return None
     try:
-        dict_description = json.loads(pydantic_model.description)
+        dict_description = json.loads(model_object.description)
         if not isinstance(dict_description, dict):
             raise ValueError
     except ValueError:
-        dict_description = {"en": pydantic_model.description}
+        dict_description = {"en": model_object.description}
     return model.LangStringSet(dict_description)
 
 
@@ -203,12 +201,12 @@ def get_id_short(
 
 
 def get_semantic_id(
-    pydantic_model: aas_model.Submodel | aas_model.SubmodelElementCollection,
+    model_object: aas_model.Submodel | aas_model.SubmodelElementCollection,
 ) -> str | None:
-    if pydantic_model.semantic_id:
+    if model_object.semantic_id:
         semantic_id = model.ExternalReference(
             key=(
-                model.Key(model.KeyTypes.GLOBAL_REFERENCE, pydantic_model.semantic_id),
+                model.Key(model.KeyTypes.GLOBAL_REFERENCE, model_object.semantic_id),
             )
         )
     else:
