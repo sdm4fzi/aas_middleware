@@ -1,5 +1,6 @@
 from aas_middleware.model.data_model import DataModel
 
+from aas_middleware.model.util import get_id_with_patch
 from tests.conftest import (
     ProductAas,
     SubmodelBom,
@@ -83,6 +84,6 @@ def test_more_complex_example(
     assert len(data_model.get_referenced_models(example_submodel_with_id_reference_components)) == 2
     assert len(data_model.get_referenced_models(example_submodel_with_product_association)) == 2
     
-# TODO: add tests to rebuild data model with direct / indirect references
+# TODO: add tests to rebuild data model with direct / indirect references / aas structure
 # TODO: also add tests for subclassing Dataclass and making mixed use as data model and basemodel
 # TODO: also add tests for adding / removing model instances from data model

@@ -14,7 +14,6 @@ class Child(BaseModel):
     age: int
 
 class NameInfo(BaseModel):
-    # TODO: rework bug with creating ids here and not updating the values in the data model correctly...
     first_name: str
     last_name: str
 
@@ -27,34 +26,29 @@ name_info_child = NameInfo(first_name="Peter", last_name="Parker")
 example_child = Child(Id="peter", age=10, name_info=name_info_child)
 name_info_parent = NameInfo(first_name="John", last_name="Johnathan")
 example_parent = Parent(Id="John", name=name_info_parent, child=example_child)
-name_info_other_parent = NameInfo(first_name="Martha", last_name="Martha")
+name_info_other_parent = NameInfo(first_name="John", last_name="Martha")
 other_parent = Parent(Id="Martha", name=name_info_other_parent, child=example_child)
 
 other_name_info_child = NameInfo(first_name="alex", last_name="pupu")
 other_child = Child(Id="alex", age=10, name_info=other_name_info_child)
 
 data_model = DataModel.from_models(example_parent, other_parent, other_child)
+print("unpatched:", [(reference_info.identifiable_id, reference_info.reference_id) for reference_info in data_model._reference_infos])
+
 
 patched_data_model = DataModelRebuilder(data_model).rebuild_data_model_for_AAS_structure()
+print("patched:", [(reference_info.identifiable_id, reference_info.reference_id) for reference_info in data_model._reference_infos])
+
 
 dict_store = AASFormatter().serialize(patched_data_model)
-print(len(dict_store))
-for value in dict_store:
-    print(value, value.id_short)
-
 
 model_id_map = {model_id: counter for counter, model_id in enumerate(data_model.model_ids)}
 
 import igraph as ig
 from matplotlib import pyplot as plt
-
-print(data_model.model_ids)
-# TODO: solve problem of self referencing reference_info...
-print([(reference_info.identifiable_id, reference_info.reference_id) for reference_info in data_model._reference_infos])
-
 n_vertices = len(data_model.model_ids)
 edges = [(model_id_map[reference_info.identifiable_id], model_id_map[reference_info.reference_id]) for reference_info in data_model._reference_infos]
-g = ig.Graph(n_vertices, edges)
+g = ig.Graph(n_vertices, edges, directed=True)
 
 # Set attributes for the graph, nodes, and edges
 g["title"] = "Data Model"

@@ -1,5 +1,3 @@
-# TODO: implement class that takes a data model and rebuilds it with either direct or indirect references
-
 from typing import Type, TypeVar
 from httpx import patch
 from pydantic import Field, create_model
@@ -77,15 +75,7 @@ class DataModelRebuilder:
         Returns:
             DataModel: The rebuilt data model.
         """
-        new_data_model = DataModel()
-        referencing_models = []
-        for model in self.data_model.get_contained_models():
-            reference_infos_of_model = self.data_model.get_referenced_info(model)
-            if not reference_infos_of_model:
-                new_data_model.add_model(model)
-                continue
-            referencing_models.append(model)
-        # 1. get at first all data models that are referencing but are not referenced by other data models
+        raise NotImplementedError
 
     
     def rebuild_data_model_for_AAS_structure(self) -> DataModel:

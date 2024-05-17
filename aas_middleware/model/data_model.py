@@ -13,6 +13,8 @@ from aas_middleware.model.util import (
     convert_under_score_to_camel_case_str,
     convert_camel_case_to_underscrore_str,
     get_id_with_patch,
+    get_value_attributes,
+    is_identifiable_container,
     models_are_equal,
 )
 
@@ -59,13 +61,11 @@ class DataModel(BaseModel):
             Identifiable.model_validate(self)
             self.add_model(self)
         except ValidationError:
-            for field_info in self.model_fields.values():
-                try:
-                    # TODO: check for list of models or adjust load_model method to load
-                    Identifiable.model_validate(field_info)
-                    self.add_model(field_info)
-                except ValidationError:
-                    pass
+            for attribute_value in get_value_attributes(self).values():
+                if is_identifiable_container(attribute_value):
+                    self.add(*attribute_value)
+                else:
+                    self.add(attribute_value)
 
 
     @classmethod

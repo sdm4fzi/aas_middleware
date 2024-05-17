@@ -67,7 +67,7 @@ def get_identifier_type_fields(model: BaseModel) -> List[str]:
     """
     model_fields = []
     for field_name, field_info in model.model_fields.items():
-        if field_info.annotation is Identifier:
+        if field_info.annotation == Identifier:
             model_fields.append(field_name)
     return model_fields
 
@@ -98,7 +98,7 @@ def get_id(model: Any) -> str | int | UUID:
         sig = inspect.signature(type(model).__init__)
         potential_identifier = []
         for param in sig.parameters.values():
-            if param.annotation is Identifier or param.annotation is "Identifier":
+            if param.annotation == Identifier or param.annotation == "Identifier":
                 potential_identifier.append(param.name)
         if len(potential_identifier) > 1:
             raise ValueError(f"Model {model} has multiple Identifier attributes.")
@@ -161,9 +161,6 @@ def is_identifiable_container(model: Any) -> bool:
     if not isinstance(model, list | tuple | set | dict):
         return False
     if isinstance(model, list | tuple | set) and not all(is_identifiable(element) for element in model):
-        return False
-    if isinstance(model, dict) and not all(is_identifiable(value) for value in model.values()):
-        # TODO: validate if keys should fulfill some criteria or dict is even needed...
         return False
     return True
 
@@ -251,9 +248,10 @@ def get_references_of_reference_type_for_basemodel(model: BaseModel) -> List[str
     """
     references = []
     for field_name, field_info in model.model_fields.items():
-        if field_info.annotation is Reference:
+        if field_info.annotation == Reference or field_info.annotation == "Reference":
             references.append(getattr(model, field_name))
-        if field_info.annotation is List[Reference]:
+        if field_info.annotation == List[Reference]:
+            print("reference found")
             references += getattr(model, field_name)
     return [str(ref) for ref in references if ref]
 
@@ -270,9 +268,9 @@ def get_references_of_reference_type_for_object(model: object) -> List[str]:
     references = []
     sig = inspect.signature(type(model).__init__)
     for param in sig.parameters.values():
-        if param.annotation is Reference:
+        if param.annotation == Reference:
             references.append(getattr(model, param.name))
-        if param.annotation is List[Reference]:
+        if param.annotation == List[Reference]:
             references += getattr(model, param.name)
     return [str(ref) for ref in references if ref]
 
@@ -309,7 +307,7 @@ def get_attribute_name_encoded_references(model: Identifiable) -> List[str]:
     """
     referenced_ids = []
     for attribute_name, attribute_value in vars(model).items():
-        if attribute_name in STANDARD_AAS_FIELDS:
+        if attribute_name in STANDARD_AAS_FIELDS or attribute_name in REFERENCE_ATTRIBUTE_NAMES_SUFFIXES:
             continue
         if not any(
             attribute_name.endswith(suffix) for suffix in REFERENCE_ATTRIBUTE_NAMES_SUFFIXES
@@ -385,7 +383,22 @@ def models_are_equal(model1: Identifiable, model2: Identifiable) -> bool:
     """
     model1_attributes = get_value_attributes(model1)
     model2_attributes = get_value_attributes(model2)
-    # TODO: maybe to this recurrently
-    if model1_attributes != model2_attributes:
+    if set(model1_attributes.keys()) != set(model2_attributes.keys()):
         return False
+    for attribute_name1, attribute_value1 in model1_attributes.items():
+        if is_identifiable(attribute_value1):
+            if not models_are_equal(attribute_value1, model2_attributes[attribute_name1]):
+                return False
+        elif is_identifiable_container(attribute_value1):
+            if not is_identifiable_container(model2_attributes[attribute_name1]):
+                return False
+            if not len(attribute_value1) == len(model2_attributes[attribute_name1]):
+                return False
+            if not all(
+                models_are_equal(item1, item2)
+                for item1, item2 in zip(attribute_value1, model2_attributes[attribute_name1])
+            ):
+                return False
+        elif attribute_value1 != model2_attributes[attribute_name1]:
+            return False
     return True

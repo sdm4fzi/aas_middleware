@@ -56,7 +56,6 @@ def convert_aas_to_pydantic_model(
     Returns:
         aas_model.AAS: Pydantic model of the asset administration shell
     """
-    # TODO: rework here if information in data specification changes, also add that in data specifications the submodel attribute name is saved.
     aas_class_name = convert_util.get_class_name_from_basyx_model(aas)
     dict_dynamic_model_creation = get_initial_dict_for_dynamic_model_creation(aas)
     dict_model_instantiation = get_initial_dict_for_model_instantiation(aas)
@@ -224,7 +223,6 @@ def convert_submodel_to_pydantic_model(sm: model.Submodel) -> aas_model.Submodel
     dict_model_instantiation = get_initial_dict_for_model_instantiation(sm)
 
     for sm_element in sm.submodel_element:
-        # TODO: add possibility to specify the attribute name of properties in the data specification
         attribute_name = convert_util.get_attribute_name_from_basyx_model(
             sm, sm_element.id_short
         )
