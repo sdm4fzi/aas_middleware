@@ -2,26 +2,23 @@ from typing import Type
 
 from pydantic import ValidationError
 
-from aas_middleware.model.formatting.aas.aas_model import AAS, Submodel, SubmodelElementCollection
+from aas_middleware.model.formatting.aas.aas_model import (
+    AAS,
+    Submodel,
+    SubmodelElementCollection,
+)
 
 
 def test_minimal_instantiation():
-    aas = AAS(
-        id="test"
-    )
+    aas = AAS(id="test")
     assert aas.id == "test"
     assert aas.id_short == "test"
 
-    aas = AAS(
-        id="test",
-        id_short="test_short"
-    )
+    aas = AAS(id="test", id_short="test_short")
     assert aas.id == "test"
     assert aas.id_short == "test_short"
 
-    aas = AAS(
-        id_short="test_short"
-    )
+    aas = AAS(id_short="test_short")
     assert aas.id == "test_short"
     assert aas.id_short == "test_short"
 
@@ -42,23 +39,16 @@ def test_minimal_instantiation():
     except ValidationError:
         pass
 
-    submodel = Submodel(
-        id="test"
-    )
+    submodel = Submodel(id="test")
     assert submodel.id == "test"
     assert submodel.id_short == "test"
 
-    submodel = Submodel(
-        id="test",
-        id_short="test_short"
-    )
+    submodel = Submodel(id="test", id_short="test_short")
 
     assert submodel.id == "test"
     assert submodel.id_short == "test_short"
 
-    submodel = Submodel(
-        id_short="test_short"
-    )
+    submodel = Submodel(id_short="test_short")
 
     assert submodel.id == "test_short"
     assert submodel.id_short == "test_short"
@@ -102,10 +92,7 @@ def test_minimal_instantiation():
 
 def test_faulty_aas(faulty_aas: Type[AAS]):
     try:
-        faulty_aas(
-            id="test",
-            example_string_value="test"
-        )
+        faulty_aas(id="test", example_string_value="test")
         assert False
     except ValidationError as e:
         pass

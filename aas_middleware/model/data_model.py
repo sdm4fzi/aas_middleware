@@ -33,7 +33,8 @@ class DateTimeEncoder(json.JSONEncoder):
             return o.isoformat()
 
         return super().default(o)
-    
+
+
 class DataModel(BaseModel):
     """
     The data model is a container that allows to store all models of a data model and provides methods to access them easily by their id or type.
@@ -48,6 +49,7 @@ class DataModel(BaseModel):
         _reference_info_dict_for_referencing (Dict[str, Dict[str, ReferenceInfo]]): The dictionary of reference infos with keys from the referencing model to the referenced model.
         _reference_info_dict_for_referenced (Dict[str, Dict[str, ReferenceInfo]]): The dictionary of reference infos with keys from the referenced model to the referencing model.
     """
+
     _reference_infos: List[ReferenceInfo] = []
     _models_key_id: Dict[str, Identifiable] = {}
     _top_level_models: Dict[str, List[str]] = {}
@@ -67,9 +69,10 @@ class DataModel(BaseModel):
                 else:
                     self.add(attribute_value)
 
-
     @classmethod
-    def from_models(cls, *models: Tuple[Identifiable], **data: Dict[str, Any]) -> DataModel:
+    def from_models(
+        cls, *models: Tuple[Identifiable], **data: Dict[str, Any]
+    ) -> DataModel:
         """
         Method to create a data model from a list of provided models.
 
@@ -123,14 +126,11 @@ class DataModel(BaseModel):
         Identifiable.model_validate(model)
         model_id = get_id_with_patch(model)
         if model_id in self.model_ids:
-            raise ValueError(
-                f"Model with id {model_id} already loaded."
-            )
+            raise ValueError(f"Model with id {model_id} already loaded.")
         all_identifiables, reference_infos = ReferenceFinder.find(model)
         self._add_contained_models(model, all_identifiables)
         self._add_top_level_model(model)
         self._add_references_to_referencing_models_dict(reference_infos)
-
 
     def check_different_model_with_same_id_contained(self, model: Identifiable) -> bool:
         """
@@ -253,7 +253,9 @@ class DataModel(BaseModel):
         """
         nested_dict = {}
         for attribute_name, attribute_value in self.get_top_level_models().items():
-            nested_dict[attribute_name] = [model.model_dump() for model in attribute_value]
+            nested_dict[attribute_name] = [
+                model.model_dump() for model in attribute_value
+            ]
         return nested_dict
 
     def json(self) -> str:
@@ -266,7 +268,9 @@ class DataModel(BaseModel):
         nested_dict = {}
         for attribute_name, attribute_value in self.get_top_level_models().items():
             # TODO: if a non-BaseModel object is loaded, this breakds down -> adjust this
-            nested_dict[attribute_name] = [model.model_dump() for model in attribute_value]
+            nested_dict[attribute_name] = [
+                model.model_dump() for model in attribute_value
+            ]
         return json.dumps(nested_dict, indent=4, cls=DateTimeEncoder)
 
     def get_top_level_models(self) -> Dict[str, List[Identifiable]]:
@@ -321,8 +325,10 @@ class DataModel(BaseModel):
             List[Identifiable]: The list of models.
         """
         return list(self._models_key_id.values())
-    
-    def get_referencing_info(self, referenced_model: Identifiable) -> List[ReferenceInfo]:
+
+    def get_referencing_info(
+        self, referenced_model: Identifiable
+    ) -> List[ReferenceInfo]:
         """
         Method to get all reference infos of a model.
 
@@ -335,9 +341,13 @@ class DataModel(BaseModel):
         referenced_model_id = get_id_with_patch(referenced_model)
         if not referenced_model_id in self._reference_info_dict_for_referenced:
             return []
-        return list(self._reference_info_dict_for_referenced[referenced_model_id].values())
+        return list(
+            self._reference_info_dict_for_referenced[referenced_model_id].values()
+        )
 
-    def get_referencing_models(self, referenced_model: Identifiable) -> List[Identifiable]:
+    def get_referencing_models(
+        self, referenced_model: Identifiable
+    ) -> List[Identifiable]:
         """
         Method to get all models that reference a specific model directly as an attribute or by its id.
 
@@ -379,8 +389,10 @@ class DataModel(BaseModel):
             for model_id in referencing_model_dict
             if isinstance(self.get_model(model_id), referencing_model_type)
         ]
-    
-    def get_referenced_info(self, referencing_model: Identifiable) -> List[ReferenceInfo]:
+
+    def get_referenced_info(
+        self, referencing_model: Identifiable
+    ) -> List[ReferenceInfo]:
         """
         Method to get all reference infos of a model.
 
@@ -393,9 +405,13 @@ class DataModel(BaseModel):
         referencing_model_id = get_id_with_patch(referencing_model)
         if not referencing_model_id in self._reference_info_dict_for_referencing:
             return []
-        return list(self._reference_info_dict_for_referencing[referencing_model_id].values())
-        
-    def get_referenced_models(self, referencing_model: Identifiable) -> List[Identifiable]:
+        return list(
+            self._reference_info_dict_for_referencing[referencing_model_id].values()
+        )
+
+    def get_referenced_models(
+        self, referencing_model: Identifiable
+    ) -> List[Identifiable]:
         """
         Method to get all models that are referenced by a specific model directly as an attribute or by its id.
 
@@ -412,7 +428,7 @@ class DataModel(BaseModel):
             referencing_model_id
         ]
         return [self.get_model(model_id) for model_id in referenced_model_dict]
-    
+
     def get_referenced_models_of_type(
         self, referencing_model: Identifiable, referenced_model_type: Type[T]
     ) -> List[T]:

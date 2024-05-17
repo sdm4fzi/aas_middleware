@@ -8,7 +8,9 @@ from pydantic import BaseModel, BeforeValidator, model_validator
 
 Identifier = TypeVar("Identifier", bound=str | int | UUID)
 Reference = TypeVar("Reference", bound=str | int | UUID)
-UnIdentifiable = str | int | float | bool | None | UUID | Enum | list | tuple | set | type
+UnIdentifiable = (
+    str | int | float | bool | None | UUID | Enum | list | tuple | set | type
+)
 
 
 def string_is_not_empty(v: str):
@@ -37,5 +39,6 @@ class Identifiable(BaseModel):
         potential_id = get_id(data)
         assert potential_id, "Either id or id_short must be set"
         return {"id": potential_id}
+
 
 from aas_middleware.model.util import get_id

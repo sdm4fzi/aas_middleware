@@ -7,7 +7,7 @@ from aas_middleware.model.util import (
     get_all_contained_identifiables,
     get_id_with_patch,
     get_referenced_ids_of_model,
-    get_identifiable_attributes_of_model
+    get_identifiable_attributes_of_model,
 )
 
 

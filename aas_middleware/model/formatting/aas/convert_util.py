@@ -205,9 +205,7 @@ def get_semantic_id(
 ) -> str | None:
     if model_object.semantic_id:
         semantic_id = model.ExternalReference(
-            key=(
-                model.Key(model.KeyTypes.GLOBAL_REFERENCE, model_object.semantic_id),
-            )
+            key=(model.Key(model.KeyTypes.GLOBAL_REFERENCE, model_object.semantic_id),)
         )
     else:
         semantic_id = None

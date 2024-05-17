@@ -88,11 +88,11 @@ class AAS(Identifiable):
             if field_name in ["id", "id_short", "description"]:
                 continue
             try:
-                Submodel.model_validate(
-                getattr(self, field_name)
-            )
+                Submodel.model_validate(getattr(self, field_name))
             except ValidationError:
-                assert False, f"All attributes of an AAS must be of type Submodel or inherit from Submodel"
+                assert (
+                    False
+                ), f"All attributes of an AAS must be of type Submodel or inherit from Submodel"
         return self
 
 

@@ -27,7 +27,9 @@ def test_minimal_example_with_AAS(example_aas: ProductAas):
     assert data_model.get_models_of_type(SubmodelBom) == [example_aas.example_submodel]
     assert data_model.get_referencing_models(example_aas.info) == [example_aas]
     assert data_model.get_referenced_models(example_aas.example_submodel) == []
-    assert data_model.get_referenced_models(example_aas.info) == [example_aas.info.product_version]
+    assert data_model.get_referenced_models(example_aas.info) == [
+        example_aas.info.product_version
+    ]
 
 
 def test_more_complex_example(
@@ -56,10 +58,21 @@ def test_more_complex_example(
     )
     assert data_model.get_model("product_aas") == example_aas
     assert data_model.get_model("product_info") == example_aas.info
-    assert data_model.get_model("example_basemodel_bom_with_id") == example_basemodel_bom_with_id
-    assert data_model.get_model("example_object_bom_with_id") == example_object_bom_with_id
-    assert data_model.get_model("example_basemodel_bom_with_identifier_attribute_id") == example_basemodel_bom_with_identifier_attribute
-    assert data_model.get_model("example_object_with_identifier_attribute_id") == example_object_with_identifier_attribute
+    assert (
+        data_model.get_model("example_basemodel_bom_with_id")
+        == example_basemodel_bom_with_id
+    )
+    assert (
+        data_model.get_model("example_object_bom_with_id") == example_object_bom_with_id
+    )
+    assert (
+        data_model.get_model("example_basemodel_bom_with_identifier_attribute_id")
+        == example_basemodel_bom_with_identifier_attribute
+    )
+    assert (
+        data_model.get_model("example_object_with_identifier_attribute_id")
+        == example_object_with_identifier_attribute
+    )
 
     assert len(data_model._models_key_id) == 19
     assert data_model.get_models_of_type_name("ProductAas") == [
@@ -80,10 +93,26 @@ def test_more_complex_example(
     assert data_model.get_referencing_models(example_aas) == []
     assert len(data_model.get_referencing_models(example_aas_comp1)) == 3
 
-    assert len(data_model.get_referenced_models(example_submodel_with_reference_components)) == 2
-    assert len(data_model.get_referenced_models(example_submodel_with_id_reference_components)) == 2
-    assert len(data_model.get_referenced_models(example_submodel_with_product_association)) == 2
-    
+    assert (
+        len(
+            data_model.get_referenced_models(example_submodel_with_reference_components)
+        )
+        == 2
+    )
+    assert (
+        len(
+            data_model.get_referenced_models(
+                example_submodel_with_id_reference_components
+            )
+        )
+        == 2
+    )
+    assert (
+        len(data_model.get_referenced_models(example_submodel_with_product_association))
+        == 2
+    )
+
+
 # TODO: add tests to rebuild data model with direct / indirect references / aas structure
 # TODO: also add tests for subclassing Dataclass and making mixed use as data model and basemodel
 # TODO: also add tests for adding / removing model instances from data model

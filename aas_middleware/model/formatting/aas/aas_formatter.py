@@ -9,8 +9,15 @@ from aas_middleware.model.formatting.aas.aas_model import BasyxModels
 from basyx.aas.model import DictObjectStore
 from basyx.aas import model
 
-from aas_middleware.model.formatting.aas.convert_aas import convert_aas_to_pydantic_model, convert_object_store_to_pydantic_models
-from aas_middleware.model.formatting.aas.convert_pydantic import convert_model_to_aas, convert_model_to_submodel, infere_aas_structure
+from aas_middleware.model.formatting.aas.convert_aas import (
+    convert_aas_to_pydantic_model,
+    convert_object_store_to_pydantic_models,
+)
+from aas_middleware.model.formatting.aas.convert_pydantic import (
+    convert_model_to_aas,
+    convert_model_to_submodel,
+    infere_aas_structure,
+)
 
 
 class AASFormatter:
@@ -43,7 +50,6 @@ class AASFormatter:
                 continue
             obj_store.add(submodel_to_add)
         return obj_store
-    
 
     def deserialize(self, data: BasyxModels) -> DataModel:
         """

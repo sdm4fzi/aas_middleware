@@ -6,7 +6,13 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-from aas_middleware.model.core import Identifiable, Identifier, Reference, UnIdentifiable
+from aas_middleware.model.core import (
+    Identifiable,
+    Identifier,
+    Reference,
+    UnIdentifiable,
+)
+
 
 def convert_camel_case_to_underscrore_str(came_case_string: str) -> str:
     """
@@ -124,7 +130,7 @@ def get_id(model: Any) -> str | int | UUID:
     for id_attribute in potential_id_attributes:
         if id_attribute in data and isinstance(data[id_attribute], str | int | UUID):
             return data[id_attribute]
-    
+
     raise ValueError(
         f"Model {model} has no attribute that can be used as id attribute."
     )
@@ -160,7 +166,9 @@ def is_identifiable_container(model: Any) -> bool:
     """
     if not isinstance(model, list | tuple | set | dict):
         return False
-    if isinstance(model, list | tuple | set) and not all(is_identifiable(element) for element in model):
+    if isinstance(model, list | tuple | set) and not all(
+        is_identifiable(element) for element in model
+    ):
         return False
     return True
 
@@ -175,7 +183,7 @@ def get_values_as_identifiable_list(value: Any) -> List[Optional[Identifiable]]:
 
 
 def get_identifiable_attributes_of_model(
-    potential_identifiable_container: Identifiable
+    potential_identifiable_container: Identifiable,
 ) -> List[Identifiable]:
     referable_values = []
     if not is_identifiable(potential_identifiable_container):
@@ -202,15 +210,14 @@ def add_non_redundant_identifiable(
     """
     # TODO: maybe use directly a dict here to avoid iteration by using hashable ids
     if not any(
-        get_id_with_patch(model) == get_id_with_patch(other_referable) for other_referable in identifiables
+        get_id_with_patch(model) == get_id_with_patch(other_referable)
+        for other_referable in identifiables
     ):
         identifiables.append(model)
     return identifiables
 
 
-def get_all_contained_identifiables(
-    model: Identifiable
-) -> List[Identifiable]:
+def get_all_contained_identifiables(model: Identifiable) -> List[Identifiable]:
     """
     Method to iterate over an Identifiable model and get all contained Identifiables.
 
@@ -223,7 +230,9 @@ def get_all_contained_identifiables(
     contained_identifiables = []
     identifiable_attributes = get_identifiable_attributes_of_model(model)
     for identifiable_attribute in identifiable_attributes:
-        in_attribute_contained_identifiables = get_all_contained_identifiables(identifiable_attribute)
+        in_attribute_contained_identifiables = get_all_contained_identifiables(
+            identifiable_attribute
+        )
         for identifiable in in_attribute_contained_identifiables:
             add_non_redundant_identifiable(identifiable, contained_identifiables)
     if is_identifiable_container(model):
@@ -255,6 +264,7 @@ def get_references_of_reference_type_for_basemodel(model: BaseModel) -> List[str
             references += getattr(model, field_name)
     return [str(ref) for ref in references if ref]
 
+
 def get_references_of_reference_type_for_object(model: object) -> List[str]:
     """
     Function to get the references of a model that are of type Reference.
@@ -273,6 +283,7 @@ def get_references_of_reference_type_for_object(model: object) -> List[str]:
         if param.annotation == List[Reference]:
             references += getattr(model, param.name)
     return [str(ref) for ref in references if ref]
+
 
 def get_referenced_ids_of_model(model: Identifiable) -> Set[str]:
     """
@@ -293,7 +304,19 @@ def get_referenced_ids_of_model(model: Identifiable) -> Set[str]:
     return set(referenced_ids)
 
 
-REFERENCE_ATTRIBUTE_NAMES_SUFFIXES = ["id", "ids", "Id", "Ids", "ID", "IDs", "Identifier", "Identifiers", "identity", "identities"]
+REFERENCE_ATTRIBUTE_NAMES_SUFFIXES = [
+    "id",
+    "ids",
+    "Id",
+    "Ids",
+    "ID",
+    "IDs",
+    "Identifier",
+    "Identifiers",
+    "identity",
+    "identities",
+]
+
 
 def get_attribute_name_encoded_references(model: Identifiable) -> List[str]:
     """
@@ -307,10 +330,14 @@ def get_attribute_name_encoded_references(model: Identifiable) -> List[str]:
     """
     referenced_ids = []
     for attribute_name, attribute_value in vars(model).items():
-        if attribute_name in STANDARD_AAS_FIELDS or attribute_name in REFERENCE_ATTRIBUTE_NAMES_SUFFIXES:
+        if (
+            attribute_name in STANDARD_AAS_FIELDS
+            or attribute_name in REFERENCE_ATTRIBUTE_NAMES_SUFFIXES
+        ):
             continue
         if not any(
-            attribute_name.endswith(suffix) for suffix in REFERENCE_ATTRIBUTE_NAMES_SUFFIXES
+            attribute_name.endswith(suffix)
+            for suffix in REFERENCE_ATTRIBUTE_NAMES_SUFFIXES
         ):
             continue
         if isinstance(attribute_value, str | int | UUID):
@@ -344,6 +371,7 @@ def replace_attribute_with_model(model: Identifiable, existing_model: Identifiab
 
 STANDARD_AAS_FIELDS = {"id", "description", "id_short", "semantic_id"}
 
+
 def get_value_attributes(obj: object) -> Dict[str, Any]:
     """
     Function to get an dict of all attributes of an object without the private attributes and standard AAS attributes.
@@ -356,7 +384,7 @@ def get_value_attributes(obj: object) -> Dict[str, Any]:
     """
     vars_dict = {}
     object_id = get_id_with_patch(obj)
-    
+
     for attribute_name, attribute_value in vars(obj).items():
         if attribute_name.startswith("_"):
             continue
@@ -387,7 +415,9 @@ def models_are_equal(model1: Identifiable, model2: Identifiable) -> bool:
         return False
     for attribute_name1, attribute_value1 in model1_attributes.items():
         if is_identifiable(attribute_value1):
-            if not models_are_equal(attribute_value1, model2_attributes[attribute_name1]):
+            if not models_are_equal(
+                attribute_value1, model2_attributes[attribute_name1]
+            ):
                 return False
         elif is_identifiable_container(attribute_value1):
             if not is_identifiable_container(model2_attributes[attribute_name1]):
@@ -396,7 +426,9 @@ def models_are_equal(model1: Identifiable, model2: Identifiable) -> bool:
                 return False
             if not all(
                 models_are_equal(item1, item2)
-                for item1, item2 in zip(attribute_value1, model2_attributes[attribute_name1])
+                for item1, item2 in zip(
+                    attribute_value1, model2_attributes[attribute_name1]
+                )
             ):
                 return False
         elif attribute_value1 != model2_attributes[attribute_name1]:
