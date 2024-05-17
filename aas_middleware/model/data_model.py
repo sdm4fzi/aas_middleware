@@ -4,7 +4,7 @@ import json
 from typing import Dict, List, Literal, Set, Tuple, TypeVar, Union, Any, Type
 from datetime import datetime
 
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, Field, ValidationError
 
 from aas_middleware.model.core import Identifiable
 
@@ -46,6 +46,7 @@ class DataModel(BaseModel):
         _reference_info_dict_for_referencing (Dict[str, Dict[str, ReferenceInfo]]): The dictionary of reference infos with keys from the referencing model to the referenced model.
         _reference_info_dict_for_referenced (Dict[str, Dict[str, ReferenceInfo]]): The dictionary of reference infos with keys from the referenced model to the referencing model.
     """
+    _reference_infos: List[ReferenceInfo] = []
     _models_key_id: Dict[str, Identifiable] = {}
     _top_level_models: Dict[str, List[str]] = {}
     _models_key_type: Dict[str, List[str]] = {}
@@ -91,7 +92,7 @@ class DataModel(BaseModel):
         Returns:
             Set[str]: The set of ids.
         """
-        return self._models_key_id.keys()
+        return set(str(key) for key in self._models_key_id.keys())
 
     def get_contained_ids(self) -> Set[str]:
         """
@@ -179,6 +180,8 @@ class DataModel(BaseModel):
         Args:
             model (Identifiable): The model to add the information for.
         """
+        # TODO: make sure that the reference_infos are unique -> set and frozen -> update when the attribute is adjusted by replace_attribute_with_model
+        self._reference_infos += reference_infos
         for reference_info in reference_infos:
             referencing_model_id = reference_info.identifiable_id
             referenced_model_id = reference_info.reference_id

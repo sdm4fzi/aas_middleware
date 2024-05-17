@@ -1,0 +1,17 @@
+version: "3.9"
+services:
+  aas-env:
+    image: eclipsebasyx/aas-environment:2.0.0-milestone-02
+    ports:
+        - 8081:8081
+        
+  aas-registry:
+    image: eclipsebasyx/aas-registry-log-mem:2.0.0-milestone-02
+    ports:
+      - 8082:8080
+    volumes:
+      - ./aas-registry.yml:/workspace/config/application.yml
+
+networks:
+  backend:
+    driver: bridge
