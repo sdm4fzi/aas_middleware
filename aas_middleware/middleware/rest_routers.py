@@ -23,6 +23,8 @@ from aas2openapi.util.convert_util import (
     get_all_submodels_from_model,
     convert_camel_case_to_underscrore_str,
 )
+from aas_middleware.model.data_model import DataModel
+from aas_middleware.model.data_model_rebuilder import DataModelRebuilder
 
 
 def is_optional_field(field: ModelField):
@@ -225,5 +227,23 @@ def generate_endpoints_from_model(pydantic_model: Type[BaseModel]) -> List[APIRo
     submodels = get_all_submodels_from_model(pydantic_model)
     for submodel in submodels:
         routers.append(generate_submodel_endpoints_from_model(pydantic_model, submodel))
+
+    return routers
+
+def generate_endpoints_from_data_model(data_model: DataModel) -> List[APIRouter]:
+    """
+    Generates CRUD endpoints for a pydantic model representing an aas and its submodels.
+
+    Args:
+        pydantic_model (Type[BaseModel]): Pydantic model representing an aas with submodels.
+
+    Returns:
+        List[APIRouter]: List of FastAPI routers with CRUD endpoints for the given pydantic model and its submodels that perform Middleware syxnchronization.
+    """
+    rebuild_data_model = DataModelRebuilder(data_model=data_model).rebuild_data_model_for_AAS_structure()
+    routers = []
+
+    for top_level_model_type in rebuild_data_model.get_top_level_types():
+        routers += generate_endpoints_from_model(top_level_model_type)
 
     return routers

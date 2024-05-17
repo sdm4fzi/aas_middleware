@@ -86,6 +86,21 @@ class DataModel(BaseModel):
         data_model = cls(**data)
         data_model.add(*models)
         return data_model
+    
+    @classmethod
+    def from_model_types(cls, *model_types: Tuple[Type[Identifiable]], **data: Dict[str, Any]) -> DataModel:
+        """
+        Method to create a data model a provided list of model types.
+
+        Args:
+            model_types (Tuple[Type[Identifiable]]): The model types to load into the data model.
+            data (Dict[str, Any]): The data to load into the data model.
+
+        Returns:
+            DataModel: The data model with loaded models
+        """
+        # TODO: implement function to generate data model from types alone!
+        raise NotImplementedError
 
     @property
     def model_ids(self) -> Set[str]:
@@ -286,6 +301,18 @@ class DataModel(BaseModel):
                 self.get_model(model_id) for model_id in top_level_model_ids
             ]
         return top_level_models
+    
+    def get_top_level_types(self) -> List[Type[Identifiable]]:
+        """
+        Method to get all types of the top level models in the data model.
+
+        Returns:
+            List[Type[Identifiable]]: The types of the top level models in the data model
+        """
+        # TODO: implement function and change structure in DataModel that it can be instantiated also with types
+        # TODO: also add the possibility to specify a name of data model
+        # TODO: add the possibility that a DataModel is frozen -> no types can be added or removed.
+        raise NotImplementedError
 
     def get_models_of_type_name(self, model_type_name: str) -> List[Identifiable]:
         """

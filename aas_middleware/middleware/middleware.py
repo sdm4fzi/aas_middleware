@@ -14,8 +14,13 @@ import aas_middleware
 # from aas_middleware.middleware.rest_routers import generate_endpoints_from_model
 # from aas_middleware.middleware.model_registry_api import generate_model_api
 # from aas_middleware.util.convert_util import set_example_values, get_pydantic_model_from_dict, get_pydantic_models_from_instances
+from aas_middleware.middleware.model_registry_api import generate_model_api
+from aas_middleware.middleware.rest_routers import generate_endpoints_from_data_model
 from aas_middleware.middleware.workflow_router import generate_workflow_endpoint
 from aas_middleware.connect.workflows.workflow import Workflow
+from aas_middleware.model.data_model import DataModel
+from aas_middleware.model.data_model_rebuilder import DataModelRebuilder
+from aas_middleware.model.formatting.aas.aas_formatter import AASFormatter
 
 
 class Middleware:
@@ -24,9 +29,10 @@ class Middleware:
     """
 
     def __init__(self):
-        self.models: typing.List[typing.Type[BaseModel]] = []
+        # TODO: adjust that the types in the middleware are DataModels.
+        self.data_models: typing.Dict[str, DataModel] = {}
+        
         self._app: typing.Optional[FastAPI] = None
-
         self._workflows: typing.List[Workflow] = []
 
     async def start_up(self):
@@ -84,53 +90,62 @@ class Middleware:
 
             @app.get("/", response_model=str)
             async def root():
-                return "Welcome to aas2openapi Middleware!"
+                return "Welcome to aas-middleware!"
 
         return self._app
+    
+    def load_data_model(self, name: str, data_model: DataModel):
+        """
+        Function to load a data model into the middleware to be used for synchronization.
+
+        Args:
+            name (str): The name of the data model.
+            data_model (DataModel): Data model containing the types and values.
+        """
+        self.data_models[name] = data_model
 
     def load_json_models(
         self,
-        json_models: dict = None,
-        file_path: str = None,
+        json_models: typing.Dict[str, typing.Any] = None,
         all_fields_required: bool = False,
     ):
         """
-        Functions that loads aas' and submodels from a json file into the middleware that can be used for synchronization.
+        Functions that loads models from a json dict into the middleware that can be used for synchronization.
 
-        The function can either be used with a dict that contains the aas' and submodels or with a json file path, so the function reads the file.
+        The function can either be used with a dict that contains the objects.
 
         Args:
             json_models (dict): Dictionary of aas' and submodels.
-            file_path (str): Path to the json file.
         """
-        if not json_models and not file_path:
+        if not json_models:
             raise ValueError("Either json_models or file_path must be specified.")
-        if not json_models and file_path:
-            with open(file_path) as json_file:
-                json_models = json.load(json_file)
-        for model_name, model_values in json_models.items():
-            pydantic_model = get_pydantic_model_from_dict(
-                model_values, model_name, all_fields_required
-            )
-            self.models.append(pydantic_model)
+        # TODO: use here the function to load a DataModel from a dict
+        # for model_name, model_values in json_models.items():
+        #     pydantic_model = get_pydantic_model_from_dict(
+        #         model_values, model_name, all_fields_required
+        #     )
+        #     self.models.append(pydantic_model)
 
-    def load_pydantic_model_instances(self, instances: typing.List[BaseModel]):
+    def load_model_instances(self, name: str, instances: typing.List[BaseModel]):
         """
-        Functions that loads pydantic models into the middleware that can be used for synchronization.
+        Functions that loads pydantic models into the middleware as a datamodel that can be used for synchronization.
 
         Args:
+            name (str): The name of the data model.
             instances (typing.List[BaseModel]): List of pydantic model instances.
         """
-        self.models = get_pydantic_models_from_instances(instances)
+        data_model = DataModel.from_models(*instances)
+        self.load_data_model(name, data_model)
 
-    def load_pydantic_models(self, models: typing.List[typing.Type[BaseModel]]):
+    def load_pydantic_models(self, name: str, models: typing.List[typing.Type[BaseModel]]):
         """
         Functions that loads pydantic models into the middleware that can be used for synchronization.
 
         Args:
             models (typing.List[typing.Type[BaseModel]]): List of pydantic models.
         """
-        self.models = models
+        data_model = DataModel.from_model_types(models)
+        self.load_data_model(data_model)
 
     def load_aas_objectstore(self, models: model.DictObjectStore):
         """
@@ -139,8 +154,9 @@ class Middleware:
         Args:
             models (typing.List[model.DictObjectStore]): Object store of aas' and submodels
         """
-        instances = aas2openapi.convert_object_store_to_pydantic_models(models)
-        self.models = get_pydantic_models_from_instances(instances)
+        data_model = AASFormatter().deserialize(models)
+        self.load_data_model(data_model)
+
 
     def generate_model_registry_api(self):
         """
@@ -160,8 +176,9 @@ class Middleware:
         """
         Generates a REST API with CRUD operations for aas' and submodels from the loaded models.
         """
-        for model in self.models:
-            routers = generate_endpoints_from_model(model)
+        for data_model in self.data_models:
+            # TODO: the name of the data model should be used. Also an AAS Connector is required here for connecting to the correct data source / sink
+            routers = generate_endpoints_from_data_model(data_model)
             for router in routers:
                 self.app.include_router(router)
 
