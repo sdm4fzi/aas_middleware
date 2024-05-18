@@ -30,3 +30,4 @@ A DataModel inherits from pydantic BaseModel and can therefore be used like a py
 An edge can thereby be a direct relation between two objects (composition) or an indirect relation (by referencing the id of another object). The graph structure allows to easily access objects and their relating objects. 
 
 The DataModel allows to retrieve objects either with original relations (direct and indirect), or with resolved relations (purely direct or puerly indirect). Resolving relations means that the objects that are referenced by an id are retrieved and added to the object (or vice versa). This allows to easily access all related objects of an object.
+
