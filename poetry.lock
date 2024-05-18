@@ -174,6 +174,38 @@ tests-mypy = ["mypy (>=1.6)", "pytest-mypy-plugins"]
 tests-no-zope = ["attrs[tests-mypy]", "cloudpickle", "hypothesis", "pympler", "pytest (>=4.3.0)", "pytest-xdist[psutil]"]
 
 [[package]]
+name = "ba-syx-aas-repository-client"
+version = "2.0"
+description = "A client library for accessing BaSyx AAS Repository"
+optional = false
+python-versions = ">=3.8,<4.0"
+files = [
+    {file = "ba_syx_aas_repository_client-2.0-py3-none-any.whl", hash = "sha256:82ddc0cfae51c31c8409f7a0643ebc91e421b69ae847b2f4dc87048825f8c46c"},
+    {file = "ba_syx_aas_repository_client-2.0.tar.gz", hash = "sha256:f9815f727d0d05f3044155848d657bdaa16c43b1913938d1636048d3c2fc26f8"},
+]
+
+[package.dependencies]
+attrs = ">=21.3.0"
+httpx = ">=0.15.4,<0.25.0"
+python-dateutil = ">=2.8.0,<3.0.0"
+
+[[package]]
+name = "ba-syx-submodel-repository-client"
+version = "3.0"
+description = "A client library for accessing BaSyx Submodel Repository"
+optional = false
+python-versions = ">=3.8,<4.0"
+files = [
+    {file = "ba_syx_submodel_repository_client-3.0-py3-none-any.whl", hash = "sha256:88426c5f390a819d83d2a0f9eecc640714bfe15bec1f3aef9c93b0ea6009dda4"},
+    {file = "ba_syx_submodel_repository_client-3.0.tar.gz", hash = "sha256:2724cd2a024b7d84b16d45bc631e7a3977622055922cb6a91c553b87bd19b8dc"},
+]
+
+[package.dependencies]
+attrs = ">=21.3.0"
+httpx = ">=0.15.4,<0.25.0"
+python-dateutil = ">=2.8.0,<3.0.0"
+
+[[package]]
 name = "basyx-python-sdk"
 version = "1.0.0"
 description = "The Eclipse BaSyx Python SDK, an implementation of the Asset Administration Shell for Industry 4.0 systems"
@@ -507,24 +539,24 @@ files = [
 
 [[package]]
 name = "httpcore"
-version = "1.0.5"
+version = "0.17.3"
 description = "A minimal low-level HTTP client."
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.7"
 files = [
-    {file = "httpcore-1.0.5-py3-none-any.whl", hash = "sha256:421f18bac248b25d310f3cacd198d55b8e6125c107797b609ff9b7a6ba7991b5"},
-    {file = "httpcore-1.0.5.tar.gz", hash = "sha256:34a38e2f9291467ee3b44e89dd52615370e152954ba21721378a87b2960f7a61"},
+    {file = "httpcore-0.17.3-py3-none-any.whl", hash = "sha256:c2789b767ddddfa2a5782e3199b2b7f6894540b17b16ec26b2c4d8e103510b87"},
+    {file = "httpcore-0.17.3.tar.gz", hash = "sha256:a6f30213335e34c1ade7be6ec7c47f19f50c56db36abef1a9dfa3815b1cb3888"},
 ]
 
 [package.dependencies]
+anyio = ">=3.0,<5.0"
 certifi = "*"
 h11 = ">=0.13,<0.15"
+sniffio = "==1.*"
 
 [package.extras]
-asyncio = ["anyio (>=4.0,<5.0)"]
 http2 = ["h2 (>=3,<5)"]
 socks = ["socksio (==1.*)"]
-trio = ["trio (>=0.22.0,<0.26.0)"]
 
 [[package]]
 name = "httptools"
@@ -576,19 +608,18 @@ test = ["Cython (>=0.29.24,<0.30.0)"]
 
 [[package]]
 name = "httpx"
-version = "0.27.0"
+version = "0.24.1"
 description = "The next generation HTTP client."
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.7"
 files = [
-    {file = "httpx-0.27.0-py3-none-any.whl", hash = "sha256:71d5465162c13681bff01ad59b2cc68dd838ea1f10e51574bac27103f00c91a5"},
-    {file = "httpx-0.27.0.tar.gz", hash = "sha256:a0cb88a46f32dc874e04ee956e4c2764aba2aa228f650b06788ba6bda2962ab5"},
+    {file = "httpx-0.24.1-py3-none-any.whl", hash = "sha256:06781eb9ac53cde990577af654bd990a4949de37a28bdb4a230d434f3a30b9bd"},
+    {file = "httpx-0.24.1.tar.gz", hash = "sha256:5853a43053df830c20f8110c5e69fe44d035d850b2dfe795e196f00fdb774bdd"},
 ]
 
 [package.dependencies]
-anyio = "*"
 certifi = "*"
-httpcore = "==1.*"
+httpcore = ">=0.15.0,<0.18.0"
 idna = "*"
 sniffio = "*"
 
@@ -1906,4 +1937,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "jaraco.test", "more
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "1fed84abed23dce7c248ce2cc3c48441cb745b405e9b1af7fb256e54027b228a"
+content-hash = "bb108e44de2c39339257ba42d9b59911313f8ffe3b538aa75d66b8df1e2d075e"

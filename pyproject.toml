@@ -17,6 +17,10 @@ aiohttp = "^3.9.5"
 importlib-metadata = "^7.1.0"
 
 
+[tool.poetry.group.temp.dependencies]
+ba-syx-submodel-repository-client = "^3.0"
+ba-syx-aas-repository-client = "^2.0"
+
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.2.0"
 black = "^24.4.2"
