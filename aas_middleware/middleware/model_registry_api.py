@@ -3,12 +3,12 @@ from typing import TYPE_CHECKING, List
 import json
 
 if TYPE_CHECKING:
-    from aas2openapi.middleware.middleware import Middleware
+    from aas_middleware.middleware.middleware import Middleware
 
 from fastapi import APIRouter, HTTPException, FastAPI
 from fastapi.openapi.utils import get_openapi
 
-from aas2openapi.middleware.rest_routers import generate_endpoints_from_model
+from aas_middleware.middleware.rest_routers import generate_endpoints_from_model
 
 
 from typing import Dict

@@ -1,21 +1,40 @@
-from typing import Type, TypeVar, Generic
-
-from aas_middleware.core import Connector
+from typing import Protocol, Type, TypeVar, Generic
+from aas_middleware.connect.connectors.connector import Connector
 from aas_middleware.model import core
 
-C = TypeVar("C", bound=Connector)
 D = TypeVar("D", bound=core.Identifiable)
 
+class Consumer(Protocol, Generic[D]):
+    @property
+    def item_id(self) -> str:
+        ...
 
-class Consumer(Generic[C, D]):
-    def __init__(self, connector: C, data_model: Type[D]) -> None:
+    def set_model(self, model: Type[D]):
+        ...
+
+    def get_model(self) -> Type[D]:
+        ...
+
+    async def execute(self, data: D):
+        ...
+
+
+
+class ConnectorConsumer(Generic[D]):
+    def __init__(self, connector: Connector, data_model: Type[D], id: str) -> None:
         self.connector = connector
         self.data_model = data_model
+        self.id = id
+        # TODO: connect connector
 
-    async def set_connector(self, connector: C):
+    @property
+    def id(self) -> str:
+        return self.id
+
+    async def set_connector(self, connector: Connector):
         self.connector = connector
 
-    async def get_connector(self) -> C:
+    async def get_connector(self) -> Connector:
         return self.connector
 
     async def set_model(self, model: Type[D]):
@@ -25,7 +44,6 @@ class Consumer(Generic[C, D]):
         return self.data_model
 
     async def execute(self, data: D):
-        # TODO: make validation of data
-        body = data.json()
+        self.data_model.model_validate(data)
+        body = data.model_dump_json()
         respone = await self.connector.send(body)
-        print(respone)

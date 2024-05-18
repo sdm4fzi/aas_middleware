@@ -14,7 +14,7 @@ print(VERSION)
 
 
 from aas_middleware.connect.connectors.http_request_connector import HttpRequestConnector
-from aas_middleware.connect.providers.base_provider import ConnectorProvider
+from aas_middleware.connect.providers.provider import Provider
 from aas_middleware.connect.consumers.consumers import Consumer
 
 class ProductionResource(BaseModel):
@@ -37,7 +37,7 @@ prodsys_consumer = Consumer(
     data_model=ProductionResource
 )
 
-mes_provider = ConnectorProvider(
+mes_provider = Provider(
     connector=workstation_connector,
     data_model=WorkStation
 )
@@ -52,7 +52,7 @@ def mes_prodsys_mapper(mes_data: WorkStation):
     )
 
 @middleware.workflow(mes_provider=mes_provider, prodsys_consumer=prodsys_consumer)
-async def mes_prodsys_workflow(mes_provider: ConnectorProvider, prodsys_consumer: Consumer):
+async def mes_prodsys_workflow(mes_provider: Provider, prodsys_consumer: Consumer):
     mes_data = await mes_provider.execute()
     prodsys_data = mes_prodsys_mapper(mes_data)
     print(prodsys_data.json())
