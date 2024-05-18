@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 from fastapi import APIRouter, HTTPException, FastAPI
 from fastapi.openapi.utils import get_openapi
 
-from aas_middleware.middleware.rest_routers import generate_endpoints_from_model
+from aas_middleware.middleware.rest_routers import RestRouter
 
 
 from typing import Dict
@@ -69,7 +69,8 @@ def register_model_from_middleware(
     middleware_instance.load_json_models(
         json_models={model_name: model}, all_fields_required=True
     )
-    routers = generate_endpoints_from_model(middleware_instance.models[-1])
+    rest_router = RestRouter(middleware_instance.models[-1], middleware_instance)
+    routers = rest_router.generate_endpoints()
     for router in routers:
         middleware_instance.app.include_router(router)
     update_openapi(middleware_instance.app)

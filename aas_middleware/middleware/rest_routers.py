@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 def check_if_submodel_is_optional_in_aas(
     aas: Type[AAS], submodel: Type[Submodel]
-) -> bool:
+    ) -> bool:
     """
     Checks if a submodel is an optional attribute in an aas.
 
@@ -31,7 +31,7 @@ def check_if_submodel_is_optional_in_aas(
     Returns:
         bool: True if the submodel is an optional attribute in the aas, False otherwise.
     """
-    for field_name, field_info in aas.model_fields.items():
+    for field_info in aas.model_fields.values():
         if field_info.annotation == submodel:
             if field_info.is_required():
                 return False
@@ -42,172 +42,164 @@ def check_if_submodel_is_optional_in_aas(
     )
 
 
-def generate_submodel_endpoints_from_model(
-    # TODO: inject here the middleware to access the persistence providers and consumers to retrieve the data from the objects by using BasyxConnectors
-    pydantic_model: Type[AAS], submodel: Type[Submodel],
-    providers: List[Provider[Submodel]], consumers: List[Consumer[Submodel]]
-) -> APIRouter:
-    """
-    Generates CRUD endpoints for a submodel of a pydantic model representing an aas.
+class RestRouter:
+    def __init__(self, data_model: DataModel, data_model_name: str, middleware: Middleware):
+        self.data_model = data_model
+        self.data_model_name = data_model_name
+        self.aas_data_model = DataModelRebuilder(data_model=data_model).rebuild_data_model_for_AAS_structure()
 
-    Args:
-        pydantic_model (Type[BaseModel]): Pydantic model representing the aas of the submodel.
-        submodel (Type[base.Submodel]): Pydantic model representing the submodel.
+        self.middleware = middleware
 
-    Returns:
-        APIRouter: FastAPI router with CRUD endpoints for the given submodel that performs Middleware syxnchronization.
-    """
-    model_name = pydantic_model.__name__
-    submodel_name = submodel.__name__
-    optional_submodel = check_if_submodel_is_optional_in_aas(pydantic_model, submodel)
-    router = APIRouter(
-        prefix=f"/{model_name}/{{item_id}}/{submodel_name}",
-        tags=[model_name],
-        responses={404: {"description": "Not found"}},
-    )
+    def get_provider(self, item_id: str) -> Provider[AAS | Submodel]:
+        return self.middleware.get_persistence_provider(self.data_model_name, item_id)
+    
+    def get_consumer(self, item_id: str) -> Consumer[AAS | Submodel]:
+        return self.middleware.get_persistence_consumer(self.data_model_name, item_id)
+    
+    def generate_submodel_endpoints_from_model(
+            self,
+        aas_model_type: Type[AAS], submodel_model_type: Type[Submodel],
+    ) -> APIRouter:
+        """
+        Generates CRUD endpoints for a submodel of a pydantic model representing an aas.
 
-    @router.get(
-        "/",
-        response_model=submodel,
-    )
-    async def get_item(item_id: str):
-        # TODO: use hash tables in a class RestRouter to realize this behavior
-        for provider in providers:
-            if provider.item_id == item_id:
-                return await provider.execute()
+        Args:
+            aas_model_type (Type[BaseModel]): Pydantic model representing the aas of the submodel.
+            submodel_model_type (Type[base.Submodel]): Pydantic model representing the submodel.
 
-    if optional_submodel:
+        Returns:
+            APIRouter: FastAPI router with CRUD endpoints for the given submodel that performs Middleware syxnchronization.
+        """
+        model_name = aas_model_type.__name__
+        submodel_name = submodel_model_type.__name__
+        optional_submodel = check_if_submodel_is_optional_in_aas(aas_model_type, submodel_model_type)
+        # TODO: the data model name should be used for creating the endpoint
+        router = APIRouter(
+            prefix=f"/{model_name}/{{item_id}}/{submodel_name}",
+            tags=[model_name],
+            responses={404: {"description": "Not found"}},
+        )
 
-        @router.post("/")
-        async def post_item(item_id: str, item: submodel) -> Dict[str, str]:
-            for consumer in consumers:
-                if consumer.item_id == item.id:
-                    await consumer.execute(item)
-                    return {
-                        "message": f"Succesfully created submodel {submodel_name} of aas with id {item_id}"
-                    }
+        @router.get(
+            "/",
+            response_model=submodel_model_type,
+        )
+        async def get_item(item_id: str):
+            # TODO: item_id represents the aas_id of the submodel -> execute provider of aas and retrieve only submodel field from it.
+            return await self.get_provider(item_id).execute()
 
-    @router.put("/")
-    async def put_item(item_id: str, item: submodel) -> Dict[str, str]:
-        for consumer in consumers:
-                if consumer.item_id == item_id:
-                    # TODO: also update the item_id in the consumer if the new item has another id.
-                    await consumer.execute(item)
-                    return {
-                        "message": f"Succesfully updated submodel {submodel_name} of aas with id {item_id}"
-                    }
+        if optional_submodel:
 
-    if optional_submodel:
+            @router.post("/")
+            async def post_item(item_id: str, item: submodel_model_type) -> Dict[str, str]:
+                await self.get_consumer(item.id).execute(item)
+                # TODO: also update the submodel in the aas containing the submodel
+                return {
+                    "message": f"Succesfully created submodel {submodel_name} of aas with id {item_id}"
+                }
 
-        @router.delete("/")
+        @router.put("/")
+        async def put_item(item_id: str, item: submodel_model_type) -> Dict[str, str]:
+            await self.get_consumer(item_id).execute(item)
+            # TODO: also update the submodel in the aas containing the submodel
+            # TODO: also update the item_id in the consumer if the new item has another id.
+            return {
+                "message": f"Succesfully updated submodel {submodel_name} of aas with id {item_id}"
+            }
+
+        if optional_submodel:
+
+            @router.delete("/")
+            async def delete_item(item_id: str):
+                # TODO: add functionality that an empty execute bdoy is a delete
+                await self.get_consumer(item_id).execute()
+                # TODO: also update the submodel in the aas containing the submodel
+                return {
+                    "message": f"Succesfully deleted submodel {submodel_name} of aas with id {item_id}"
+                }
+
+        return router
+
+
+    def generate_aas_endpoints_from_model(self, aas_model_type: Type[AAS]) -> APIRouter:
+        """
+        Generates CRUD endpoints for a pydantic model representing an aas.
+
+        Args:
+            aas_model_type (Type[AAS]): Pydantic model representing an aas
+
+        Returns:
+            APIRouter: FastAPI router with CRUD endpoints for the given pydantic model that performs Middleware syxnchronization.
+        """
+        router = APIRouter(
+            prefix=f"/{aas_model_type.__name__}",
+            tags=[aas_model_type.__name__],
+            responses={404: {"description": "Not found"}},
+        )
+
+        @router.get("/", response_model=List[aas_model_type])
+        async def get_items():
+            aas_list = []
+            all_model_ids = [model.id for model in self.data_model.get_models_of_type(aas_model_type)]
+            for model_id in all_model_ids:
+                retrieved_aas = await self.get_provider(model_id).execute()
+                aas_list.append(retrieved_aas)
+            return aas_list
+
+        @router.post(f"/")
+        async def post_item(item: aas_model_type) -> Dict[str, str]:
+            await self.get_consumer(item.id).execute(item)
+            return {
+                "message": f"Succesfully created aas {aas_model_type.__name__} with id {item.id}"
+            }
+
+        @router.get("/{item_id}", response_model=aas_model_type)
+        async def get_item(item_id: str):
+            return await self.get_provider(item_id).execute()
+
+        @router.put("/{item_id}")
+        async def put_item(item_id: str, item: aas_model_type) -> Dict[str, str]:
+            await self.get_consumer(item_id).execute(item)
+            # TODO: also update the item_id in the consumer if the new item has another id.
+            return {"message": f"Succesfully updated aas with id {item.id}"}
+
+        @router.delete("/{item_id}")
         async def delete_item(item_id: str):
-            for consumer in consumers:
-                if consumer.item_id == item_id:
-                    # TODO: implement logic in consumers, that if nothing is send, a delete method is performed.
-                    await consumer.execute()
-                    return {
-                        "message": f"Succesfully deleted submodel {submodel_name} of aas with id {item_id}"
-                    }
+            await self.get_consumer(item_id).execute()
+            # TODO: implement logic in consumers, that if nothing is send, a delete method is performed.
+            return {"message": f"Succesfully deleted aas with id {item_id}"}
 
-    return router
+        return router
 
+    
+    
+    def generate_endpoints_from_model(self, pydantic_model: Type[BaseModel], middleware: Middleware) -> List[APIRouter]:
+        """
+        Generates CRUD endpoints for a pydantic model representing an aas and its submodels.
 
-def generate_aas_endpoints_from_model(pydantic_model: Type[AAS], providers: List[Provider[AAS]], consumers: List[Consumer[AAS]]) -> APIRouter:
-    """
-    Generates CRUD endpoints for a pydantic model representing an aas.
+        Args:
+            pydantic_model (Type[BaseModel]): Pydantic model representing an aas with submodels.
 
-    Args:
-        pydantic_model (Type[BaseModel]): Pydantic model representing an aas
+        Returns:
+            List[APIRouter]: List of FastAPI routers with CRUD endpoints for the given pydantic model and its submodels that perform Middleware syxnchronization.
+        """
+        routers = []
+        routers.append(self.generate_aas_endpoints_from_model(pydantic_model))
+        submodels = get_all_submodels_from_model(pydantic_model)
+        for submodel in submodels:
+            routers.append(self.generate_submodel_endpoints_from_model(pydantic_model, submodel))
+        return routers
+    
 
-    Returns:
-        APIRouter: FastAPI router with CRUD endpoints for the given pydantic model that performs Middleware syxnchronization.
-    """
-    router = APIRouter(
-        prefix=f"/{pydantic_model.__name__}",
-        tags=[pydantic_model.__name__],
-        responses={404: {"description": "Not found"}},
-    )
+    def generate_endpoints(self) -> List[APIRouter]:
+        """
+        Generates CRUD endpoints for a pydantic model representing an aas and its submodels.
 
-    @router.get("/", response_model=List[pydantic_model])
-    async def get_items():
-        aas_list = []
-        for provider in providers:
-            retrieved_aas = await provider.execute()
-            aas_list.append(retrieved_aas)
-        return aas_list
+        Returns:
+            List[APIRouter]: List of FastAPI routers with CRUD endpoints for the given pydantic model and its submodels that perform Middleware syxnchronization.
+        """
+        routers = []
 
-    @router.post(f"/")
-    async def post_item(item: pydantic_model) -> Dict[str, str]:
-        for consumer in consumers:
-                if consumer.item_id == item.id:
-                    await consumer.execute(item)
-                    return {
-                        "message": f"Succesfully created aas {pydantic_model.__name__} with id {item.id}"
-                    }
-
-    @router.get("/{item_id}", response_model=pydantic_model)
-    async def get_item(item_id: str):
-        for provider in providers:
-            if provider.item_id == item_id:
-                return await provider.execute()
-
-    @router.put("/{item_id}")
-    async def put_item(item_id: str, item: pydantic_model) -> Dict[str, str]:
-        for consumer in consumers:
-                # TODO: also update the item_id in the consumer if the new item has another id.
-                if consumer.item_id == item.id:
-                    await consumer.execute(item)
-                    return {"message": f"Succesfully updated aas with id {item.id}"}
-
-    @router.delete("/{item_id}")
-    async def delete_item(item_id: str):
-        for consumer in consumers:
-            if consumer.item_id == item_id:
-                # TODO: implement logic in consumers, that if nothing is send, a delete method is performed.
-                await consumer.execute()
-                return {"message": f"Succesfully deleted aas with id {item_id}"}
-
-    return router
-
-
-def generate_endpoints_from_model(pydantic_model: Type[BaseModel], middleware: Middleware) -> List[APIRouter]:
-    """
-    Generates CRUD endpoints for a pydantic model representing an aas and its submodels.
-
-    Args:
-        pydantic_model (Type[BaseModel]): Pydantic model representing an aas with submodels.
-
-    Returns:
-        List[APIRouter]: List of FastAPI routers with CRUD endpoints for the given pydantic model and its submodels that perform Middleware syxnchronization.
-    """
-    routers = []
-    # instead of injecting the middleware here -> create a rest router class that
-    # retrieves from the middleware these objects
-    providers = middleware.get_persistence_providers_for_type(pydantic_model)
-    consumers = middleware.get_persistence_consumers_for_type(pydantic_model)
-    routers.append(generate_aas_endpoints_from_model(pydantic_model, providers, consumers))
-    submodels = get_all_submodels_from_model(pydantic_model)
-    for submodel in submodels:
-        providers = middleware.get_persistence_providers_for_type(submodel)
-        consumers = middleware.get_persistence_consumers_for_type(submodel)
-        routers.append(generate_submodel_endpoints_from_model(pydantic_model, submodel, providers, consumers))
-
-    return routers
-
-def generate_endpoints_from_data_model(data_model: DataModel, middleware: Middleware) -> List[APIRouter]:
-    """
-    Generates CRUD endpoints for a pydantic model representing an aas and its submodels.
-
-    Args:
-        pydantic_model (Type[BaseModel]): Pydantic model representing an aas with submodels.
-
-    Returns:
-        List[APIRouter]: List of FastAPI routers with CRUD endpoints for the given pydantic model and its submodels that perform Middleware syxnchronization.
-    """
-    rebuild_data_model = DataModelRebuilder(data_model=data_model).rebuild_data_model_for_AAS_structure()
-    routers = []
-
-    for top_level_model_type in rebuild_data_model.get_top_level_types():
-        routers += generate_endpoints_from_model(top_level_model_type, middleware)
-
-    return routers
+        for top_level_model_type in self.aas_data_model.get_top_level_types():
+            routers += self.generate_endpoints_from_model(top_level_model_type)
+        return routers

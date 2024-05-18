@@ -1,26 +1,21 @@
 import asyncio
 import typing
-import anyio
-from pydantic import BaseModel, parse_obj_as
-from fastapi import BackgroundTasks, FastAPI
+from pydantic import BaseModel
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-import json
 from basyx.aas import model
 
 import aas_middleware
-
-# from aas_middleware.middleware.graphql_routers import generate_graphql_endpoint
-# from aas_middleware.middleware.rest_routers import generate_endpoints_from_model
-# from aas_middleware.middleware.model_registry_api import generate_model_api
-# from aas_middleware.util.convert_util import set_example_values, get_pydantic_model_from_dict, get_pydantic_models_from_instances
+from aas_middleware.connect.consumers.consumers import Consumer
+from aas_middleware.connect.providers.provider import Provider
 from aas_middleware.middleware.model_registry_api import generate_model_api
-from aas_middleware.middleware.rest_routers import generate_endpoints_from_data_model
+from aas_middleware.middleware.rest_routers import RestRouter
 from aas_middleware.middleware.workflow_router import generate_workflow_endpoint
 from aas_middleware.connect.workflows.workflow import Workflow
 from aas_middleware.model.data_model import DataModel
-from aas_middleware.model.data_model_rebuilder import DataModelRebuilder
 from aas_middleware.model.formatting.aas.aas_formatter import AASFormatter
+from aas_middleware.model.formatting.aas.aas_model import AAS, Submodel
 
 
 class Middleware:
@@ -33,6 +28,13 @@ class Middleware:
         self.data_models: typing.Dict[str, DataModel] = {}
         
         self._app: typing.Optional[FastAPI] = None
+        
+
+        # TODO: add methods that automatically instantiate these dicts here
+        self._persistence_providers: typing.Dict[str, typing.Dict[str, Provider[AAS, Submodel]]]
+        self._persistence_consumers: typing.Dict[str, typing.Dict[str, Consumer[AAS, Submodel]]]
+
+
         self._workflows: typing.List[Workflow] = []
 
     async def start_up(self):
@@ -157,6 +159,33 @@ class Middleware:
         data_model = AASFormatter().deserialize(models)
         self.load_data_model(data_model)
 
+    def get_persistence_provider(self, data_model_name: str, model_id: typing.Optional[str]=None) -> Provider[AAS | Submodel]:
+        """
+        Function returns a persistence provider based on the information mentioned.
+
+        Args:
+            data_model_name (str): The name of the data model used for identifying the data model in the middleware.
+            model_name (typing.Optional[str], optional): The id of the model in the data model.
+
+        Returns:
+            Provider[AAS | Submodel]: The provider of the model.
+        """
+        return self._persistence_providers[data_model_name][model_id]
+    
+    def get_persistence_consumer(self, data_model_name: str, model_id: typing.Optional[str]=None) -> Consumer[AAS | Submodel]:
+        """
+        Function returns a persistence consumer based on the information mentioned.
+
+        Args:
+            data_model_name (str): The name of the data model used for identifying the data model in the middleware.
+            model_name (typing.Optional[str], optional): The id of the model in the data model.
+
+        Returns:
+            Consumer[AAS | Submodel]: The provider of the model.
+        """
+        return self._persistence_consumers[data_model_name][model_id]
+
+
 
     def generate_model_registry_api(self):
         """
@@ -176,9 +205,9 @@ class Middleware:
         """
         Generates a REST API with CRUD operations for aas' and submodels from the loaded models.
         """
-        for data_model in self.data_models:
-            # TODO: the name of the data model should be used. Also an AAS Connector is required here for connecting to the correct data source / sink
-            routers = generate_endpoints_from_data_model(data_model)
+        for data_model_name, data_model in self.data_models.items():
+            rest_router = RestRouter(data_model, data_model_name, self)
+            routers = rest_router.generate_endpoints()
             for router in routers:
                 self.app.include_router(router)
 
