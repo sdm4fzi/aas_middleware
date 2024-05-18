@@ -30,7 +30,7 @@ from starlette_graphene3 import (
     make_playground_handler,
 )
 
-from aas_middleware.model.formatting.aas.aas_middleware_util import get_all_submodels_from_model
+from aas_middleware.model.formatting.aas.aas_middleware_util import get_all_submodels_from_model, union_type_check
 from aas_middleware.model.formatting.aas.aas_model import AAS, Submodel, SubmodelElementCollection
 
 
@@ -139,7 +139,7 @@ def create_graphe_pydantic_output_type_for_submodel_elements(
     for attribute_name, attribute_value in get_all_submodel_elements_from_submodel(
         model
     ).items():
-        if convert_util.union_type_check(attribute_value):
+        if union_type_check(attribute_value):
             subtypes = typing.get_args(attribute_value)
             for subtype in subtypes:
                 create_graphe_pydantic_output_type_for_submodel_elements(
@@ -152,7 +152,7 @@ def create_graphe_pydantic_output_type_for_submodel_elements(
         elif is_typing_list_or_tuple(attribute_value):
             if list_contains_any_submodel_element_collections(attribute_value):
                 for nested_type in attribute_value.__args__:
-                    if convert_util.union_type_check(nested_type):
+                    if union_type_check(nested_type):
                         subtypes = typing.get_args(nested_type)
                         for subtype in subtypes:
                             create_graphe_pydantic_output_type_for_submodel_elements(

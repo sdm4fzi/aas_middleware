@@ -183,7 +183,7 @@ def union_type_check(model: Type) -> bool:
     Returns:
         bool: If the type is a union type.
     """
-    if typing.get_origin(model) is typing.Union:
+    if typing.get_origin(model) == typing.Union:
         args = typing.get_args(model)
         if all(issubclass(arg, BaseModel) for arg in args):
             return True

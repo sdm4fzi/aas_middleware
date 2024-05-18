@@ -41,7 +41,7 @@ print("patched:", [(reference_info.identifiable_id, reference_info.reference_id)
 
 
 dict_store = AASFormatter().serialize(patched_data_model)
-
+# TODO: use below to implement a visualizer function for an arbitrary data model
 model_id_map = {model_id: counter for counter, model_id in enumerate(data_model.model_ids)}
 
 import igraph as ig
