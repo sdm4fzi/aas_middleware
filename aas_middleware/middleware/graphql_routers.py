@@ -1,36 +1,41 @@
-from aas_middleware.client.aas_client import (
-    get_aas_from_server,
-    get_all_aas_from_server,
-)
-from aas_middleware.client.submodel_client import get_all_submodels_of_type
-from aas_middleware.util.convert_util import get_vars
-from aas_middleware.models import base
-from aas_middleware.util import convert_util
-from aas_middleware.util.convert_util import (
-    get_all_submodel_elements_from_submodel,
-    get_all_submodels_from_model,
-    get_vars,
-)
-from aas_middleware.util.client_utils import check_aas_and_sm_server_online
+# from aas_middleware.client.aas_client import (
+#     get_aas_from_server,
+#     get_all_aas_from_server,
+# )
+# from aas_middleware.util.convert_util import get_vars
+# from aas_middleware.models import base
+# from aas_middleware.util import convert_util
+# from aas_middleware.util.convert_util import (
+#     get_all_submodel_elements_from_submodel,
+#     get_all_submodels_from_model,
+#     get_vars,
+# )
+# from aas_middleware.util.client_utils import check_aas_and_sm_server_online
 
 import typing
+
 from fastapi import APIRouter
 from pydantic import BaseModel, create_model
-from pydantic.fields import ModelField, FieldInfo
-from pydantic import BaseConfig, validator
+from pydantic.fields import FieldInfo
 
 from graphene_pydantic import PydanticObjectType, PydanticInputObjectType
 from graphene_pydantic.registry import get_global_registry
 
 import graphene
+# TODO: add starlette_graphene3 as depndency
+from aas_middleware.model.util import get_value_attributes
 from starlette_graphene3 import (
     GraphQLApp,
     make_graphiql_handler,
     make_playground_handler,
 )
 
+from aas_middleware.model.formatting.aas.aas_middleware_util import get_all_submodels_from_model
+from aas_middleware.model.formatting.aas.aas_model import AAS, Submodel, SubmodelElementCollection
 
-from typing import List, Type
+
+# TODO: update graphql router similar to rest router.
+
 
 
 def add_class_method(model: typing.Type):
@@ -45,7 +50,7 @@ model_name_registry = set()
 
 
 def create_graphe_pydantic_output_type_for_model(
-    input_model: Type[BaseModel], union_type: bool = False
+    input_model: typing.Type[BaseModel], union_type: bool = False
 ) -> PydanticObjectType:
     """
     Creates a pydantic model for the given pydantic model.
@@ -122,7 +127,7 @@ def rework_default_list_to_default_factory(model: BaseModel):
 
 
 def create_graphe_pydantic_output_type_for_submodel_elements(
-    model: BaseModel, union_type: bool = False
+    model: Submodel, union_type: bool = False
 ) -> PydanticObjectType:
     """
     Create recursively graphene pydantic output types for submodels and submodel elements.
@@ -130,6 +135,7 @@ def create_graphe_pydantic_output_type_for_submodel_elements(
     Args:
         model (typing.Union[base.Submodel, base.SubmodelElementCollectiontuple, list, set, ]): Submodel element for which the graphene pydantic output types should be created.
     """
+    # TODO: use here model_fields
     for attribute_name, attribute_value in get_all_submodel_elements_from_submodel(
         model
     ).items():
@@ -140,7 +146,7 @@ def create_graphe_pydantic_output_type_for_submodel_elements(
                     subtype, union_type=True
                 )
         elif hasattr(attribute_value, "__fields__") and issubclass(
-            attribute_value, base.SubmodelElementCollection
+            attribute_value, SubmodelElementCollection
         ):
             create_graphe_pydantic_output_type_for_submodel_elements(attribute_value)
         elif is_typing_list_or_tuple(attribute_value):
@@ -152,7 +158,7 @@ def create_graphe_pydantic_output_type_for_submodel_elements(
                             create_graphe_pydantic_output_type_for_submodel_elements(
                                 subtype, union_type=True
                             )
-                    elif issubclass(nested_type, base.SubmodelElementCollection):
+                    elif issubclass(nested_type, SubmodelElementCollection):
                         create_graphe_pydantic_output_type_for_submodel_elements(
                             nested_type
                         )
@@ -178,7 +184,7 @@ def get_base_query_and_mutation_classes() -> (
     return Query, Mutation
 
 
-def get_aas_resolve_function(model: Type[BaseModel]) -> typing.Callable:
+def get_aas_resolve_function(model: typing.Type[BaseModel]) -> typing.Callable:
     """
     Returns the resolve function for the given pydantic model.
 
@@ -188,8 +194,8 @@ def get_aas_resolve_function(model: Type[BaseModel]) -> typing.Callable:
     Returns:
         typing.Callable: Resolve function for the given pydantic model.
     """
-
     async def resolve_models(self, info):
+        # TODO: use here connectors
         await check_aas_and_sm_server_online()
         data_retrieved = await get_all_aas_from_server(model)
         return data_retrieved
@@ -210,6 +216,7 @@ def get_submodel_resolve_function(model: Type[BaseModel]) -> typing.Callable:
     """
 
     async def resolve_models(self, info):
+        # TODO: use here connectors
         await check_aas_and_sm_server_online()
         data_retrieved = await get_all_submodels_of_type(model)
         return data_retrieved
@@ -218,7 +225,7 @@ def get_submodel_resolve_function(model: Type[BaseModel]) -> typing.Callable:
     return resolve_models
 
 
-def generate_graphql_endpoint(models: List[Type[BaseModel]]) -> GraphQLApp:
+def generate_graphql_endpoint(models: typing.List[typing.Type[BaseModel]]) -> GraphQLApp:
     """
     Generates a GraphQL endpoint for the given pydantic models.
     Args:
@@ -228,6 +235,7 @@ def generate_graphql_endpoint(models: List[Type[BaseModel]]) -> GraphQLApp:
     """
     query, mutation = get_base_query_and_mutation_classes()
     # TODO: also make mutation possible
+    # TODO: implement this function for data models.
     for model in models:
         model_name = model.__name__
 

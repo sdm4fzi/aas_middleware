@@ -14,6 +14,10 @@ from aas_middleware.middleware.rest_routers import RestRouter
 from typing import Dict
 
 
+
+# TODO: extend the model registry API to the admin API, where als consumers, providers etc. can be defined.
+
+
 def route_belongs_to_model(route: str, name: str) -> bool:
     route_api_key = route.path_format.split("/")[1]
     return route_api_key == name
