@@ -7,6 +7,8 @@ import uvicorn
 
 
 from aas_middleware import Middleware, VERSION
+from aas_middleware.connect.consumers.connector_consumer import ConnectorConsumer
+from aas_middleware.connect.providers.connector_provider import ConnectorProvider
 middleware = Middleware()
 
 print(VERSION)
@@ -14,8 +16,6 @@ print(VERSION)
 
 
 from aas_middleware.connect.connectors.http_request_connector import HttpRequestConnector
-from aas_middleware.connect.providers.provider import Provider
-from aas_middleware.connect.consumers.consumers import Consumer
 
 class ProductionResource(BaseModel):
     ID: str
@@ -32,14 +32,16 @@ class WorkStation(BaseModel):
 prodsys_connector = HttpRequestConnector("http://localhost:12345/production_resource")
 workstation_connector = HttpRequestConnector("http://localhost:12345/work_station")
 
-prodsys_consumer = Consumer(
+prodsys_consumer = ConnectorConsumer(
     connector=prodsys_connector,
-    data_model=ProductionResource
+    data_model=ProductionResource,
+    id="prodsys_consumer"
 )
 
-mes_provider = Provider(
+mes_provider = ConnectorProvider(
     connector=workstation_connector,
-    data_model=WorkStation
+    data_model=WorkStation,
+    id="mes_provider"
 )
 
 def mes_prodsys_mapper(mes_data: WorkStation):
@@ -52,7 +54,7 @@ def mes_prodsys_mapper(mes_data: WorkStation):
     )
 
 @middleware.workflow(mes_provider=mes_provider, prodsys_consumer=prodsys_consumer)
-async def mes_prodsys_workflow(mes_provider: Provider, prodsys_consumer: Consumer):
+async def mes_prodsys_workflow(mes_provider: ConnectorProvider, prodsys_consumer: ConnectorConsumer):
     mes_data = await mes_provider.execute()
     prodsys_data = mes_prodsys_mapper(mes_data)
     print(prodsys_data.json())

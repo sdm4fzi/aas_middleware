@@ -1,10 +1,10 @@
-from typing import Protocol, TypeVar, Generic, Type
+from typing import Protocol, Type, TypeVar, Generic
 from aas_middleware.connect.connectors.connector import Connector
 from aas_middleware.model import core
 
 D = TypeVar("D", bound=core.Identifiable)
 
-class Provider(Protocol, Generic[D]):
+class Consumer(Protocol, Generic[D]):
     @property
     def item_id(self) -> str:
         ...
@@ -15,5 +15,5 @@ class Provider(Protocol, Generic[D]):
     def get_model(self) -> Type[D]:
         ...
 
-    async def execute(self) -> D:
+    async def execute(self, data: D):
         ...

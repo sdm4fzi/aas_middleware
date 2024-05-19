@@ -6,7 +6,7 @@ authors = ["Sebastian Behrendt <sebastianbehrendt97@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.12"
+python = "^3.10"
 pydantic = "^2.7.1"
 fastapi = "^0.111.0"
 uvicorn = "^0.29.0"
@@ -14,17 +14,24 @@ basyx-python-sdk = "^1.0.0"
 graphene-pydantic = "^0.6.1"
 anyio = "^4.3.0"
 aiohttp = "^3.9.5"
-importlib-metadata = "^7.1.0"
-
-
-[tool.poetry.group.temp.dependencies]
-ba-syx-submodel-repository-client = "^3.0"
-ba-syx-aas-repository-client = "^2.0"
+toml = "^0.10.2"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.2.0"
 black = "^24.4.2"
 pytest-order = "^1.2.1"
+
+[tool.poetry.group.industrial.dependencies]
+aiomqtt = "^2.1.0"
+asyncua = "^1.1.0"
+
+
+[tool.poetry.group.kiota.dependencies]
+microsoft-kiota-abstractions = "^1.3.2"
+microsoft-kiota-serialization-json = "^1.2.0"
+microsoft-kiota-serialization-text = "^1.0.0"
+microsoft-kiota-serialization-form = "^0.1.0"
+microsoft-kiota-serialization-multipart = "^0.1.0"
 
 [build-system]
 requires = ["poetry-core"]

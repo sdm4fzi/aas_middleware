@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from basyx.aas import model
 
 import aas_middleware
-from aas_middleware.connect.consumers.consumers import Consumer
+from aas_middleware.connect.consumers.consumer import Consumer
 from aas_middleware.connect.providers.provider import Provider
 from aas_middleware.middleware.model_registry_api import generate_model_api
 from aas_middleware.middleware.rest_routers import RestRouter
@@ -139,7 +139,7 @@ class Middleware:
         data_model = DataModel.from_models(*instances)
         self.load_data_model(name, data_model)
 
-    def load_pydantic_models(self, name: str, models: typing.List[typing.Type[BaseModel]]):
+    def load_pydantic_models(self, name: str, *models: typing.Tuple[typing.Type[BaseModel]]):
         """
         Functions that loads pydantic models into the middleware that can be used for synchronization.
 

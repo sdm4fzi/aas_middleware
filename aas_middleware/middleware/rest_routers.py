@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 from typing import TYPE_CHECKING, List, Type, Dict
 
-from aas_middleware.connect.consumers.consumers import Consumer
+from aas_middleware.connect.consumers.consumer import Consumer
 from aas_middleware.connect.providers.provider import Provider
 from aas_middleware.model.data_model import DataModel
 from aas_middleware.model.data_model_rebuilder import DataModelRebuilder

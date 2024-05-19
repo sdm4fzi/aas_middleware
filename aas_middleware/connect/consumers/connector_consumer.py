@@ -1,35 +1,18 @@
-from typing import Protocol, Type, TypeVar, Generic
+from typing import Type, Generic
+
 from aas_middleware.connect.connectors.connector import Connector
-from aas_middleware.model import core
-
-D = TypeVar("D", bound=core.Identifiable)
-
-class Consumer(Protocol, Generic[D]):
-    @property
-    def item_id(self) -> str:
-        ...
-
-    def set_model(self, model: Type[D]):
-        ...
-
-    def get_model(self) -> Type[D]:
-        ...
-
-    async def execute(self, data: D):
-        ...
-
-
+from aas_middleware.connect.consumers.consumer import D
 
 class ConnectorConsumer(Generic[D]):
     def __init__(self, connector: Connector, data_model: Type[D], id: str) -> None:
         self.connector = connector
         self.data_model = data_model
-        self.id = id
+        self._id = id
         # TODO: connect connector
 
     @property
     def id(self) -> str:
-        return self.id
+        return self._id
 
     async def set_connector(self, connector: Connector):
         self.connector = connector
