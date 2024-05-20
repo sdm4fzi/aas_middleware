@@ -14,7 +14,7 @@ from aas_middleware.middleware.rest_routers import RestRouter
 from aas_middleware.middleware.workflow_router import generate_workflow_endpoint
 from aas_middleware.connect.workflows.workflow import Workflow
 from aas_middleware.model.data_model import DataModel
-from aas_middleware.model.formatting.aas.aas_formatter import AASFormatter
+from aas_middleware.model.formatting.aas.basyx_formatter import BasyxFormatter
 from aas_middleware.model.formatting.aas.aas_model import AAS, Submodel
 
 
@@ -156,7 +156,7 @@ class Middleware:
         Args:
             models (typing.List[model.DictObjectStore]): Object store of aas' and submodels
         """
-        data_model = AASFormatter().deserialize(models)
+        data_model = BasyxFormatter().deserialize(models)
         self.load_data_model(data_model)
 
     def get_persistence_provider(self, data_model_name: str, model_id: typing.Optional[str]=None) -> Provider[AAS | Submodel]:

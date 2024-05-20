@@ -6,7 +6,7 @@ from pydantic import BaseModel, create_model
 from aas_middleware.model.data_model import DataModel
 from aas_middleware.model.data_model_rebuilder import DataModelRebuilder, get_patched_aas_object
 from aas_middleware.model.formatting.aas import aas_model
-from aas_middleware.model.formatting.aas.aas_formatter import AASFormatter
+from aas_middleware.model.formatting.aas.basyx_formatter import BasyxFormatter
 from aas_middleware.model.reference_finder import ReferenceType
 
 class Child(BaseModel):
@@ -40,7 +40,7 @@ patched_data_model = DataModelRebuilder(data_model).rebuild_data_model_for_AAS_s
 print("patched:", [(reference_info.identifiable_id, reference_info.reference_id) for reference_info in data_model._reference_infos])
 
 
-dict_store = AASFormatter().serialize(patched_data_model)
+dict_store = BasyxFormatter().serialize(patched_data_model)
 # TODO: use below to implement a visualizer function for an arbitrary data model
 model_id_map = {model_id: counter for counter, model_id in enumerate(data_model.model_ids)}
 

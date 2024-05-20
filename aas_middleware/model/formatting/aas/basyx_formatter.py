@@ -21,7 +21,7 @@ from aas_middleware.model.formatting.aas.convert_pydantic import (
 
 
 # TODO: rename to basyx formatter
-class AASFormatter:
+class BasyxFormatter:
     """
     Allows to serialize and deserialize Basyx AAS objects (AssetAdministrationShells, Submodels or Containers of both) to a DataModel.
     """

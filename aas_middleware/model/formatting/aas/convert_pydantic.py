@@ -45,7 +45,7 @@ def infere_aas_structure(
     )
     new_data_model = DataModelRebuilder(data).rebuild_data_model_for_AAS_structure()
     top_level_models_list = []
-    for models in data.get_top_level_models().values():
+    for models in new_data_model.get_top_level_models().values():
         top_level_models_list += models
     aas_models = [
         model for model in top_level_models_list if isinstance(model, aas_model.AAS)
