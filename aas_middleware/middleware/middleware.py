@@ -1,6 +1,7 @@
+from ast import TypeAlias, TypeVar
 import asyncio
 import typing
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -13,10 +14,30 @@ from aas_middleware.middleware.model_registry_api import generate_model_api
 from aas_middleware.middleware.rest_routers import RestRouter
 from aas_middleware.middleware.workflow_router import generate_workflow_endpoint
 from aas_middleware.connect.workflows.workflow import Workflow
+from aas_middleware.model.core import Identifiable
 from aas_middleware.model.data_model import DataModel
 from aas_middleware.model.formatting.aas.basyx_formatter import BasyxFormatter
 from aas_middleware.model.formatting.aas.aas_model import AAS, Submodel
 
+
+
+class ConnectionInfo(BaseModel):
+    """
+    Class that contains the information of a connection of a provider and a consumer to the persistence layer.
+    """
+    data_model_name: str
+    model_id: typing.Optional[str] = None
+    field_id: typing.Optional[str] = None
+
+    model_config = ConfigDict(frozen=True)
+
+    @property
+    def connection_type(self) -> typing.Literal["data_model", "model", "field"]:
+        if self.model_id:
+            if self.field_id:
+                return "field"
+            return "model"
+        return "data_model"
 
 class Middleware:
     """
@@ -24,25 +45,28 @@ class Middleware:
     """
 
     def __init__(self):
-        # TODO: adjust that the types in the middleware are DataModels.
         self.data_models: typing.Dict[str, DataModel] = {}
         
         self._app: typing.Optional[FastAPI] = None
         
+        self._all_providers: typing.List[Provider[Identifiable]] = []
+        self._all_consumers: typing.List[Consumer[Identifiable]] = []
+        self._all_workflows: typing.List[Workflow] = []
 
         # TODO: add methods that automatically instantiate these dicts here
-        self._persistence_providers: typing.Dict[str, typing.Dict[str, Provider[AAS, Submodel]]]
-        self._persistence_consumers: typing.Dict[str, typing.Dict[str, Consumer[AAS, Submodel]]]
+        self._persistence_providers: typing.Dict[ConnectionInfo, Provider[AAS | Submodel]] = {}
+        self._persistence_consumers: typing.Dict[ConnectionInfo, Consumer[AAS | Submodel]] = {}
 
-
-        self._workflows: typing.List[Workflow] = []
+        self._connected_providers: typing.Dict[ConnectionInfo, Provider[AAS | Submodel]] = {}
+        self._connected_consumers: typing.Dict[ConnectionInfo, Consumer[AAS | Submodel]] = {}
+        self._connected_workflows: typing.Dict[typing.Tuple[ConnectionInfo], Workflow] = {}
 
     async def start_up(self):
         """
         Function starts the mainloop of the middleware running all continuous workflows and
         doing all polling http requestors.
         """
-        for workflow in self._workflows:
+        for workflow in self._all_workflows:
             if workflow.on_startup:
                 # TODO: make a case distinction for workflows that postpone start up or not...
                 asyncio.create_task(workflow.execute())
@@ -51,7 +75,7 @@ class Middleware:
         """
         Function stops all continuous workflows and polling http requestors.
         """
-        for workflow in self._workflows:
+        for workflow in self._all_workflows:
             if workflow.on_shutdown:
                 if workflow.running:
                     await workflow.interrupt()
@@ -170,7 +194,7 @@ class Middleware:
         Returns:
             Provider[AAS | Submodel]: The provider of the model.
         """
-        return self._persistence_providers[data_model_name][model_id]
+        return self._persistence_providers[ConnectionInfo(data_model_name, model_id)]
     
     def get_persistence_consumer(self, data_model_name: str, model_id: typing.Optional[str]=None) -> Consumer[AAS | Submodel]:
         """
@@ -183,7 +207,7 @@ class Middleware:
         Returns:
             Consumer[AAS | Submodel]: The provider of the model.
         """
-        return self._persistence_consumers[data_model_name][model_id]
+        return self._persistence_consumers[ConnectionInfo(data_model_name, model_id)]
 
 
 
@@ -235,7 +259,7 @@ class Middleware:
                 interval=interval,
                 **kwargs
             )
-            self._workflows.append(workflow)
+            self._all_workflows.append(workflow)
             workflows_app = generate_workflow_endpoint(workflow)
             self.app.include_router(workflows_app)
             return func

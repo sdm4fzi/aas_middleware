@@ -3,14 +3,17 @@ from __future__ import annotations
 from fastapi import HTTPException, APIRouter
 from pydantic import BaseModel
 
-from typing import TYPE_CHECKING, List, Type, Dict
+from typing import TYPE_CHECKING, List, Tuple, Type, Dict
 
+from aas_middleware.connect.connectors.aas_client_connector.aas_client_connector import BasyxAASConnector
 from aas_middleware.connect.consumers.consumer import Consumer
 from aas_middleware.connect.providers.provider import Provider
+from aas_middleware.middleware.middleware import ConnectionInfo
 from aas_middleware.model.data_model import DataModel
 from aas_middleware.model.data_model_rebuilder import DataModelRebuilder
 from aas_middleware.model.formatting.aas.aas_middleware_util import get_all_submodels_from_model
 from aas_middleware.model.formatting.aas.aas_model import AAS, Submodel
+from aas_middleware.model.util import get_id_with_patch
 
 if TYPE_CHECKING:
     from aas_middleware.middleware.middleware import Middleware
@@ -49,6 +52,22 @@ class RestRouter:
         self.aas_data_model = DataModelRebuilder(data_model=data_model).rebuild_data_model_for_AAS_structure()
 
         self.middleware = middleware
+
+        # TODO: generate persistence providers and consumers for all models in the data model
+
+    def generate_peristence_providers_and_consumers(self):
+        for model_of_type in self.aas_data_model.get_top_level_models().values():
+            for model in model_of_type:
+                provider, consumer = self.generate_persistence_provider_and_consumer(model)
+                connection_info = ConnectionInfo(data_model_name=self.data_model_name, model_name=get_id_with_patch(model))
+                self.middleware.add_persistence_provider(provider, connection_info)
+                self.middleware.add_persistence_consumer(consumer, connection_info)
+
+
+    def generate_persistence_provider_and_consumer(self, model: Type[AAS | Submodel]) -> Tuple[Provider[AAS | Submodel], Consumer[AAS | Submodel]]:
+        raise NotImplementedError
+        # TODO: implement creation of providers and connectors
+
 
     def get_provider(self, item_id: str) -> Provider[AAS | Submodel]:
         return self.middleware.get_persistence_provider(self.data_model_name, item_id)
@@ -92,6 +111,7 @@ class RestRouter:
 
             @router.post("/")
             async def post_item(item_id: str, item: submodel_model_type) -> Dict[str, str]:
+                # TODO: also update data model with the new submodel and and a persistence provider and consumer
                 await self.get_consumer(item.id).execute(item)
                 # TODO: also update the submodel in the aas containing the submodel
                 return {

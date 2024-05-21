@@ -29,7 +29,7 @@ def convert_object_store_to_pydantic_models(
     pydantic_submodels: typing.List[aas_model.Submodel] = []
     for identifiable in obj_store:
         if isinstance(identifiable, model.Submodel):
-            pydantic_submodel = convert_submodel_to_pydantic_model(identifiable)
+            pydantic_submodel = convert_submodel_to_model(identifiable)
             pydantic_submodels.append(pydantic_submodel)
 
     pydantic_aas_list: typing.List[aas_model.AAS] = []
@@ -208,7 +208,7 @@ def get_initial_dict_for_model_instantiation(
     return model_instantiation_dict
 
 
-def convert_submodel_to_pydantic_model(sm: model.Submodel) -> aas_model.Submodel:
+def convert_submodel_to_model(sm: model.Submodel) -> aas_model.Submodel:
     """
     Converts a Submodel to a Pydantic model.
 

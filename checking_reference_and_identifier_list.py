@@ -1,21 +1,18 @@
-from typing import List
-from aas_middleware.model.core import Identifier, Reference
-from tests.conftest import SubmodelBomWithReferenceComponents
+from pydantic import BaseModel, ConfigDict
+
+class FrozenModel(BaseModel):
+    id: int
+    name: str
+
+    model_config = ConfigDict(frozen=True)
 
 
-example_sm = SubmodelBomWithReferenceComponents(
-    id_short="identifier",
-    components=["comp1", "compo2"],
-    num_components=2
-)
 
-for name, field_info in example_sm.model_fields.items():
-    print(name, field_info.annotation)
-    if field_info.annotation is Identifier:
-        print("found Identifier in field:", name)
-    if field_info.annotation is Reference:
-        print("found Reference in field:", name)
-    if field_info.annotation is List[Identifier]:
-        print("found Identifier list in field:", name)
-    if field_info.annotation is List[Reference]:
-        print("found Reference list in field:", name)
+a = FrozenModel(id=1, name="a")
+b = FrozenModel(id=2, name="b")
+
+c = {a: "a", b: "b"}
+
+new_a = FrozenModel(id=1, name="a")
+
+print(c[new_a])  # prints "a"

@@ -8,7 +8,7 @@ from aas_middleware.model.formatting.aas import convert_pydantic, convert_aas
 
 def test_convert_simple_submodel(example_submodel: Submodel):
     basyx_aas_submodel = convert_pydantic.convert_model_to_submodel(example_submodel)
-    pydantic_model = convert_aas.convert_submodel_to_pydantic_model(basyx_aas_submodel)
+    pydantic_model = convert_aas.convert_submodel_to_model(basyx_aas_submodel)
     assert pydantic_model.model_dump() == example_submodel.model_dump()
 
 

@@ -37,7 +37,6 @@ class BasyxFormatter:
             Objectstore: the basyx object store contain all AAS elements
         """
         aas_models, submodel_models = infere_aas_structure(data)
-        print(len(aas_models), len(submodel_models))
         obj_store = DictObjectStore()
         for aas in aas_models:
             obj_store_to_add = convert_model_to_aas(aas)
