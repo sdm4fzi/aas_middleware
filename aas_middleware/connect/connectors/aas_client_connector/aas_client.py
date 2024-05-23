@@ -7,7 +7,7 @@ from basyx.aas import model
 from pydantic import BaseModel
 
 from aas_middleware.connect.connectors.aas_client_connector import client_utils
-from aas_middleware.connect.connectors.aas_client_connector.submodel_client import get_all_basyx_submodels_from_server, post_submodel_to_server, put_submodel_to_server, submodel_is_on_server
+from aas_middleware.connect.connectors.aas_client_connector.submodel_client import get_all_basyx_submodels_from_server, get_submodel_from_server, post_submodel_to_server, put_submodel_to_server, submodel_is_on_server
 from aas_middleware.model.formatting.aas import aas_model
 
 from ba_syx_aas_environment_component_client import Client as AASClient
@@ -178,4 +178,27 @@ async def delete_aas_from_server(aas_id: str, aas_client: AASClient):
     base_64_id = client_utils.get_base64_from_string(aas_id)
     response = await delete_asset_administration_shell_by_id.asyncio(
         client=aas_client, aas_identifier=base_64_id
+    )
+
+
+async def get_submodel_from_aas_id_and_class_name(aas_id: str, class_name: str, aas_client: AASClient, submodel_client: SubmodelClient) -> aas_model.Submodel:
+    """
+    Function to get a submodel from the server based on the AAS id and the class name of the submodel
+    Args:
+        aas_id (str): id of the AAS
+        class_name (str): class name of the submodel
+    Raises:
+        HTTPException: If submodel with the given class name does not exist for the given AAS
+    Returns:
+        aas_model.Submodel: submodel retrieved from the server
+    """
+    basyx_aas = await get_basyx_aas_from_server(aas_id, aas_client)
+    for basyx_submodel in basyx_aas.submodel:
+        submodel_id = basyx_submodel.key[0].value
+        submodel = await get_submodel_from_server(submodel_id, submodel_client)
+        if submodel.__class__.__name__ == class_name:
+            return submodel
+    raise HTTPException(
+        status_code=411,
+        detail=f"Submodel with name {class_name} does not exist for AAS with id {aas_id}",
     )

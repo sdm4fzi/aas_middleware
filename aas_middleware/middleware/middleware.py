@@ -1,4 +1,5 @@
-from ast import TypeAlias, TypeVar
+from __future__ import annotations
+
 import asyncio
 import typing
 from pydantic import BaseModel, ConfigDict
@@ -43,30 +44,31 @@ class Middleware:
     """
     Middleware that can be used to generate a REST or GraphQL API from aas' and submodels either in pydanctic models or in aas object store format.
     """
+    # TODO: create AAS Middleware class that has easy utility functions to instantiate the persistence providers / consumers.
 
     def __init__(self):
         self.data_models: typing.Dict[str, DataModel] = {}
         
         self._app: typing.Optional[FastAPI] = None
         
-        self._all_providers: typing.List[Provider[Identifiable]] = []
-        self._all_consumers: typing.List[Consumer[Identifiable]] = []
-        self._all_workflows: typing.List[Workflow] = []
+        self.all_providers: typing.List[Provider[Identifiable]] = []
+        self.all_consumers: typing.List[Consumer[Identifiable]] = []
+        self.all_workflows: typing.List[Workflow] = []
 
         # TODO: add methods that automatically instantiate these dicts here
-        self._persistence_providers: typing.Dict[ConnectionInfo, Provider[AAS | Submodel]] = {}
-        self._persistence_consumers: typing.Dict[ConnectionInfo, Consumer[AAS | Submodel]] = {}
+        self.persistence_providers: typing.Dict[ConnectionInfo, Provider[AAS | Submodel]] = {}
+        self.persistence_consumers: typing.Dict[ConnectionInfo, Consumer[AAS | Submodel]] = {}
 
-        self._connected_providers: typing.Dict[ConnectionInfo, Provider[AAS | Submodel]] = {}
-        self._connected_consumers: typing.Dict[ConnectionInfo, Consumer[AAS | Submodel]] = {}
-        self._connected_workflows: typing.Dict[typing.Tuple[ConnectionInfo], Workflow] = {}
+        self.connected_providers: typing.Dict[ConnectionInfo, Provider[AAS | Submodel]] = {}
+        self.connected_consumers: typing.Dict[ConnectionInfo, Consumer[AAS | Submodel]] = {}
+        self.connected_workflows: typing.Dict[typing.Tuple[ConnectionInfo], Workflow] = {}
 
     async def start_up(self):
         """
         Function starts the mainloop of the middleware running all continuous workflows and
         doing all polling http requestors.
         """
-        for workflow in self._all_workflows:
+        for workflow in self.all_workflows:
             if workflow.on_startup:
                 # TODO: make a case distinction for workflows that postpone start up or not...
                 asyncio.create_task(workflow.execute())
@@ -75,7 +77,7 @@ class Middleware:
         """
         Function stops all continuous workflows and polling http requestors.
         """
-        for workflow in self._all_workflows:
+        for workflow in self.all_workflows:
             if workflow.on_shutdown:
                 if workflow.running:
                     await workflow.interrupt()
@@ -183,33 +185,41 @@ class Middleware:
         data_model = BasyxFormatter().deserialize(models)
         self.load_data_model(data_model)
 
-    def get_persistence_provider(self, data_model_name: str, model_id: typing.Optional[str]=None) -> Provider[AAS | Submodel]:
+    def connect_provider(self, provider: Provider, data_model_name: str, model_id: typing.Optional[str]=None, field_id: typing.Optional[str]=None, persistence: bool=False):
         """
-        Function returns a persistence provider based on the information mentioned.
+        Function to connect a provider to the middleware.
 
         Args:
+            provider (Provider): The provider that should be connected.
             data_model_name (str): The name of the data model used for identifying the data model in the middleware.
-            model_name (typing.Optional[str], optional): The id of the model in the data model.
+            model_id (typing.Optional[str], optional): The id of the model in the data model. Defaults to None.
+            field_id (typing.Optional[str], optional): The id of the field in the model. Defaults to None.
+            persistence (bool, optional): If the connection should be persisted. Defaults to False.
+        """
+        connection_info = ConnectionInfo(data_model_name=data_model_name, model_id=model_id, field_id=field_id)
 
-        Returns:
-            Provider[AAS | Submodel]: The provider of the model.
+        if persistence:
+            self.persistence_providers[connection_info] = provider
+        else:
+            self.connected_providers[connection_info] = provider
+
+    def connect_consumer(self, consumer: Consumer, data_model_name: str, model_id: typing.Optional[str]=None, field_id: typing.Optional[str]=None, persistence: bool=False):
         """
-        return self._persistence_providers[ConnectionInfo(data_model_name, model_id)]
-    
-    def get_persistence_consumer(self, data_model_name: str, model_id: typing.Optional[str]=None) -> Consumer[AAS | Submodel]:
-        """
-        Function returns a persistence consumer based on the information mentioned.
+        Function to connect a consumer to the middleware.
 
         Args:
+            consumer (Consumer): The consumer that should be connected.
             data_model_name (str): The name of the data model used for identifying the data model in the middleware.
-            model_name (typing.Optional[str], optional): The id of the model in the data model.
-
-        Returns:
-            Consumer[AAS | Submodel]: The provider of the model.
+            model_id (typing.Optional[str], optional): The id of the model in the data model. Defaults to None.
+            field_id (typing.Optional[str], optional): The id of the field in the model. Defaults to None.
+            persistence (bool, optional): If the connection should be persisted. Defaults to False.
         """
-        return self._persistence_consumers[ConnectionInfo(data_model_name, model_id)]
-
-
+        connection_info = ConnectionInfo(data_model_name=data_model_name, model_id=model_id, field_id=field_id)
+        
+        if persistence:
+            self.persistence_consumers[connection_info] = consumer
+        else:
+            self.connected_consumers[connection_info] = consumer
 
     def generate_model_registry_api(self):
         """
@@ -225,15 +235,15 @@ class Middleware:
             + self.app.routes[NUM_CONSTANT_ROUTES:-NUM_REGISTRY_ROUTES]
         )
 
-    def generate_rest_api(self):
+    def generate_rest_api_for_data_model(self, data_model_name: str):
         """
         Generates a REST API with CRUD operations for aas' and submodels from the loaded models.
         """
-        for data_model_name, data_model in self.data_models.items():
-            rest_router = RestRouter(data_model, data_model_name, self)
-            routers = rest_router.generate_endpoints()
-            for router in routers:
-                self.app.include_router(router)
+        data_model = self.data_models[data_model_name]
+        rest_router = RestRouter(data_model, data_model_name, self)
+        routers = rest_router.generate_endpoints()
+        for router in routers:
+            self.app.include_router(router)
 
     # def generate_graphql_api(self):
     #     """
@@ -259,7 +269,7 @@ class Middleware:
                 interval=interval,
                 **kwargs
             )
-            self._all_workflows.append(workflow)
+            self.all_workflows.append(workflow)
             workflows_app = generate_workflow_endpoint(workflow)
             self.app.include_router(workflows_app)
             return func

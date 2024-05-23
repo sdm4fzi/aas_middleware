@@ -310,9 +310,11 @@ class DataModel(BaseModel):
             List[Type[Identifiable]]: The types of the top level models in the data model
         """
         # TODO: implement function and change structure in DataModel that it can be instantiated also with types
-        # TODO: also add the possibility to specify a name of data model
         # TODO: add the possibility that a DataModel is frozen -> no types can be added or removed.
-        raise NotImplementedError
+        top_level_types = []
+        for top_level_models_of_type in self.get_top_level_models().values():
+            top_level_types.append(top_level_models_of_type[0].__class__)
+        return top_level_types
 
     def get_models_of_type_name(self, model_type_name: str) -> List[Identifiable]:
         """

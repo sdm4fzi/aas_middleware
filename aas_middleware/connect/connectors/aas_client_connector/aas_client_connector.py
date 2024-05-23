@@ -1,5 +1,5 @@
 
-from typing import Generic, Optional
+from typing import Generic, Optional, TypeVar
 from aas_middleware.connect.connectors.aas_client_connector.aas_client import aas_is_on_server, delete_aas_from_server, get_aas_from_server, post_aas_to_server, put_aas_to_server
 
 from ba_syx_aas_environment_component_client import Client as AASClient
@@ -9,8 +9,11 @@ from aas_middleware.connect.connectors.aas_client_connector.client_utils import 
 from aas_middleware.connect.connectors.aas_client_connector.submodel_client import delete_submodel_from_server, get_submodel_from_server, post_submodel_to_server, put_submodel_to_server, submodel_is_on_server
 from aas_middleware.model.formatting.aas.aas_model import AAS, Submodel
 
-class BasyxAASConnector(Generic(AAS)):
-    def __init__(self, host: str, port: int, aas_id: str, submodel_host: Optional[str] = None, submodel_port: Optional[int] = None):
+T = TypeVar("T", bound=AAS)
+S = TypeVar("S", bound=Submodel)
+
+class BasyxAASConnector(Generic[T]):
+    def __init__(self, aas_id: str, host: str, port: int, submodel_host: Optional[str] = None, submodel_port: Optional[int] = None):
         # TODO: aas and submodel repo host are needed as kwargs
         self.host = host
         self.port = port
@@ -36,7 +39,7 @@ class BasyxAASConnector(Generic(AAS)):
     async def disconnect(self):
         pass
 
-    async def send(self, body: Optional[AAS]) -> None:
+    async def send(self, body: Optional[T]) -> None:
         if not body:
             await delete_aas_from_server(self.aas_id, self.aas_client)
         if aas_is_on_server(self.aas_id, self.aas_client):
@@ -44,12 +47,12 @@ class BasyxAASConnector(Generic(AAS)):
         else:
             post_aas_to_server(self.aas_id, self.aas_client, self.submodel_client)
 
-    async def receive(self) -> AAS:
+    async def receive(self) -> T:
         return await get_aas_from_server(self.aas_id, self.aas_client, self.submodel_client)
 
 
-class BasyxSubmodelConnector(Generic(Submodel)):
-    def __init__(self, host: str, port: int, submodel_id: str):
+class BasyxSubmodelConnector(Generic[S]):
+    def __init__(self, submodel_id: str, host: str, port: int):
         self.host = host
         self.port = port
         self.submodel_id = submodel_id
@@ -64,7 +67,7 @@ class BasyxSubmodelConnector(Generic(Submodel)):
     async def disconnect(self):
         pass
 
-    async def send(self, body: Optional[Submodel]) -> None:
+    async def send(self, body: Optional[S]) -> None:
         if not body:
             await delete_submodel_from_server(self.submodel_id, self.submodel_client)
         if submodel_is_on_server(self.submodel_id, self.submodel_client):
@@ -72,5 +75,5 @@ class BasyxSubmodelConnector(Generic(Submodel)):
         else:
             post_submodel_to_server(self.submodel_id, self.submodel_client)
 
-    async def receive(self) -> Submodel:
+    async def receive(self) -> S:
         return await get_submodel_from_server(self.submodel_id, self.submodel_client)
