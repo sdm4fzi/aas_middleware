@@ -151,6 +151,7 @@ class RestRouter:
             return aas_list
 
         aas_model_type.model_rebuild(force=True, _parent_namespace_depth=5)
+        # FIXME: resolve problem with annotations of aas_model_type resolving in PydanticUndefinedAnnotation.from_name_error
         @router.post(f"/", response_model=Dict[str, str])
         async def post_item(item: aas_model_type) -> Dict[str, str]:
             await self.get_consumer(item.id).execute(item)
