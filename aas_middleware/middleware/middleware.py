@@ -12,6 +12,7 @@ import aas_middleware
 from aas_middleware.connect.consumers.consumer import Consumer
 from aas_middleware.connect.providers.provider import Provider
 from aas_middleware.middleware.model_registry_api import generate_model_api
+from aas_middleware.middleware.persistence_factory import PersistenceFactory
 from aas_middleware.middleware.rest_routers import RestRouter
 from aas_middleware.middleware.workflow_router import generate_workflow_endpoint
 from aas_middleware.connect.workflows.workflow import Workflow
@@ -61,7 +62,10 @@ class Middleware:
 
         self.connected_providers: typing.Dict[ConnectionInfo, Provider[AAS | Submodel]] = {}
         self.connected_consumers: typing.Dict[ConnectionInfo, Consumer[AAS | Submodel]] = {}
-        self.connected_workflows: typing.Dict[typing.Tuple[ConnectionInfo], Workflow] = {}
+        self.connected_workflows: typing.Dict[typing.Tuple[ConnectionInfo, ConnectionInfo], Workflow] = {}
+
+        self.persistence_factories: typing.Dict[str, typing.Dict[str, PersistenceFactory]] = {}
+
 
     async def start_up(self):
         """
@@ -184,6 +188,19 @@ class Middleware:
         """
         data_model = BasyxFormatter().deserialize(models)
         self.load_data_model(data_model)
+
+    def create_model_persistence(self, data_model_name: str, model: Identifiable) -> typing.Tuple[Consumer[Identifiable], Provider[Identifiable]]:
+        if not self.persistence_factories.get(data_model_name):
+            raise ValueError(f"No persistence factory for data model {data_model_name} found.")
+        if not self.persistence_factories[data_model_name].get(model.__class__.__name__):
+            raise ValueError(f"No persistence factory for model {model.__class__.__name__} found.")
+        if self.persistence_providers.get(ConnectionInfo(data_model_name=data_model_name, model_id=model.id)):
+            raise ValueError(f"Provider for model {model.id} already exists.")
+        persistence_consumer, persistence_provider = self.persistence_factories[data_model_name][model.__class__.__name__].create(model, model.id)
+        self.connect_consumer(persistence_consumer, data_model_name, model.id, persistence=True)
+        self.connect_provider(persistence_provider, data_model_name, model.id, persistence=True)
+
+        return persistence_consumer, persistence_provider
 
     def connect_provider(self, provider: Provider, data_model_name: str, model_id: typing.Optional[str]=None, field_id: typing.Optional[str]=None, persistence: bool=False):
         """

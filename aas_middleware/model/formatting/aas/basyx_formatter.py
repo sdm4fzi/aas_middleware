@@ -64,4 +64,4 @@ class BasyxFormatter:
         if not isinstance(data, DictObjectStore):
             data = DictObjectStore(data)
         models = convert_object_store_to_pydantic_models(data)
-        return DataModel(*models)
+        return DataModel.from_models(*models)

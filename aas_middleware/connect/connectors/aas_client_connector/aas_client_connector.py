@@ -14,7 +14,6 @@ S = TypeVar("S", bound=Submodel)
 
 class BasyxAASConnector(Generic[T]):
     def __init__(self, aas_id: str, host: str, port: int, submodel_host: Optional[str] = None, submodel_port: Optional[int] = None):
-        # TODO: aas and submodel repo host are needed as kwargs
         self.host = host
         self.port = port
         self.aas_id = aas_id

@@ -27,7 +27,7 @@ class ConnectorProvider(Generic[D]):
 
     async def execute(self) -> D:
         response = await self.connector.receive()
-        return self.data_model.model_validate_json(response)
+        return self.data_model.model_validate(response)
 
 
 class QueryConnectorProvider(Generic[D]):
