@@ -3,9 +3,12 @@ from pydantic import BaseModel
 
 from typing import TYPE_CHECKING, List, Type, Dict
 
+from aas_middleware.connect.consumers.connector_consumer import ConnectorConsumer
 from aas_middleware.connect.consumers.consumer import Consumer
+from aas_middleware.connect.providers.connector_provider import ConnectorProvider
 from aas_middleware.connect.providers.provider import Provider
 from aas_middleware.middleware import middleware
+from aas_middleware.model import data_model
 from aas_middleware.model.data_model import DataModel
 from aas_middleware.model.formatting.aas.aas_middleware_util import get_all_submodels_from_model
 from aas_middleware.model.formatting.aas.aas_model import AAS, Submodel
@@ -51,11 +54,38 @@ class RestRouter:
         self.middleware = middleware
 
     def get_provider(self, item_id: str) -> Provider[AAS | Submodel]:
-        return self.middleware.persistence_providers[middleware.ConnectionInfo(self.data_model_name, item_id)]
+        return self.middleware.persistence_providers[middleware.ConnectionInfo(data_model_name=self.data_model_name, model_id=item_id)]
     
     def get_consumer(self, item_id: str) -> Consumer[AAS | Submodel]:
-        return self.middleware.persistence_consumers[middleware.ConnectionInfo(self.data_model_name, item_id)]
+        return self.middleware.persistence_consumers[middleware.ConnectionInfo(data_model_name=self.data_model_name, model_id=item_id)]
     
+    def create_consumer(self, model: AAS | Submodel) -> Consumer[AAS | Submodel]:
+        # TODO: maybe add this method to the middleware class and require a default persistence location
+        for connection_info, consumer in self.middleware.persistence_consumers.items():
+            if connection_info.data_model_name == self.data_model_name:
+                connector = consumer.connector
+                break
+        else:
+            raise ValueError(f"No consumer found for {model.id}")
+        persistence_consumer = ConnectorConsumer(connector, type(model), model.id)
+        self.middleware.connect_consumer(persistence_consumer, self.data_model_name, model.id, persistence=True)
+
+        return self.middleware.persistence_consumers[middleware.ConnectionInfo(data_model_name=self.data_model_name, model_id=model.id)]
+
+
+    def create_provider(self, model: AAS | Submodel) -> Provider[AAS | Submodel]:
+        # TODO: maybe add this method to the middleware class and require a default persistence location
+        for connection_info, provider in self.middleware.persistence_providers.items():
+            if connection_info.data_model_name == self.data_model_name:
+                connector = provider.connector
+                break
+        else:
+            raise ValueError(f"No provider found for {model.id}")
+        persistence_provider = ConnectorProvider(connector, type(model), model.id)
+        self.middleware.connect_provider(persistence_provider, self.data_model_name, model.id, persistence=True)
+
+        return self.middleware.persistence_providers[middleware.ConnectionInfo(data_model_name=self.data_model_name, model_id=model.id)]
+
     def generate_submodel_endpoints_from_model(
             self,
         aas_model_type: Type[AAS], submodel_model_type: Type[Submodel],
@@ -89,7 +119,6 @@ class RestRouter:
             return await self.get_provider(item_id).execute()
 
         if optional_submodel:
-
             @router.post("/")
             async def post_item(item_id: str, item: submodel_model_type) -> Dict[str, str]:
                 # TODO: also update data model with the new submodel and and a persistence provider and consumer
@@ -141,6 +170,7 @@ class RestRouter:
         @router.get("/", response_model=List[aas_model_type])
         async def get_items():
             aas_list = []
+            # FIXME: resolve bug that aas is not found...
             all_model_ids = [model.id for model in self.data_model.get_models_of_type(aas_model_type)]
             for model_id in all_model_ids:
                 retrieved_aas = await self.get_provider(model_id).execute()
@@ -149,7 +179,9 @@ class RestRouter:
 
         @router.post(f"/", response_model=Dict[str, str])
         async def post_item(item: aas_model_type) -> Dict[str, str]:
-            await self.get_consumer(item.id).execute(item)
+            consumer = self.create_consumer(item)
+            self.create_provider(item)
+            await consumer.execute(item)
             return {
                 "message": f"Succesfully created aas {aas_model_type.__name__} with id {item.id}"
             }
@@ -160,7 +192,12 @@ class RestRouter:
 
         @router.put("/{item_id}")
         async def put_item(item_id: str, item: aas_model_type) -> Dict[str, str]:
-            await self.get_consumer(item_id).execute(item)
+            try:
+                consumer = self.get_consumer(item_id)
+            except KeyError:
+                consumer = self.create_consumer(item)
+                self.create_provider(item)
+            await consumer.execute(item)
             # TODO: also update the item_id in the consumer if the new item has another id.
             return {"message": f"Succesfully updated aas with id {item.id}"}
 

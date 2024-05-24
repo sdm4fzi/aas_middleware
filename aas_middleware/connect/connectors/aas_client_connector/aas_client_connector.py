@@ -42,10 +42,10 @@ class BasyxAASConnector(Generic[T]):
     async def send(self, body: Optional[T]) -> None:
         if not body:
             await delete_aas_from_server(self.aas_id, self.aas_client)
-        if aas_is_on_server(self.aas_id, self.aas_client):
-            put_aas_to_server(self.aas_id, self.aas_client, self.submodel_client)
+        if await aas_is_on_server(self.aas_id, self.aas_client):
+            await put_aas_to_server(body, self.aas_client, self.submodel_client)
         else:
-            post_aas_to_server(self.aas_id, self.aas_client, self.submodel_client)
+            await post_aas_to_server(body, self.aas_client, self.submodel_client)
 
     async def receive(self) -> T:
         return await get_aas_from_server(self.aas_id, self.aas_client, self.submodel_client)
@@ -70,10 +70,10 @@ class BasyxSubmodelConnector(Generic[S]):
     async def send(self, body: Optional[S]) -> None:
         if not body:
             await delete_submodel_from_server(self.submodel_id, self.submodel_client)
-        if submodel_is_on_server(self.submodel_id, self.submodel_client):
-            put_submodel_to_server(self.submodel_id, self.submodel_client)
+        if await submodel_is_on_server(self.submodel_id, self.submodel_client):
+            await put_submodel_to_server(self.submodel_id, self.submodel_client)
         else:
-            post_submodel_to_server(self.submodel_id, self.submodel_client)
+            await post_submodel_to_server(self.submodel_id, self.submodel_client)
 
     async def receive(self) -> S:
         return await get_submodel_from_server(self.submodel_id, self.submodel_client)

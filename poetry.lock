@@ -169,13 +169,13 @@ dev = ["black", "coverage", "isort", "pre-commit", "pyenchant", "pylint"]
 
 [[package]]
 name = "annotated-types"
-version = "0.6.0"
+version = "0.7.0"
 description = "Reusable constraint types to use with typing.Annotated"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "annotated_types-0.6.0-py3-none-any.whl", hash = "sha256:0641064de18ba7a25dee8f96403ebc39113d0cb953a01429249d5c7564666a43"},
-    {file = "annotated_types-0.6.0.tar.gz", hash = "sha256:563339e807e53ffd9c267e99fc6d9ea23eb8443c08f112651963e24e22f84a5d"},
+    {file = "annotated_types-0.7.0-py3-none-any.whl", hash = "sha256:1f02e8b43a8fbbc3f3e0d4f0f4bfc8131bcb4eebe8849b8e5c773f3a1c582a53"},
+    {file = "annotated_types-0.7.0.tar.gz", hash = "sha256:aff07c09a53a08bc8cfccb9c85b05f1aa9a2a6f23728d790723543408344ce89"},
 ]
 
 [[package]]
@@ -253,13 +253,13 @@ tests-no-zope = ["attrs[tests-mypy]", "cloudpickle", "hypothesis", "pympler", "p
 
 [[package]]
 name = "ba-syx-aas-environment-component-client"
-version = "2.0"
+version = "2.1"
 description = "A client library for accessing BaSyx AAS Environment Component"
 optional = false
 python-versions = "<4.0,>=3.8"
 files = [
-    {file = "ba_syx_aas_environment_component_client-2.0-py3-none-any.whl", hash = "sha256:e4fc81213699d7dcc935f2131f3f12914774126423701089385129eef99158ad"},
-    {file = "ba_syx_aas_environment_component_client-2.0.tar.gz", hash = "sha256:4811285e15547f0163d4ce382d5759068b4c5f3138b37d2aa8b8e172e05f9aab"},
+    {file = "ba_syx_aas_environment_component_client-2.1-py3-none-any.whl", hash = "sha256:0870ffc7cd87f3a2877848be2adbd8ec44e221eaa5e66042991b8d9c4fdfda9e"},
+    {file = "ba_syx_aas_environment_component_client-2.1.tar.gz", hash = "sha256:42b5dc28d1235505cf550010f8d2f27d8e11c0923cf17d15bf7b7b248f73e7d0"},
 ]
 
 [package.dependencies]
@@ -1735,13 +1735,13 @@ typing-extensions = ">=3.7.4.3"
 
 [[package]]
 name = "typing-extensions"
-version = "4.11.0"
+version = "4.12.0"
 description = "Backported and Experimental Type Hints for Python 3.8+"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "typing_extensions-4.11.0-py3-none-any.whl", hash = "sha256:c1f94d72897edaf4ce775bb7558d5b79d8126906a14ea5ed1635921406c0387a"},
-    {file = "typing_extensions-4.11.0.tar.gz", hash = "sha256:83f085bd5ca59c80295fc2a82ab5dac679cbe02b9f33f7d83af68e241bea51b0"},
+    {file = "typing_extensions-4.12.0-py3-none-any.whl", hash = "sha256:b349c66bea9016ac22978d800cfff206d5f9816951f12a7d0ec5578b0a819594"},
+    {file = "typing_extensions-4.12.0.tar.gz", hash = "sha256:8cbcdc8606ebcb0d95453ad7dc5065e6237b6aa230a31e81d0f440c30fed5fd8"},
 ]
 
 [[package]]
@@ -2191,4 +2191,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "1f94b684c4cce179ebaabd6f1d1a7ba1c96c176fc6b056cc80480ce3252dc63e"
+content-hash = "bd676972bf9502d5b0a82b8be886639f0ff29a2a1a37700e339b14cc1be9fe01"

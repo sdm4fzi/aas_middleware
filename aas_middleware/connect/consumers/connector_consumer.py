@@ -29,4 +29,4 @@ class ConnectorConsumer(Generic[D]):
     async def execute(self, data: D):
         self.data_model.model_validate(data)
         body = data.model_dump_json()
-        respone = await self.connector.send(body)
+        respone = await self.connector.send(data)

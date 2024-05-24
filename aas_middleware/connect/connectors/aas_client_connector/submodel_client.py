@@ -84,7 +84,7 @@ async def post_submodel_to_server(pydantic_submodel: aas_model.Submodel, submode
         )
     basyx_submodel = convert_model_to_submodel(pydantic_submodel)
     submodel_for_client = client_utils.ClientModel(basyx_object=basyx_submodel)
-    response = await post_submodel.asyncio(client=submodel_client, json_body=submodel_for_client)
+    response = await post_submodel.asyncio(client=submodel_client, body=submodel_for_client)
 
 
 async def put_submodel_to_server(submodel: aas_model.Submodel, submodel_client: SubmodelClient):
@@ -105,7 +105,7 @@ async def put_submodel_to_server(submodel: aas_model.Submodel, submodel_client: 
     submodel_for_client = client_utils.ClientModel(basyx_object=basyx_submodel)
     base_64_id = client_utils.get_base64_from_string(submodel.id)
     response = await put_submodel_by_id.asyncio(
-        submodel_identifier=base_64_id, client=submodel_client, json_body=submodel_for_client
+        submodel_identifier=base_64_id, client=submodel_client, body=submodel_for_client
     )
 
 

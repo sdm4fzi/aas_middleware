@@ -64,7 +64,7 @@ async def post_aas_to_server(aas: aas_model.AAS, aas_client: AASClient, submodel
     basyx_aas = obj_store.get(aas.id)
     aas_for_client = ClientModel(basyx_object=basyx_aas)
     response = await post_asset_administration_shell.asyncio(
-        client=aas_client, json_body=aas_for_client
+        client=aas_client, body=aas_for_client
     )
 
     aas_attributes = get_value_attributes(aas)
@@ -94,7 +94,7 @@ async def put_aas_to_server(aas: aas_model.AAS, aas_client: AASClient, submodel_
     aas_for_client = ClientModel(basyx_object=basyx_aas)
     base_64_id = client_utils.get_base64_from_string(aas.id)
     await put_asset_administration_shell_by_id.asyncio(
-        aas_identifier=base_64_id, client=aas_client, json_body=aas_for_client
+        aas_identifier=base_64_id, client=aas_client, body=aas_for_client
     )
 
     for submodel in get_value_attributes(aas).values():

@@ -44,4 +44,3 @@ class AasMiddleware(Middleware):
                 persistence_consumer = ConnectorConsumer(connector, model, model.id)
                 self.connect_consumer(persistence_consumer, name, model.id, persistence=True)
         self.generate_rest_api_for_data_model(name)
-    
