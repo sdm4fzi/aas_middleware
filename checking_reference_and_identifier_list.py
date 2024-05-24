@@ -1,18 +1,26 @@
-from pydantic import BaseModel, ConfigDict
+from typing import Type
+from aiohttp import streamer
+import fastapi
+from pydantic import BaseModel, ConfigDict, create_model
 
 class FrozenModel(BaseModel):
     id: int
     name: str
 
-    model_config = ConfigDict(frozen=True)
 
 
+app = fastapi.FastAPI()
 
-a = FrozenModel(id=1, name="a")
-b = FrozenModel(id=2, name="b")
 
-c = {a: "a", b: "b"}
+def create_post_endpoint(model_type: Type[FrozenModel]):
+    @app.post("/model")
+    async def create_model(model: model_type) -> FrozenModel:
+        return model
 
-new_a = FrozenModel(id=1, name="a")
+# create_post_endpoint(FrozenModel)
 
-print(c[new_a])  # prints "a"
+dynamic_created_model = create_model("DynamicModel", id=(int, ...), name2=(str, ...))
+create_post_endpoint(dynamic_created_model)
+
+import uvicorn
+uvicorn.run(app)

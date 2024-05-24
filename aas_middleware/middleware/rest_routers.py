@@ -1,15 +1,12 @@
-from __future__ import annotations
-
-from fastapi import APIRouter, Body
+from fastapi import APIRouter
 from pydantic import BaseModel
 
-from typing import TYPE_CHECKING, Annotated, List, Type, Dict
+from typing import TYPE_CHECKING, List, Type, Dict
 
 from aas_middleware.connect.consumers.consumer import Consumer
 from aas_middleware.connect.providers.provider import Provider
 from aas_middleware.middleware import middleware
 from aas_middleware.model.data_model import DataModel
-from aas_middleware.model.data_model_rebuilder import DataModelRebuilder
 from aas_middleware.model.formatting.aas.aas_middleware_util import get_all_submodels_from_model
 from aas_middleware.model.formatting.aas.aas_model import AAS, Submodel
 
@@ -44,7 +41,7 @@ def check_if_submodel_is_optional_in_aas(
 
 
 class RestRouter:
-    def __init__(self, data_model: DataModel, data_model_name: str, middleware: Middleware):
+    def __init__(self, data_model: DataModel, data_model_name: str, middleware: "Middleware"):
         self.data_model = data_model
         self.data_model_name = data_model_name
         # TODO: potentially remove dependancy for data model rebuilder here
@@ -91,25 +88,25 @@ class RestRouter:
             # TODO: item_id represents the aas_id of the submodel -> execute provider of aas and retrieve only submodel field from it.
             return await self.get_provider(item_id).execute()
 
-        # if optional_submodel:
+        if optional_submodel:
 
-        #     @router.post("/")
-        #     async def post_item(item_id: str, item: submodel_model_type) -> Dict[str, str]:
-        #         # TODO: also update data model with the new submodel and and a persistence provider and consumer
-        #         await self.get_consumer(item.id).execute(item)
-        #         # TODO: also update the submodel in the aas containing the submodel
-        #         return {
-        #             "message": f"Succesfully created submodel {submodel_name} of aas with id {item_id}"
-        #         }
+            @router.post("/")
+            async def post_item(item_id: str, item: submodel_model_type) -> Dict[str, str]:
+                # TODO: also update data model with the new submodel and and a persistence provider and consumer
+                await self.get_consumer(item.id).execute(item)
+                # TODO: also update the submodel in the aas containing the submodel
+                return {
+                    "message": f"Succesfully created submodel {submodel_name} of aas with id {item_id}"
+                }
 
-        # @router.put("/")
-        # async def put_item(item_id: str, item: submodel_model_type) -> Dict[str, str]:
-        #     await self.get_consumer(item_id).execute(item)
-        #     # TODO: also update the submodel in the aas containing the submodel
-        #     # TODO: also update the item_id in the consumer if the new item has another id.
-        #     return {
-        #         "message": f"Succesfully updated submodel {submodel_name} of aas with id {item_id}"
-        #     }
+        @router.put("/")
+        async def put_item(item_id: str, item: submodel_model_type) -> Dict[str, str]:
+            await self.get_consumer(item_id).execute(item)
+            # TODO: also update the submodel in the aas containing the submodel
+            # TODO: also update the item_id in the consumer if the new item has another id.
+            return {
+                "message": f"Succesfully updated submodel {submodel_name} of aas with id {item_id}"
+            }
 
         if optional_submodel:
 
@@ -150,8 +147,6 @@ class RestRouter:
                 aas_list.append(retrieved_aas)
             return aas_list
 
-        aas_model_type.model_rebuild(force=True, _parent_namespace_depth=5)
-        # FIXME: resolve problem with annotations of aas_model_type resolving in PydanticUndefinedAnnotation.from_name_error
         @router.post(f"/", response_model=Dict[str, str])
         async def post_item(item: aas_model_type) -> Dict[str, str]:
             await self.get_consumer(item.id).execute(item)
@@ -163,11 +158,11 @@ class RestRouter:
         async def get_item(item_id: str):
             return await self.get_provider(item_id).execute()
 
-        # @router.put("/{item_id}")
-        # async def put_item(item_id: str, item: aas_model_type) -> Dict[str, str]:
-        #     await self.get_consumer(item_id).execute(item)
-        #     # TODO: also update the item_id in the consumer if the new item has another id.
-        #     return {"message": f"Succesfully updated aas with id {item.id}"}
+        @router.put("/{item_id}")
+        async def put_item(item_id: str, item: aas_model_type) -> Dict[str, str]:
+            await self.get_consumer(item_id).execute(item)
+            # TODO: also update the item_id in the consumer if the new item has another id.
+            return {"message": f"Succesfully updated aas with id {item.id}"}
 
         @router.delete("/{item_id}")
         async def delete_item(item_id: str):
