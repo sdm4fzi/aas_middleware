@@ -245,6 +245,18 @@ def get_identifiable_attributes_of_model(
         referable_values += get_values_as_identifiable_list(attribute_value)
     return referable_values
 
+def get_unidentifiable_attributes_of_model(
+    potential_identifiable_container: Identifiable,
+) -> Dict[str, UnIdentifiable]:
+    unidentifiable_values = {}
+    if not is_identifiable(potential_identifiable_container):
+        return []
+    else:
+        attribute_dict = vars(potential_identifiable_container)
+    for attribute_name, attribute_value in attribute_dict.items():
+        if isinstance(attribute_value, UnIdentifiable):
+            unidentifiable_values[attribute_name] = attribute_value
+    return unidentifiable_values
 
 def add_non_redundant_identifiable(
     model: Identifiable, identifiables: List[Identifiable]

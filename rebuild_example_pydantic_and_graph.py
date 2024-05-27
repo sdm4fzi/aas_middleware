@@ -5,6 +5,7 @@ from pydantic import BaseModel, create_model
 
 from aas_middleware.model.data_model import DataModel
 from aas_middleware.model.data_model_rebuilder import DataModelRebuilder, get_patched_aas_object
+from aas_middleware.model.data_model_visualizer import get_instance_graph, get_type_graph, visualize_graph
 from aas_middleware.model.formatting.aas import aas_model
 from aas_middleware.model.formatting.aas.basyx_formatter import BasyxFormatter
 from aas_middleware.model.reference_finder import ReferenceType
@@ -41,67 +42,11 @@ print("patched:", [(reference_info.identifiable_id, reference_info.reference_id)
 
 
 dict_store = BasyxFormatter().serialize(patched_data_model)
-# TODO: use below to implement a visualizer function for an arbitrary data model
-## instances
-# n_vertices = len(data_model.model_ids)
-# model_id_map = {model_id: counter for counter, model_id in enumerate(data_model.model_ids)}
-# edges = [(model_id_map[reference_info.identifiable_id], model_id_map[reference_info.reference_id]) for reference_info in data_model._schema_reference_infos]
 
+instance_graph = get_instance_graph(patched_data_model)
+print(instance_graph)
+type_graph = get_type_graph(patched_data_model)
+print(type_graph)
 
-## types
-unique_names = set()
-for schema in data_model._schema_reference_infos:
-    unique_names.add(schema.identifiable_id)
-    unique_names.add(schema.reference_id)
-n_vertices = len(unique_names)
-schema_id_map = {model_id: counter for counter, model_id in enumerate(unique_names)}
-edges = [(schema_id_map[reference_info.identifiable_id], schema_id_map[reference_info.reference_id]) for reference_info in data_model._schema_reference_infos]
-
-
-import igraph as ig
-from matplotlib import pyplot as plt
-
-g = ig.Graph(n_vertices, edges, directed=True)
-
-# Set attributes for the graph, nodes, and edges
-g["title"] = "Data Model"
-g.vs["name"] = list(unique_names)
-g.es["type"] = [reference_info.reference_type for reference_info in data_model._schema_reference_infos]
-print(g.es["type"])
-
-# Plot in matplotlib
-# Note that attributes can be set globally (e.g. vertex_size), or set individually using arrays (e.g. vertex_color)
-fig, ax = plt.subplots(figsize=(5,5))
-
-edge_colors = []
-for edge in g.es["type"]:
-    if edge == ReferenceType.ASSOCIATION:
-        edge_colors.append("#C74225")
-    elif edge == ReferenceType.REFERENCE:
-        edge_colors.append("#2587C7")
-    elif edge == ReferenceType.ATTRIBUTE:
-        edge_colors.append("#ADADAD")
-
-
-ig.plot(
-    g,
-    target=ax,
-    layout="circle", # print nodes in a circular layout
-    vertex_size=30,
-    vertex_frame_width=4.0,
-    vertex_frame_color="white",
-    vertex_label=g.vs["name"],
-    vertex_label_size=7.0,
-    # edge_width=[2 if reference_type == ReferenceType.ASSOCIATION else 1 for reference_type in g.es["type"]],
-    # edge_color=["#7142cf" if reference_type == ReferenceType.ASSOCIATION else "#AAA" for reference_type in g.es["type"]]
-    edge_color=edge_colors
-)
-
-plt.show()
-
-# # Save the graph as an image file
-# fig.savefig('social_network.png')
-# fig.savefig('social_network.jpg')
-# fig.savefig('social_network.pdf')
-print(g.indegree())
-print(g.shell_index())
+visualize_graph(instance_graph)
+visualize_graph(type_graph)

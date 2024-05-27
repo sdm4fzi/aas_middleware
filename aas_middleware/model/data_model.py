@@ -521,7 +521,7 @@ class DataModel(BaseModel):
         referenced_model_dict = self._reference_info_dict_for_referencing[
             referencing_model_id
         ]
-        return [self.get_model(model_id) for model_id in referenced_model_dict]
+        return [self.get_model(model_id) for model_id in referenced_model_dict if model_id in self.model_ids]
 
     def get_referenced_models_of_type(
         self, referencing_model: Identifiable, referenced_model_type: Type[T]

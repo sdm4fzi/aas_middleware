@@ -12,6 +12,7 @@ from aas_middleware.model.util import (
     get_reference_name,
     get_referenced_ids_of_model,
     get_identifiable_attributes_of_model,
+    get_unidentifiable_attributes_of_model,
     is_identifiable_container,
     is_identifiable_type,
 )
@@ -70,6 +71,15 @@ def get_reference_infos_of_model(model: Identifiable) -> Set[ReferenceInfo]:
             identifiable_id=get_id_with_patch(model),
             reference_id=indirect_reference,
             reference_type=ReferenceType.REFERENCE,
+        )
+        reference_infos.add(reference_info)
+
+    unidentifiable_attributes = get_unidentifiable_attributes_of_model(model)
+    for attribute_name, attribute_value in unidentifiable_attributes.items():
+        reference_info = ReferenceInfo(
+            identifiable_id=get_id_with_patch(model),
+            reference_id=f"{attribute_name}={attribute_value}",
+            reference_type=ReferenceType.ATTRIBUTE,
         )
         reference_infos.add(reference_info)
     return reference_infos
