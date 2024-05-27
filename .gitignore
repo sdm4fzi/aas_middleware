@@ -53,3 +53,7 @@ venv.bak/
 
 # Vscode
 .vscode/
+
+# sdm tests
+/sdm_reference_model/
+sdm_model_checks.py

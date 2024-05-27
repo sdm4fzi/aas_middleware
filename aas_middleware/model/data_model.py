@@ -107,7 +107,8 @@ class DataModel(BaseModel):
             DataModel: The data model with loaded models
         """
         data_model = cls(**data)
-        data_model.add_schema(*model_types)
+        for model_type in model_types:
+            data_model.add_schema(model_type)
         return data_model
 
     @property
