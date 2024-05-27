@@ -9,7 +9,7 @@ from pydantic import BaseModel, BeforeValidator, model_validator
 Identifier = TypeVar("Identifier", bound=str | int | UUID)
 Reference = TypeVar("Reference", bound=str | int | UUID)
 UnIdentifiable = (
-    str | int | float | bool | None | UUID | Enum | list | tuple | set | type
+    str | int | float | bool | None | UUID | Enum | list | tuple | set | type | dict
 )
 
 

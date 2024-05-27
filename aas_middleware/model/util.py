@@ -1,10 +1,12 @@
 from __future__ import annotations
 import inspect
 import re
-from typing import Any, Dict, List, Set, Optional
+from typing import Any, Dict, List, Set, Optional, Tuple, Type
+import typing
 from uuid import UUID
 
 from pydantic import BaseModel
+from pydantic.fields import FieldInfo
 
 from aas_middleware.model.core import (
     Identifiable,
@@ -61,7 +63,8 @@ def is_identifiable(model: Any) -> bool:
     return True
 
 
-def get_identifier_type_fields(model: BaseModel) -> List[str]:
+# def get_identifier_type_fields(model: BaseModel) -> List[str]:
+def get_identifier_type_fields(field_info_dict: Dict[str, FieldInfo]) -> List[str]:
     """
     Function to get the fields of a model that are of type Identifier.
 
@@ -72,7 +75,7 @@ def get_identifier_type_fields(model: BaseModel) -> List[str]:
         List[str]: The field names that are Identifiers
     """
     model_fields = []
-    for field_name, field_info in model.model_fields.items():
+    for field_name, field_info in field_info_dict.items():
         if field_info.annotation == Identifier:
             model_fields.append(field_name)
     return model_fields
@@ -95,12 +98,13 @@ def get_id(model: Any) -> str | int | UUID:
         raise ValueError("Model is a basic type and has no id attribute.")
 
     if isinstance(model, BaseModel):
-        identifiable_fields = get_identifier_type_fields(model)
+        identifiable_fields = get_identifier_type_fields(model.model_fields)
         if len(identifiable_fields) > 1:
             raise ValueError(f"Model has multiple Identifier attributes: {model}")
         if identifiable_fields:
             return getattr(model, identifiable_fields[0])
     elif hasattr(model, "__dict__"):
+        # TODO: use typing.get_type_hints instead of inspect.signature
         sig = inspect.signature(type(model).__init__)
         potential_identifier = []
         for param in sig.parameters.values():
@@ -152,6 +156,53 @@ def get_id_with_patch(model: Any) -> str:
         return str(get_id(model))
     except ValueError:
         return "id_" + str(id(model))
+    
+
+def is_identifiable_type(schema: Type[Any]) -> bool:
+    """
+    Function to check if a schema is identifiable.
+
+    Args:
+        schema (Type[Any]): The schema.
+
+    Returns:
+        bool: True if the schema is identifiable, False otherwise.
+    """
+    # TODO: refactor to combine is_identifiable and is_identifiable_type
+    # TODO: handle here also union types
+    if not isinstance(schema, type):
+        return False
+    if issubclass(schema, UnIdentifiable):
+        return False
+    return True
+    
+
+def is_identifiable_type_container(schema: Type[Any]) -> bool:
+    """
+    Method to check if a schema is a container of identifiables.
+
+    Args:
+        schema (Type[Any]): The schema.
+
+    Returns:
+        bool: True if the schema is a container of identifiables, False otherwise.
+    """
+    # TODO: refactor to combine is_identifiable_container and is_identifiable_type_container
+    if typing.get_origin(schema):
+        outer_type = typing.get_origin(schema)
+    else:
+        outer_type = schema
+
+    if not outer_type in [list,  tuple, set, dict]:
+        return False
+    if outer_type == dict:
+        raise NotImplementedError("Dicts are not supported yet. Try using classes instead.")
+    type_arguments = typing.get_args(schema)
+    if not type_arguments:
+        return False
+    if not all(is_identifiable_type(element) for element in type_arguments):
+        return False
+    return True
 
 
 def is_identifiable_container(model: Any) -> bool:
@@ -317,6 +368,28 @@ REFERENCE_ATTRIBUTE_NAMES_SUFFIXES = [
     "identities",
 ]
 
+def get_reference_name(attribute_name: str, attribute_type: Type[Any]) -> Optional[str]:
+    """
+    Function to get the reference name of an attribute.
+
+    Args:
+        attribute_name (str): The attribute name.
+        attribute_type (Type[Any]): The type of the attribute.
+
+    Returns:
+        str: The name of the referenced type.
+    """
+    if attribute_name in REFERENCE_ATTRIBUTE_NAMES_SUFFIXES or attribute_name in STANDARD_AAS_FIELDS:
+        return 
+
+    if attribute_type == Reference or attribute_type == "Reference":
+        return attribute_name
+    elif typing.get_origin(attribute_type) in [List, Set, Tuple] and typing.get_args(attribute_type)[0] == Reference:
+        return attribute_name
+    elif any (attribute_name.endswith(suffix) for suffix in REFERENCE_ATTRIBUTE_NAMES_SUFFIXES):
+        suffix = next(suffix for suffix in REFERENCE_ATTRIBUTE_NAMES_SUFFIXES if attribute_name.endswith(suffix))
+        attribute_name_without_suffix = attribute_name[:-(len(suffix) + 1)]
+        return convert_under_score_to_camel_case_str(attribute_name_without_suffix)
 
 def get_attribute_name_encoded_references(model: Identifiable) -> List[str]:
     """

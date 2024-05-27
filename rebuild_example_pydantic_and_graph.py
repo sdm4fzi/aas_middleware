@@ -34,7 +34,7 @@ other_child = Child(Id="alex", age=10, name_info=other_name_info_child)
 
 data_model = DataModel.from_models(example_parent, other_parent, other_child)
 print("unpatched:", [(reference_info.identifiable_id, reference_info.reference_id) for reference_info in data_model._reference_infos])
-
+print("schemas:", [(schema.identifiable_id, schema.reference_id) for schema in data_model._schema_reference_infos])
 
 patched_data_model = DataModelRebuilder(data_model).rebuild_data_model_for_AAS_structure()
 print("patched:", [(reference_info.identifiable_id, reference_info.reference_id) for reference_info in data_model._reference_infos])
@@ -42,22 +42,47 @@ print("patched:", [(reference_info.identifiable_id, reference_info.reference_id)
 
 dict_store = BasyxFormatter().serialize(patched_data_model)
 # TODO: use below to implement a visualizer function for an arbitrary data model
-model_id_map = {model_id: counter for counter, model_id in enumerate(data_model.model_ids)}
+## instances
+# n_vertices = len(data_model.model_ids)
+# model_id_map = {model_id: counter for counter, model_id in enumerate(data_model.model_ids)}
+# edges = [(model_id_map[reference_info.identifiable_id], model_id_map[reference_info.reference_id]) for reference_info in data_model._schema_reference_infos]
+
+
+## types
+unique_names = set()
+for schema in data_model._schema_reference_infos:
+    unique_names.add(schema.identifiable_id)
+    unique_names.add(schema.reference_id)
+n_vertices = len(unique_names)
+schema_id_map = {model_id: counter for counter, model_id in enumerate(unique_names)}
+edges = [(schema_id_map[reference_info.identifiable_id], schema_id_map[reference_info.reference_id]) for reference_info in data_model._schema_reference_infos]
+
 
 import igraph as ig
 from matplotlib import pyplot as plt
-n_vertices = len(data_model.model_ids)
-edges = [(model_id_map[reference_info.identifiable_id], model_id_map[reference_info.reference_id]) for reference_info in data_model._reference_infos]
+
 g = ig.Graph(n_vertices, edges, directed=True)
 
 # Set attributes for the graph, nodes, and edges
 g["title"] = "Data Model"
-g.vs["name"] = list(data_model.model_ids)
-g.es["type"] = [reference_info.reference_type for reference_info in data_model._reference_infos]
+g.vs["name"] = list(unique_names)
+g.es["type"] = [reference_info.reference_type for reference_info in data_model._schema_reference_infos]
+print(g.es["type"])
 
 # Plot in matplotlib
 # Note that attributes can be set globally (e.g. vertex_size), or set individually using arrays (e.g. vertex_color)
 fig, ax = plt.subplots(figsize=(5,5))
+
+edge_colors = []
+for edge in g.es["type"]:
+    if edge == ReferenceType.ASSOCIATION:
+        edge_colors.append("#C74225")
+    elif edge == ReferenceType.REFERENCE:
+        edge_colors.append("#2587C7")
+    elif edge == ReferenceType.ATTRIBUTE:
+        edge_colors.append("#ADADAD")
+
+
 ig.plot(
     g,
     target=ax,
@@ -67,8 +92,9 @@ ig.plot(
     vertex_frame_color="white",
     vertex_label=g.vs["name"],
     vertex_label_size=7.0,
-    edge_width=[2 if reference_type == ReferenceType.ASSOCIATION else 1 for reference_type in g.es["type"]],
-    edge_color=["#7142cf" if reference_type == ReferenceType.ASSOCIATION else "#AAA" for reference_type in g.es["type"]]
+    # edge_width=[2 if reference_type == ReferenceType.ASSOCIATION else 1 for reference_type in g.es["type"]],
+    # edge_color=["#7142cf" if reference_type == ReferenceType.ASSOCIATION else "#AAA" for reference_type in g.es["type"]]
+    edge_color=edge_colors
 )
 
 plt.show()

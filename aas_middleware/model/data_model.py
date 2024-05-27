@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field, ValidationError
 from aas_middleware.model.core import Identifiable
 
 from aas_middleware.model.reference_finder import ReferenceFinder, ReferenceInfo
+from aas_middleware.model.schema_util import get_attribute_dict_of_schema
 from aas_middleware.model.util import (
     convert_under_score_to_camel_case_str,
     convert_camel_case_to_underscrore_str,
@@ -50,12 +51,18 @@ class DataModel(BaseModel):
         _reference_info_dict_for_referenced (Dict[str, Dict[str, ReferenceInfo]]): The dictionary of reference infos with keys from the referenced model to the referencing model.
     """
 
-    _reference_infos: List[ReferenceInfo] = []
     _models_key_id: Dict[str, Identifiable] = {}
     _top_level_models: Dict[str, List[str]] = {}
     _models_key_type: Dict[str, List[str]] = {}
+    _reference_infos: Set[ReferenceInfo] = set()
     _reference_info_dict_for_referencing: Dict[str, Dict[str, ReferenceInfo]] = {}
     _reference_info_dict_for_referenced: Dict[str, Dict[str, ReferenceInfo]] = {}
+
+    _schemas: Dict[str, Type[Any]] = {}
+    _top_level_schemas: Set[str] = set()
+    _schema_reference_infos: Set[ReferenceInfo] = set()
+    _schema_reference_info_for_referencing: Dict[str, Dict[str, ReferenceInfo]] = {}
+    _schema_reference_info_for_referenced: Dict[str, Dict[str, ReferenceInfo]] = {}
 
     def __init__(self, **data: Dict[str, Any]):
         super().__init__(**data)
@@ -99,8 +106,9 @@ class DataModel(BaseModel):
         Returns:
             DataModel: The data model with loaded models
         """
-        # TODO: implement function to generate data model from types alone!
-        raise NotImplementedError
+        data_model = cls(**data)
+        data_model.add_schema(*model_types)
+        return data_model
 
     @property
     def model_ids(self) -> Set[str]:
@@ -131,6 +139,18 @@ class DataModel(BaseModel):
         for model in models:
             self.add_model(model)
 
+    def add_schema(self, schema: Type[Identifiable]) -> None:
+        """
+        Method to add a schema of the data model.
+
+        Args:
+            schema (Type[Identifiable]): The schema to load.
+        """
+        all_schemas, schema_reference_infos = ReferenceFinder.find_schema_references(schema)
+        self._add_contained_schemas(all_schemas)
+        self._add_top_level_schema(schema)
+        self._add_schema_references_to_referencing_schemas_dict(schema_reference_infos)
+
     def add_model(self, model: Identifiable) -> None:
         """
         Method to load a model of the data model.
@@ -142,6 +162,7 @@ class DataModel(BaseModel):
         model_id = get_id_with_patch(model)
         if model_id in self.model_ids:
             raise ValueError(f"Model with id {model_id} already loaded.")
+        self.add_schema(type(model))
         all_identifiables, reference_infos = ReferenceFinder.find(model)
         self._add_contained_models(model, all_identifiables)
         self._add_top_level_model(model)
@@ -186,8 +207,21 @@ class DataModel(BaseModel):
                 continue
             self._add_model(contained_model)
 
+    def _add_contained_schemas(
+        self, contained_schemas: List[Type[Identifiable]]
+    ) -> None:
+        """
+        Method to load all contained schemas of a schema.
+
+        Args:
+            top_level_schema (Type[Identifiable]): The top level schema to load.
+            contained_schemas (List[Type[Identifiable]]): The contained schemas to load.
+        """
+        for contained_schema in contained_schemas:
+            self._schemas[contained_schema.__name__] = contained_schema
+
     def _add_references_to_referencing_models_dict(
-        self, reference_infos: List[ReferenceInfo]
+        self, reference_infos: Set[ReferenceInfo]
     ) -> None:
         """
         Method to add information about referencing model ids of the input model.
@@ -195,8 +229,7 @@ class DataModel(BaseModel):
         Args:
             model (Identifiable): The model to add the information for.
         """
-        # TODO: make sure that the reference_infos are unique -> set and frozen -> update when the attribute is adjusted by replace_attribute_with_model
-        self._reference_infos += reference_infos
+        self._reference_infos = self._reference_infos | reference_infos
         for reference_info in reference_infos:
             referencing_model_id = reference_info.identifiable_id
             referenced_model_id = reference_info.reference_id
@@ -210,6 +243,29 @@ class DataModel(BaseModel):
             self._reference_info_dict_for_referenced[referenced_model_id][
                 referencing_model_id
             ] = reference_info
+
+    def _add_schema_references_to_referencing_schemas_dict(self, reference_infos: Set[ReferenceInfo]) -> None:
+        """
+        Method to add information about referencing schema ids of the input schema.
+
+        Args:
+            schema (Type[Identifiable]): The schema to add the information for.
+        """
+        self._schema_reference_infos = self._schema_reference_infos | reference_infos
+        for reference_info in reference_infos:
+            referencing_schema_id = reference_info.identifiable_id
+            referenced_schema_id = reference_info.reference_id
+            if not referencing_schema_id in self._schema_reference_info_for_referencing:
+                self._schema_reference_info_for_referencing[referencing_schema_id] = {}
+            self._schema_reference_info_for_referencing[referencing_schema_id][
+                referenced_schema_id
+            ] = reference_info
+            if not referenced_schema_id in self._schema_reference_info_for_referenced:
+                self._schema_reference_info_for_referenced[referenced_schema_id] = {}
+            self._schema_reference_info_for_referenced[referenced_schema_id][
+                referencing_schema_id
+            ] = reference_info
+
 
     def _add_model(self, model: Identifiable) -> None:
         """
@@ -239,6 +295,17 @@ class DataModel(BaseModel):
         if not underscore_type_name in self._top_level_models:
             self._top_level_models[underscore_type_name] = []
         self._top_level_models[underscore_type_name].append(get_id_with_patch(model))
+
+    def _add_top_level_schema(self, schema: Type[Identifiable]) -> None:
+        """
+        Method to add a schema to the data model.
+
+        Args:
+            schema (Type[Identifiable]): The schema to add.
+        """
+        schema_name = schema.__name__
+        if not schema_name in self._top_level_schemas:
+            self._top_level_schemas.add(schema_name)
 
     def from_dict(self, data: NESTED_DICT, types: List[Type]) -> None:
         """
@@ -309,11 +376,9 @@ class DataModel(BaseModel):
         Returns:
             List[Type[Identifiable]]: The types of the top level models in the data model
         """
-        # TODO: implement function and change structure in DataModel that it can be instantiated also with types
-        # TODO: add the possibility that a DataModel is frozen -> no types can be added or removed.
         top_level_types = []
-        for top_level_models_of_type in self.get_top_level_models().values():
-            top_level_types.append(top_level_models_of_type[0].__class__)
+        for schema_name in self._top_level_schemas:
+            top_level_types.append(self._schemas[schema_name])
         return top_level_types
 
     def get_models_of_type_name(self, model_type_name: str) -> List[Identifiable]:
