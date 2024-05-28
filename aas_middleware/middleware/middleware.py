@@ -31,7 +31,7 @@ class ConnectionInfo(BaseModel):
     model_id: typing.Optional[str] = None
     field_id: typing.Optional[str] = None
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, protected_namespaces=())
 
     @property
     def connection_type(self) -> typing.Literal["data_model", "model", "field"]:

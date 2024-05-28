@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from typing import List, Set, Tuple, Type
+from types import NoneType
+from typing import List, Optional, Set, Tuple, Type, Union
+import typing
 from pydantic import BaseModel, ConfigDict
 from enum import Enum
 
@@ -9,12 +11,14 @@ from aas_middleware.model.schema_util import get_all_contained_schemas, get_attr
 from aas_middleware.model.util import (
     get_all_contained_identifiables,
     get_id_with_patch,
+    get_identifiable_types,
     get_reference_name,
     get_referenced_ids_of_model,
     get_identifiable_attributes_of_model,
     get_unidentifiable_attributes_of_model,
     is_identifiable_container,
     is_identifiable_type,
+    is_identifiable_type_container,
 )
 
 
@@ -100,6 +104,7 @@ def get_reference_infos(identifiables: List[Identifiable]) -> Set[ReferenceInfo]
         reference_infos = reference_infos | get_reference_infos_of_model(identifiable)
     return reference_infos
 
+
 def get_reference_infos_of_schema(schema: Type[Identifiable]) -> Set[ReferenceInfo]:
     """
     Method to add information about referencing schema ids of the input schema.
@@ -113,27 +118,35 @@ def get_reference_infos_of_schema(schema: Type[Identifiable]) -> Set[ReferenceIn
     reference_infos = set()
     attribute_dict_of_schema = get_attribute_dict_of_schema(schema)
     for attribute_name, attribute_type in attribute_dict_of_schema.items():
-        if is_identifiable_type(attribute_type) or is_identifiable_container(attribute_type):
-            reference_info = ReferenceInfo(
-                identifiable_id=schema.__name__,
-                reference_id=attribute_type.__name__,
-                reference_type=ReferenceType.ASSOCIATION,
-            )
-        elif get_reference_name(attribute_name, attribute_type):
-            reference_info = ReferenceInfo(
-                identifiable_id=schema.__name__,
-                reference_id=get_reference_name(attribute_name, attribute_type),
-                reference_type=ReferenceType.REFERENCE,
-            )
-        else:
-            reference_info = ReferenceInfo(
-                identifiable_id=schema.__name__,
-                reference_id=f"{schema.__name__}.{attribute_name}",
-                reference_type=ReferenceType.ATTRIBUTE,
-            )
-        reference_infos.add(reference_info)
+        attribute_types = get_identifiable_types(attribute_type)
+
+        for arg in attribute_types:
+            reference_info = get_reference_info_for_schema(schema, attribute_name, arg)
+            if not reference_info:
+                continue
+            reference_infos.add(reference_info)
     return reference_infos
-        
+
+
+def get_reference_info_for_schema(schema: Type[Identifiable], attribute_name: str, attribute_type: Type[Identifiable]) -> Optional[ReferenceInfo]:
+    if is_identifiable_type(attribute_type) or is_identifiable_type_container(attribute_type):
+        return ReferenceInfo(
+            identifiable_id=schema.__name__,
+            reference_id=attribute_type.__name__,
+            reference_type=ReferenceType.ASSOCIATION,
+        )
+    elif get_reference_name(attribute_name, attribute_type):
+        return ReferenceInfo(
+            identifiable_id=schema.__name__,
+            reference_id=get_reference_name(attribute_name, attribute_type),
+            reference_type=ReferenceType.REFERENCE,
+        )
+    else:
+        return ReferenceInfo(
+            identifiable_id=schema.__name__,
+            reference_id=f"{schema.__name__}.{attribute_name}",
+            reference_type=ReferenceType.ATTRIBUTE,
+        )
 
 def get_schema_reference_infos(schemas: List[Type[Identifiable]]) -> Set[ReferenceInfo]:
     """

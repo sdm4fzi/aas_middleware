@@ -75,13 +75,18 @@ def visualize_graph(graph: ig.Graph):
             edge_colors.append("#ced4da")
 
     node_colors = []
+    node_labels = []
     for node in graph.vs:
         if node["type"] == "Top Level":
             node_colors.append("#0582ca")
+            node_labels.append(node["name"])
         elif node["type"] == "Schema":
             node_colors.append("#ade8f4")
+            node_labels.append(node["name"])
         elif node["type"] == "Primitive":
             node_colors.append("#ced4da")
+            node_labels.append("")
+            # node_labels.append(node["name"])
 
     fig, ax = plt.subplots()
 
@@ -90,13 +95,13 @@ def visualize_graph(graph: ig.Graph):
             # layout="circle",
             vertex_color=node_colors,
             vertex_frame_width=0.0,
-            vertex_size=30,
+            vertex_size=10,
             vertex_label_size=7.0,
-            vertex_label=graph.vs["name"],
-            edge_width=2,
+            vertex_label=node_labels,
+            edge_width=1,
             edge_color=edge_colors,
     )
-    fig.set_size_inches(10, 10)
+    fig.set_size_inches(20, 20)
     plt.show()
     # Save the graph as an image file
     # fig.savefig('social_network.png')

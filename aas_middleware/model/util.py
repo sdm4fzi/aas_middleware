@@ -1,7 +1,8 @@
 from __future__ import annotations
 import inspect
 import re
-from typing import Any, Dict, List, Set, Optional, Tuple, Type
+from types import NoneType
+from typing import Any, Dict, List, Set, Optional, Tuple, Type, Union
 import typing
 from uuid import UUID
 
@@ -175,7 +176,18 @@ def is_identifiable_type(schema: Type[Any]) -> bool:
     if issubclass(schema, UnIdentifiable):
         return False
     return True
-    
+
+
+def get_identifiable_types(attribute_type: Type[Identifiable]) -> List[Type[Identifiable]]:
+    identifiable_types = []
+    if typing.get_origin(attribute_type) in [list, set, tuple, dict, Union]:
+        attribute_types = typing.get_args(attribute_type)
+        filtered_attribute_types = [arg for arg in attribute_types if arg != NoneType]
+    else:
+        return [attribute_type]
+    for arg in filtered_attribute_types:
+        identifiable_types += get_identifiable_types(arg)
+    return identifiable_types
 
 def is_identifiable_type_container(schema: Type[Any]) -> bool:
     """
@@ -193,14 +205,15 @@ def is_identifiable_type_container(schema: Type[Any]) -> bool:
     else:
         outer_type = schema
 
-    if not outer_type in [list,  tuple, set, dict]:
+    if not outer_type in [list,  tuple, set, dict, Union]:
         return False
     if outer_type == dict:
         raise NotImplementedError("Dicts are not supported yet. Try using classes instead.")
-    type_arguments = typing.get_args(schema)
+    type_arguments = get_identifiable_types(schema)
     if not type_arguments:
         return False
-    if not all(is_identifiable_type(element) for element in type_arguments):
+    type_arguments_with_none = [arg for arg in type_arguments if arg != NoneType]
+    if not all(is_identifiable_type(element) for element in type_arguments_with_none):
         return False
     return True
 
@@ -323,7 +336,6 @@ def get_references_of_reference_type_for_basemodel(model: BaseModel) -> List[str
         if field_info.annotation == Reference or field_info.annotation == "Reference":
             references.append(getattr(model, field_name))
         if field_info.annotation == List[Reference]:
-            print("reference found")
             references += getattr(model, field_name)
     return [str(ref) for ref in references if ref]
 
@@ -396,11 +408,13 @@ def get_reference_name(attribute_name: str, attribute_type: Type[Any]) -> Option
 
     if attribute_type == Reference or attribute_type == "Reference":
         return attribute_name
-    elif typing.get_origin(attribute_type) in [List, Set, Tuple] and typing.get_args(attribute_type)[0] == Reference:
+    elif typing.get_origin(attribute_type) in [List, Set, Tuple, Union] and Reference in typing.get_args(attribute_type):
         return attribute_name
     elif any (attribute_name.endswith(suffix) for suffix in REFERENCE_ATTRIBUTE_NAMES_SUFFIXES):
         suffix = next(suffix for suffix in REFERENCE_ATTRIBUTE_NAMES_SUFFIXES if attribute_name.endswith(suffix))
         attribute_name_without_suffix = attribute_name[:-(len(suffix) + 1)]
+        if attribute_name_without_suffix.endswith("s") and not attribute_name_without_suffix.endswith("ss"):
+            attribute_name_without_suffix = attribute_name_without_suffix[:-1]
         return convert_under_score_to_camel_case_str(attribute_name_without_suffix)
 
 def get_attribute_name_encoded_references(model: Identifiable) -> List[str]:
