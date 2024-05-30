@@ -16,6 +16,7 @@ anyio = "^4.3.0"
 aiohttp = "^3.9.5"
 toml = "^0.10.2"
 ba-syx-aas-environment-component-client = "^2.1"
+datamodel-code-generator = "^0.25.6"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.2.0"
@@ -29,6 +30,7 @@ asyncua = "^1.1.0"
 
 [tool.poetry.group.sdm.dependencies]
 pandas = "^2.2.2"
+prodsys = "^0.7.1"
 
 [build-system]
 requires = ["poetry-core"]
