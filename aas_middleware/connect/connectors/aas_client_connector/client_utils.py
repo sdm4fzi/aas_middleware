@@ -2,7 +2,7 @@ import base64
 from urllib.parse import urlparse
 
 from fastapi import HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 import basyx.aas.adapter.json
 from basyx.aas import model
@@ -15,8 +15,7 @@ logger = logging.getLogger(__name__)
 class ClientModel(BaseModel):
     basyx_object: Union[model.AssetAdministrationShell, model.Submodel]
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def to_dict(self) -> dict:
         basyx_json_string = json.dumps(

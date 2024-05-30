@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field, ValidationError
 
 from aas_middleware.model.core import Identifiable
 
-from aas_middleware.model.reference_finder import ReferenceFinder, ReferenceInfo
+from aas_middleware.model.reference_finder import ReferenceFinder, ReferenceInfo, patch_references
 from aas_middleware.model.schema_util import get_attribute_dict_of_schema
 from aas_middleware.model.util import (
     convert_under_score_to_camel_case_str,
@@ -220,6 +220,18 @@ class DataModel(BaseModel):
         """
         for contained_schema in contained_schemas:
             self._schemas[contained_schema.__name__] = contained_schema
+
+
+    def patch_schema_references(self) -> None:
+        """
+        Function tries to patch schema reference infos to represent a more realistic data model.
+
+        ReferenceInfos of Type Reference are patched so that another ReferenceInfo is added to every schema that has a class name that contains the reference id.
+        ReferenceInfos of Type Attribute are patched so that another ReferenceInfo is added to every schema that has a class name that contains the reference id.
+        """
+        reference_infos = patch_references(self._schema_reference_infos, self._schemas.values())
+        self._schema_reference_infos = reference_infos
+        self._add_schema_references_to_referencing_schemas_dict(reference_infos)
 
     def _add_references_to_referencing_models_dict(
         self, reference_infos: Set[ReferenceInfo]

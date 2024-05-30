@@ -147,6 +147,44 @@ def get_reference_info_for_schema(schema: Type[Identifiable], attribute_name: st
             reference_id=f"{schema.__name__}.{attribute_name}",
             reference_type=ReferenceType.ATTRIBUTE,
         )
+    
+
+def patch_references(references: Set[ReferenceInfo], schemas: List[Type[Identifiable]]) -> Set[ReferenceInfo]:
+    patched_references = set()
+    # FIXME: this is not working properly ---> make case distinctions and resolve them step by step
+    schema_names = {schema.__name__.split(".")[-1] for schema in schemas}
+    print(schema_names)
+    for reference in references:
+        if reference.reference_type == ReferenceType.ASSOCIATION:
+            continue
+        elif reference.reference_type == ReferenceType.ATTRIBUTE:
+            for schema_name in schema_names:
+                adjusted_reference_id = reference.reference_id.split(".")[-1]
+                if adjusted_reference_id in schema_name and len(adjusted_reference_id) > len(schema_name) and not reference.identifiable_id == schema_name:
+                    # print(f"Patch reference from {reference.identifiable_id} to {reference.reference_id} to {schema_name}")
+                    patched_references.add(
+                        ReferenceInfo(
+                            identifiable_id=reference.reference_id,
+                            reference_id=schema_name,
+                            reference_type=ReferenceType.REFERENCE,
+                        )
+                    )
+    
+        elif reference.reference_type == ReferenceType.REFERENCE:
+            for schema_name in schema_names:
+                if reference.reference_id in schema_name and len(reference.reference_id) < len(schema_name) and not reference.identifiable_id == schema_name:
+                    # print(f"Patch reference from {reference.identifiable_id} to {reference.reference_id} to {schema_name}")
+                    patched_references.add(
+                        ReferenceInfo(
+                            identifiable_id=reference.reference_id,
+                            reference_id=schema_name,
+                            reference_type=ReferenceType.REFERENCE,
+                        )
+                    )
+
+    return references | patched_references
+
+
 
 def get_schema_reference_infos(schemas: List[Type[Identifiable]]) -> Set[ReferenceInfo]:
     """
@@ -223,7 +261,7 @@ class ReferenceFinder:
         """
         self.contained_schemas = get_all_contained_schemas(self.model)
         self.schema_references = get_schema_reference_infos(self.contained_schemas)
-        
+        # FIXME: resolve empty referenced nodes without an associated type -> either find subclasses or classes that contain the referenced name (e.g. "acticePoleHousing" for class "PoleHousing")
 
 
 

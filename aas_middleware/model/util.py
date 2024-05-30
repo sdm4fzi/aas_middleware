@@ -45,7 +45,7 @@ def convert_under_score_to_camel_case_str(underscore_str: str) -> str:
         str: The camel case string.
     """
     words = underscore_str.split("_")
-    camel_case_str = "".join(word.title() for word in words)
+    camel_case_str = "".join(word[0].capitalize() + word[1:] for word in words)
     return camel_case_str
 
 
@@ -412,7 +412,10 @@ def get_reference_name(attribute_name: str, attribute_type: Type[Any]) -> Option
         return attribute_name
     elif any (attribute_name.endswith(suffix) for suffix in REFERENCE_ATTRIBUTE_NAMES_SUFFIXES):
         suffix = next(suffix for suffix in REFERENCE_ATTRIBUTE_NAMES_SUFFIXES if attribute_name.endswith(suffix))
-        attribute_name_without_suffix = attribute_name[:-(len(suffix) + 1)]
+        underscore_consideration = False
+        if attribute_name.endswith(f"_{suffix}"):
+            underscore_consideration = True
+        attribute_name_without_suffix = attribute_name[:-(len(suffix) + underscore_consideration)]
         if attribute_name_without_suffix.endswith("s") and not attribute_name_without_suffix.endswith("ss"):
             attribute_name_without_suffix = attribute_name_without_suffix[:-1]
         return convert_under_score_to_camel_case_str(attribute_name_without_suffix)
