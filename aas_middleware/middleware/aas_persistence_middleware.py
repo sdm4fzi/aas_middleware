@@ -37,6 +37,7 @@ class AasMiddleware(Middleware):
         aas_data_model = data_model
         self.load_data_model(name, aas_data_model)
         # TODO: resolve this later with types in data model
+        # FIXME: initially instances in the data model should be saved in the persistence layer
         for models_of_type in aas_data_model.get_top_level_models().values():
             if not models_of_type:
                 continue
