@@ -173,6 +173,7 @@ class RestRouter:
                 self.middleware.add_model_to_persistence(data_model_name=self.data_model_name, model=item)
                 consumer = self.get_consumer(item.id)
             await consumer.execute(item)
+            # TODO: make a try except if the execute is not possible...
             # TODO: also update the item_id in the consumer if the new item has another id.
             return {"message": f"Succesfully updated aas with id {item.id}"}
 

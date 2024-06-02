@@ -35,6 +35,9 @@ class ConnectionInfo(BaseModel):
     data_model_name: str
     model_id: typing.Optional[str] = None
     field_id: typing.Optional[str] = None
+    # TODO: add the type annotation of the connection type -> remove the type from provider / consumer, since it is used better here.... This allows to have a better overview of the connections
+    # and also removes one layer of abstraction. Saves these connecction infos in classes that make dict based mappings and queries on their attributes possible
+    # Also think about saving these connectionInfos as meta data. 
 
     model_config = ConfigDict(frozen=True, protected_namespaces=())
 
@@ -50,7 +53,6 @@ class Middleware:
     """
     Middleware that can be used to generate a REST or GraphQL API from aas' and submodels either in pydanctic models or in aas object store format.
     """
-    # TODO: create AAS Middleware class that has easy utility functions to instantiate the persistence providers / consumers.
 
     def __init__(self):
         self.data_models: typing.Dict[str, DataModel] = {}
@@ -59,6 +61,7 @@ class Middleware:
         self.on_start_up_callbacks: typing.List[typing.Callable] = []
         self.on_shutdown_callbacks: typing.List[typing.Callable] = []
         
+        # TODO: rework that not providers or consumers are used but connectors directly and connection info holds all information how the connectors are used in the middleware. 
         self.all_providers: typing.List[Provider[Identifiable]] = []
         self.all_consumers: typing.List[Consumer[Identifiable]] = []
         self.all_workflows: typing.List[Workflow] = []
