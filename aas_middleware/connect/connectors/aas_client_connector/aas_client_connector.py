@@ -13,10 +13,10 @@ T = TypeVar("T", bound=AAS)
 S = TypeVar("S", bound=Submodel)
 
 class BasyxAASConnector(Generic[T]):
-    def __init__(self, aas_id: str, host: str, port: int, submodel_host: Optional[str] = None, submodel_port: Optional[int] = None):
+    def __init__(self, model: T, host: str, port: int, submodel_host: Optional[str] = None, submodel_port: Optional[int] = None):
         self.host = host
         self.port = port
-        self.aas_id = aas_id
+        self.aas_id = model.id
 
         if not submodel_host:
             submodel_host = host
@@ -51,10 +51,10 @@ class BasyxAASConnector(Generic[T]):
 
 
 class BasyxSubmodelConnector(Generic[S]):
-    def __init__(self, submodel_id: str, host: str, port: int):
+    def __init__(self, submodel: S, host: str, port: int):
         self.host = host
         self.port = port
-        self.submodel_id = submodel_id
+        self.submodel_id = S.id
 
         self.submodel_server_address = f"http://{host}:{port}"
 

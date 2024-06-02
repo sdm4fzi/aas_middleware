@@ -98,7 +98,7 @@ async def put_aas_to_server(aas: aas_model.AAS, aas_client: AASClient, submodel_
     )
 
     for submodel in get_value_attributes(aas).values():
-        if await submodel_is_on_server(submodel.id, submodel_client):
+        if await submodel_is_on_server(submodel, submodel_client):
             await put_submodel_to_server(submodel, submodel_client)
         else:
             await post_submodel_to_server(submodel, submodel_client)

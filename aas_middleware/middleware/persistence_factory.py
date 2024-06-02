@@ -16,8 +16,8 @@ class PersistenceFactory:
     def __init__(self, connector_type: Type[Connector], *args, **kwargs):
         self.connector = partial(connector_type, *args, **kwargs)
     
-    def create(self, model: Identifiable, model_id: str, *args, **kwargs) -> Tuple[Consumer, Provider]:
-        connector = self.connector(model_id, *args, **kwargs)
+    def create(self, model: Identifiable, *args, **kwargs) -> Tuple[Consumer, Provider]:
+        connector = self.connector(model, *args, **kwargs)
         consumer = ConnectorConsumer(connector, type(model), model.id)
         provider = ConnectorProvider(connector, type(model), model.id)
         return consumer, provider

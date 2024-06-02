@@ -63,6 +63,7 @@ async def submodel_is_on_server(submodel: aas_model.Submodel, submodel_client: S
     try:
         await get_submodel_from_server(submodel.id, submodel_client)
         return True
+    # TODO: use here a clearer Exception Type
     except Exception as e:
         return False
 
@@ -84,6 +85,7 @@ async def post_submodel_to_server(pydantic_submodel: aas_model.Submodel, submode
         )
     basyx_submodel = convert_model_to_submodel(pydantic_submodel)
     submodel_for_client = client_utils.ClientModel(basyx_object=basyx_submodel)
+    # TODO: make a try except with json.decoder.JSONDecodeError to avoid error when posting a submodel that already exists, same goes for aas
     response = await post_submodel.asyncio(client=submodel_client, body=submodel_for_client)
 
 
@@ -97,7 +99,7 @@ async def put_submodel_to_server(submodel: aas_model.Submodel, submodel_client: 
     Raises:
         HTTPException: If submodel with the given id does not exist
     """
-    if not await submodel_is_on_server(submodel.id, submodel_client):
+    if not await submodel_is_on_server(submodel, submodel_client):
         raise HTTPException(
             status_code=400, detail=f"Submodel with id {submodel.id} does not exist. Try posting it first."
         )

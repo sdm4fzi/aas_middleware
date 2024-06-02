@@ -89,6 +89,7 @@ class RestRouter:
         )
         async def get_item(item_id: str):
             # TODO: item_id represents the aas_id of the submodel -> execute provider of aas and retrieve only submodel field from it.
+            # FIXME: this is not working -> fastapi.exceptions.ResponseValidationError:
             return await self.get_provider(item_id).execute()
 
         if optional_submodel:
@@ -143,7 +144,7 @@ class RestRouter:
         @router.get("/", response_model=List[aas_model_type])
         async def get_items():
             aas_list = []
-            # FIXME: resolve bug that aas is not found... Most likely because models of type product_aas are not found. -> "AAS with id product_aas does not exist"
+            # FIXME: resolve bug that posted aas is not found... go through persistence providers and search for all providers of that specific type
             all_model_ids = [model.id for model in self.data_model.get_models_of_type(aas_model_type)]
             for model_id in all_model_ids:
                 retrieved_aas = await self.get_provider(model_id).execute()
@@ -152,7 +153,9 @@ class RestRouter:
 
         @router.post(f"/", response_model=Dict[str, str])
         async def post_item(item: aas_model_type) -> Dict[str, str]:
-            consumer, provider = self.middleware.create_model_persistence(data_model_name=self.data_model_name, model=item)
+            # TODO: use here a persistence factory and only add persistence to middleware if consuming is succesfull... Otherwise persistence is not added
+            self.middleware.add_model_to_persistence(data_model_name=self.data_model_name, model=item)
+            consumer = self.get_consumer(item.id)
             await consumer.execute(item)
             return {
                 "message": f"Succesfully created aas {aas_model_type.__name__} with id {item.id}"
@@ -167,13 +170,15 @@ class RestRouter:
             try:
                 consumer = self.get_consumer(item_id)
             except KeyError:
-                consumer, provider = self.middleware.create_model_persistence(data_model_name=self.data_model_name, model=item)
+                self.middleware.add_model_to_persistence(data_model_name=self.data_model_name, model=item)
+                consumer = self.get_consumer(item.id)
             await consumer.execute(item)
             # TODO: also update the item_id in the consumer if the new item has another id.
             return {"message": f"Succesfully updated aas with id {item.id}"}
 
         @router.delete("/{item_id}")
         async def delete_item(item_id: str):
+            # FIXME: resolve bug with deleting aas that execute needs an argument -> add default argument = None
             await self.get_consumer(item_id).execute()
             # TODO: implement logic in consumers, that if nothing is send, a delete method is performed.
             return {"message": f"Succesfully deleted aas with id {item_id}"}

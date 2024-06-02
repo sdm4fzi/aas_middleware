@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+from contextlib import asynccontextmanager
+from functools import partial
 import typing
 from pydantic import BaseModel, ConfigDict
 from fastapi import FastAPI
@@ -9,8 +11,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from basyx.aas import model
 
 import aas_middleware
+from aas_middleware.connect import persistence
+from aas_middleware.connect.connectors.model_connector import ModelConnector
 from aas_middleware.connect.consumers.consumer import Consumer
 from aas_middleware.connect.providers.provider import Provider
+from aas_middleware.middleware import persistence_factory
 from aas_middleware.middleware.model_registry_api import generate_model_api
 from aas_middleware.middleware.persistence_factory import PersistenceFactory
 from aas_middleware.middleware.rest_routers import RestRouter
@@ -49,43 +54,62 @@ class Middleware:
 
     def __init__(self):
         self.data_models: typing.Dict[str, DataModel] = {}
-        
+
         self._app: typing.Optional[FastAPI] = None
+        self.on_start_up_callbacks: typing.List[typing.Callable] = []
+        self.on_shutdown_callbacks: typing.List[typing.Callable] = []
         
         self.all_providers: typing.List[Provider[Identifiable]] = []
         self.all_consumers: typing.List[Consumer[Identifiable]] = []
         self.all_workflows: typing.List[Workflow] = []
 
-        # TODO: add methods that automatically instantiate these dicts here
-        self.persistence_providers: typing.Dict[ConnectionInfo, Provider[AAS | Submodel]] = {}
-        self.persistence_consumers: typing.Dict[ConnectionInfo, Consumer[AAS | Submodel]] = {}
+        self.persistence_providers: typing.Dict[ConnectionInfo, Provider[Identifiable]] = {}
+        self.persistence_consumers: typing.Dict[ConnectionInfo, Consumer[Identifiable]] = {}
 
-        self.connected_providers: typing.Dict[ConnectionInfo, Provider[AAS | Submodel]] = {}
-        self.connected_consumers: typing.Dict[ConnectionInfo, Consumer[AAS | Submodel]] = {}
+        self.connected_providers: typing.Dict[ConnectionInfo, Provider[Identifiable]] = {}
+        self.connected_consumers: typing.Dict[ConnectionInfo, Consumer[Identifiable]] = {}
         self.connected_workflows: typing.Dict[typing.Tuple[ConnectionInfo, ConnectionInfo], Workflow] = {}
 
         self.persistence_factories: typing.Dict[str, typing.Dict[str, PersistenceFactory]] = {}
 
 
-    async def start_up(self):
+    def add_callback(self, callback_type: typing.Literal["on_start_up", "on_shutdown"], callback: typing.Callable, *args, **kwargs):
         """
-        Function starts the mainloop of the middleware running all continuous workflows and
-        doing all polling http requestors.
+        Function to add a callback to the middleware.
+
+        Args:
+            callback_type (typing.Literal["on_start_up", "on_shutdown"]): The type of the callback.
+            callback (typing.Callable): The callback function.
+        """
+        functional_callback = partial(callback, *args, **kwargs)
+        if callback_type == "on_start_up":
+            self.on_start_up_callbacks.append(functional_callback)
+        elif callback_type == "on_shutdown":
+            self.on_shutdown_callbacks.append(functional_callback)
+
+    @asynccontextmanager
+    async def lifespan(self, app: FastAPI):
+        """
+        Function to create a lifespan for the middleware for all events on startup and shutdown.
+
+        Args:
+            app (FastAPI): The FastAPI app that should be used for the lifespan.
         """
         for workflow in self.all_workflows:
             if workflow.on_startup:
                 # TODO: make a case distinction for workflows that postpone start up or not...
                 asyncio.create_task(workflow.execute())
-
-    async def shutdown(self):
-        """
-        Function stops all continuous workflows and polling http requestors.
-        """
+        for callback in self.on_start_up_callbacks:
+            await callback()
+        yield
         for workflow in self.all_workflows:
             if workflow.on_shutdown:
                 if workflow.running:
                     await workflow.interrupt()
                 await workflow.execute()
+
+        for callback in self.on_shutdown_callbacks:
+            await callback()
 
     @property
     def app(self):
@@ -107,8 +131,7 @@ class Middleware:
                     "name": "MIT License",
                     "url": "https://mit-license.org/",
                 },
-                on_startup=[self.start_up],
-                on_shutdown=[self.shutdown],
+                lifespan=self.lifespan
             )
 
             app.add_middleware(
@@ -169,6 +192,74 @@ class Middleware:
         data_model = DataModel.from_models(*instances)
         self.load_data_model(name, data_model)
 
+    async def update_value(self, value: typing.Any, data_model_name: str, model_id: typing.Optional[str]=None, field_name: typing.Optional[str]=None):
+        """
+        Function to update a value in the persistence.
+
+        Args:
+            data_model_name (str): _description_
+            model_id (typing.Optional[str]): _description_
+            field_name (typing.Optional[str]): _description_
+            value (typing.Any): _description_
+        """
+        # TODO: think about making this functionality with callbacks in the execute function with subscribers
+        connection_info = ConnectionInfo(data_model_name=data_model_name, model_id=model_id, field_id=field_name)
+        if connection_info in self.persistence_consumers:
+            consumer = self.persistence_consumers[connection_info]
+            await consumer.execute(value)
+        else:
+            raise ValueError(f"No consumer found for {connection_info}")
+        
+    async def get_value(self, data_model_name: str, model_id: typing.Optional[str], field_name: typing.Optional[str]) -> typing.Any:
+        """
+        Function to get a value from the persistence.
+
+        Args:
+            data_model_name (str): _description_
+            model_id (typing.Optional[str]): _description_
+            field_name (typing.Optional[str]): _description_
+
+        Returns:
+            typing.Any: _description_
+        """
+        connection_info = ConnectionInfo(data_model_name=data_model_name, model_id=model_id, field_id=field_name)
+        if connection_info in self.persistence_providers:
+            provider = self.persistence_providers[connection_info]
+            return await provider.execute()
+        else:
+            raise ValueError(f"No provider found for {connection_info}")
+
+    def create_persistence(self, data_model_name: str, model: typing.Optional[Identifiable], persistence_factory: PersistenceFactory = persistence_factory.PersistenceFactory(connector_type=ModelConnector)):
+        """
+        Function to create persistence for a data model.
+
+        Args:
+            name (str): The name of the data model.
+            instances (DataModel): The data model instances.
+        """
+        if not data_model_name in self.data_models:
+            raise ValueError(f"No data model {data_model_name} found.")
+        
+        if self.persistence_providers.get(ConnectionInfo(data_model_name=data_model_name, model_id=model.id)):
+            raise ValueError(f"Persistent Provider for model {model.id} already exists.")
+        if self.persistence_consumers.get(ConnectionInfo(data_model_name=data_model_name, model_id=model.id)):
+            raise ValueError(f"Persistent Consumer for model {model.id} already exists.")
+        
+        persistence_consumer, persistence_provider = persistence_factory.create(model)
+        self.connect_provider(persistence_provider, data_model_name, model.id, persistence=True)
+        self.connect_consumer(persistence_consumer, data_model_name, model.id, persistence=True)
+
+    def add_model_to_persistence(self, data_model_name: str, model: Identifiable, persistence_factory: typing.Optional[PersistenceFactory]=None) -> typing.Tuple[Consumer[Identifiable], Provider[Identifiable]]:
+        if not persistence_factory:
+            if not self.persistence_factories.get(data_model_name):
+                raise ValueError(f"No persistence factory for data model {data_model_name} found.")
+            if not self.persistence_factories[data_model_name].get(model.__class__.__name__):
+                raise ValueError(f"No persistence factory for model {model.__class__.__name__} found.")
+            persistence_factory = self.persistence_factories[data_model_name].get(model.__class__.__name__)
+
+        self.create_persistence(data_model_name, model, persistence_factory)
+    
+    
     def load_pydantic_models(self, name: str, *models: typing.Tuple[typing.Type[BaseModel]]):
         """
         Functions that loads pydantic models into the middleware that can be used for synchronization.
@@ -188,19 +279,6 @@ class Middleware:
         """
         data_model = BasyxFormatter().deserialize(models)
         self.load_data_model(data_model)
-
-    def create_model_persistence(self, data_model_name: str, model: Identifiable) -> typing.Tuple[Consumer[Identifiable], Provider[Identifiable]]:
-        if not self.persistence_factories.get(data_model_name):
-            raise ValueError(f"No persistence factory for data model {data_model_name} found.")
-        if not self.persistence_factories[data_model_name].get(model.__class__.__name__):
-            raise ValueError(f"No persistence factory for model {model.__class__.__name__} found.")
-        if self.persistence_providers.get(ConnectionInfo(data_model_name=data_model_name, model_id=model.id)):
-            raise ValueError(f"Provider for model {model.id} already exists.")
-        persistence_consumer, persistence_provider = self.persistence_factories[data_model_name][model.__class__.__name__].create(model, model.id)
-        self.connect_consumer(persistence_consumer, data_model_name, model.id, persistence=True)
-        self.connect_provider(persistence_provider, data_model_name, model.id, persistence=True)
-
-        return persistence_consumer, persistence_provider
 
     def connect_provider(self, provider: Provider, data_model_name: str, model_id: typing.Optional[str]=None, field_id: typing.Optional[str]=None, persistence: bool=False):
         """
