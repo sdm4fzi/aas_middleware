@@ -4,7 +4,7 @@ import asyncio
 from contextlib import asynccontextmanager
 from functools import partial
 import typing
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -12,10 +12,12 @@ from basyx.aas import model
 
 import aas_middleware
 from aas_middleware.connect import persistence
+from aas_middleware.connect.connectors.connector import Connector
 from aas_middleware.connect.connectors.model_connector import ModelConnector
 from aas_middleware.connect.consumers.consumer import Consumer
 from aas_middleware.connect.providers.provider import Provider
 from aas_middleware.middleware import persistence_factory
+from aas_middleware.middleware.connections import ConnectionManager, PersistenceConnectionManager
 from aas_middleware.middleware.model_registry_api import generate_model_api
 from aas_middleware.middleware.persistence_factory import PersistenceFactory
 from aas_middleware.middleware.rest_routers import RestRouter
@@ -38,6 +40,7 @@ class ConnectionInfo(BaseModel):
     # TODO: add the type annotation of the connection type -> remove the type from provider / consumer, since it is used better here.... This allows to have a better overview of the connections
     # and also removes one layer of abstraction. Saves these connecction infos in classes that make dict based mappings and queries on their attributes possible
     # Also think about saving these connectionInfos as meta data. 
+    model_type : typing.Optional[typing.Type[typing.Any]] = None
 
     model_config = ConfigDict(frozen=True, protected_namespaces=())
 
@@ -62,18 +65,29 @@ class Middleware:
         self.on_shutdown_callbacks: typing.List[typing.Callable] = []
         
         # TODO: rework that not providers or consumers are used but connectors directly and connection info holds all information how the connectors are used in the middleware. 
-        self.all_providers: typing.List[Provider[Identifiable]] = []
-        self.all_consumers: typing.List[Consumer[Identifiable]] = []
+        # use connectionsmanagers to handle the connections more efficiently...
+        self.persistence_connections: PersistenceConnectionManager = Field(default_factory=PersistenceConnectionManager, init=False)
+        self.connections: ConnectionManager = Field(default_factory=ConnectionManager, init=False)
+        
+        # self.all_providers: typing.List[Provider[Identifiable]] = []
+        # self.all_consumers: typing.List[Consumer[Identifiable]] = []
         self.all_workflows: typing.List[Workflow] = []
+        self.connectors: typing.List[Connector] = []
 
-        self.persistence_providers: typing.Dict[ConnectionInfo, Provider[Identifiable]] = {}
-        self.persistence_consumers: typing.Dict[ConnectionInfo, Consumer[Identifiable]] = {}
+        # self.persistence_providers: typing.Dict[ConnectionInfo, Provider[Identifiable]] = {}
+        # self.persistence_consumers: typing.Dict[ConnectionInfo, Consumer[Identifiable]] = {}
 
-        self.connected_providers: typing.Dict[ConnectionInfo, Provider[Identifiable]] = {}
-        self.connected_consumers: typing.Dict[ConnectionInfo, Consumer[Identifiable]] = {}
+        # self.connected_providers: typing.Dict[ConnectionInfo, Provider[Identifiable]] = {}
+        # self.connected_consumers: typing.Dict[ConnectionInfo, Consumer[Identifiable]] = {}
+
+        # TODO: think about using a connection manager for the workflows as well (or put workflows in normal connection_manager...)
         self.connected_workflows: typing.Dict[typing.Tuple[ConnectionInfo, ConnectionInfo], Workflow] = {}
 
+
+        # TODO: persistence factories should be part of the persistence connection manager
         self.persistence_factories: typing.Dict[str, typing.Dict[str, PersistenceFactory]] = {}
+
+
 
 
     def add_callback(self, callback_type: typing.Literal["on_start_up", "on_shutdown"], callback: typing.Callable, *args, **kwargs):
