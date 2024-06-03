@@ -13,7 +13,7 @@ class HttpPollingConnector(HttpRequestConnector):
         self.interval = interval
         self.previous_value: str = ""
 
-    async def receive(self) -> str:
+    async def provide(self) -> str:
         while True:
             await anyio.sleep(self.interval)
             async with aiohttp.ClientSession() as session:

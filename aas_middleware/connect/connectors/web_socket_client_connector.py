@@ -17,14 +17,14 @@ class WebSocketClientConnector:
             await self.websocket.close()
             self.websocket = None
 
-    async def send(self, body: str) -> Optional[str]:
+    async def consume(self, body: str) -> Optional[str]:
         if not self.websocket:
             raise HTTPException(status_code=400, detail="Websocket not connected")
         if self.websocket:
             await self.websocket.send(body)
             return "Websocket message sent"
 
-    async def receive(self) -> Optional[str]:
+    async def provide(self) -> Optional[str]:
         if not self.websocket:
             raise HTTPException(status_code=400, detail="Websocket not connected")
         if self.websocket:

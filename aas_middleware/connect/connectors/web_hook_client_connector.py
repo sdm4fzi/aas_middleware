@@ -75,12 +75,12 @@ class WebHookClientConnector:
         # TODO: either remove the hookevent from the provider or set it to false or
         # remove the callback from the endpoint of the provider
 
-    async def send(self, body: str) -> str:
+    async def consume(self, body: str) -> str:
         raise NotImplementedError(
             "WebHookClientConnector does not support sending data but only receiving data. Try to use the WebHookServerConnector instead."
         )
 
-    async def receive(self) -> str:
+    async def provide(self) -> str:
         """
         Function receives data from the webhook.
 

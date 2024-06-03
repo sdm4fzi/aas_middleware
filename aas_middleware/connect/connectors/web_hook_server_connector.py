@@ -55,7 +55,7 @@ class WebHookServerConnector:
         self.connectable = False
         self.connected_subscribers = []
 
-    async def send(self) -> str:
+    async def consume(self) -> str:
         """
         Function sends data to all subscribed clients of the webhook.
 
@@ -77,5 +77,5 @@ class WebHookServerConnector:
                     await response.text()
         return "Webhook message sent"
 
-    async def receive(self) -> str:
+    async def provide(self) -> str:
         raise NotImplementedError

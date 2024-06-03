@@ -1,14 +1,8 @@
 from __future__ import annotations
-from typing import Dict, Tuple, Type
 
 from aas_middleware.connect.connectors.aas_client_connector.aas_client_connector import BasyxAASConnector, BasyxSubmodelConnector
-from aas_middleware.connect.consumers.connector_consumer import ConnectorConsumer
-from aas_middleware.connect.consumers.consumer import Consumer
-from aas_middleware.connect.providers.connector_provider import ConnectorProvider
-from aas_middleware.connect.providers.provider import Provider
-from aas_middleware.middleware.middleware import ConnectionInfo, Middleware
+from aas_middleware.middleware.middleware import Middleware
 from aas_middleware.middleware.persistence_factory import PersistenceFactory
-from aas_middleware.model.core import Identifiable
 from aas_middleware.model.data_model import DataModel
 from aas_middleware.model.data_model_rebuilder import DataModelRebuilder
 from aas_middleware.model.formatting.aas.aas_model import AAS, Submodel

@@ -38,7 +38,7 @@ class BasyxAASConnector(Generic[T]):
     async def disconnect(self):
         pass
 
-    async def send(self, body: Optional[T]) -> None:
+    async def consume(self, body: Optional[T]) -> None:
         if not body:
             await delete_aas_from_server(self.aas_id, self.aas_client)
         if await aas_is_on_server(self.aas_id, self.aas_client):
@@ -46,7 +46,7 @@ class BasyxAASConnector(Generic[T]):
         else:
             await post_aas_to_server(body, self.aas_client, self.submodel_client)
 
-    async def receive(self) -> T:
+    async def provide(self) -> T:
         return await get_aas_from_server(self.aas_id, self.aas_client, self.submodel_client)
 
 
@@ -66,7 +66,7 @@ class BasyxSubmodelConnector(Generic[S]):
     async def disconnect(self):
         pass
 
-    async def send(self, body: Optional[S]) -> None:
+    async def consume(self, body: Optional[S]) -> None:
         if not body:
             await delete_submodel_from_server(self.submodel_id, self.submodel_client)
         if await submodel_is_on_server(self.submodel_id, self.submodel_client):
@@ -74,5 +74,5 @@ class BasyxSubmodelConnector(Generic[S]):
         else:
             await post_submodel_to_server(self.submodel_id, self.submodel_client)
 
-    async def receive(self) -> S:
+    async def provide(self) -> S:
         return await get_submodel_from_server(self.submodel_id, self.submodel_client)

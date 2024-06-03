@@ -22,9 +22,9 @@ class ModelConnector(Generic[T]):
     async def disconnect(self):
         pass
 
-    async def send(self, body: Optional[T]) -> None:
+    async def consume(self, body: Optional[T]) -> None:
         if not body:
             self.model = None
 
-    async def receive(self) -> Optional[T]:
+    async def provide(self) -> Optional[T]:
         return self.model

@@ -12,7 +12,7 @@ class HttpRequestConnector:
     async def disconnect(self):
         pass
 
-    async def send(self, body: str) -> str:
+    async def consume(self, body: str) -> str:
         async with aiohttp.ClientSession() as session:
             async with session.post(
                 self.url,
@@ -21,7 +21,7 @@ class HttpRequestConnector:
             ) as response:
                 return await response.text()
 
-    async def receive(self) -> str:
+    async def provide(self) -> str:
         async with aiohttp.ClientSession() as session:
             async with session.get(self.url) as response:
                 return await response.text()

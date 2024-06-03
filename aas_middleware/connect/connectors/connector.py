@@ -1,15 +1,29 @@
-from typing import Optional, Protocol
+from typing import Optional, Protocol, Any
 
+# TODO: think about making the connector a Generic for the types...
 
-class Connector(Protocol):
+class Provider(Protocol):
     async def connect(self):
         ...
 
     async def disconnect(self):
         ...
 
-    async def send(self, body: str) -> Optional[str]:
+    async def provide(self) -> Any:
         ...
 
-    async def receive(self) -> str:
+
+class Consumer(Protocol):
+    async def connect(self):
         ...
+
+    async def disconnect(self):
+        ...
+
+    async def consume(self, body: Any) -> None:
+        ...
+
+
+
+class Connector(Provider, Consumer):
+    ...

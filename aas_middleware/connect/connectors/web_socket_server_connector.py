@@ -67,7 +67,7 @@ class WebSocketServerConnector:
             await self.server.wait_closed()
             self.server = None
 
-    async def send(self, body: str) -> Optional[str]:
+    async def consume(self, body: str) -> Optional[str]:
         if not self.server:
             raise HTTPException(
                 status_code=400, detail="Websocket server is not started."
@@ -78,7 +78,7 @@ class WebSocketServerConnector:
             )
         await self.websocket.send(body)
 
-    async def receive(self) -> str:
+    async def provide(self) -> str:
         await self.received_data_event.wait()
         self.received_data_event = anyio.Event()
         return self.received_data

@@ -159,6 +159,9 @@ class PersistenceConnectionManager(ConnectionManager):
 
         Returns:
             Connector: The connector of the connection.
+
+        Raises:
+            KeyError: If the connection info is not in the connection manager.
         """
         return self.connections[connection_info]
 
