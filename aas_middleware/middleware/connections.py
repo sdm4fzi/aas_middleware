@@ -26,16 +26,18 @@ class ConnectionInfo(BaseModel):
             return "model"
         return "data_model"
     
-class ConnectionManager(BaseModel):
+class ConnectionManager:
     """
     Class that manages the connections of the middleware.
     """
-    connections: typing.Dict[ConnectionInfo, typing.List[Connector]] = {}
 
-    data_model_connection_infos: typing.Dict[str, typing.List[ConnectionInfo]] = []
-    model_connection_infos: typing.Dict[str, typing.List[ConnectionInfo]] = []
-    field_connection_infos: typing.Dict[str, typing.List[ConnectionInfo]] = []
-    type_connection_infos: typing.Dict[str, typing.List[ConnectionInfo]] = []
+    def __init__(self):
+        self.connections: typing.Dict[ConnectionInfo, Connector] = {}
+
+        self.data_model_connection_infos: typing.Dict[str, typing.List[ConnectionInfo]] = {}
+        self.model_connection_infos: typing.Dict[str, typing.List[ConnectionInfo]] = {}
+        self.field_connection_infos: typing.Dict[str, typing.List[ConnectionInfo]] = {}
+        self.type_connection_infos: typing.Dict[str, typing.List[ConnectionInfo]] = {}
 
     def add_connection(self, connection_info: ConnectionInfo, connector: Connector):
         """
@@ -126,7 +128,10 @@ class PersistenceConnectionManager(ConnectionManager):
     """
     Class that manages the connections of the middleware.
     """
-    connections: typing.Dict[ConnectionInfo, Connector] = {}
+
+    def __init__(self):
+        super().__init__()
+        self.connections: typing.Dict[ConnectionInfo, Connector] = {}
 
     def add_connection(self, connection_info: ConnectionInfo, connector: Connector):
         """

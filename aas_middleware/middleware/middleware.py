@@ -4,7 +4,6 @@ import asyncio
 from contextlib import asynccontextmanager
 from functools import partial
 import typing
-from cycler import V
 from pydantic import BaseModel, ConfigDict, Field
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from basyx.aas import model
 
 import aas_middleware
-from aas_middleware.connect import persistence
+# from aas_middleware.connect import persistence
 from aas_middleware.connect.connectors.connector import Connector
 from aas_middleware.connect.connectors.model_connector import ModelConnector
 from aas_middleware.middleware import persistence_factory
