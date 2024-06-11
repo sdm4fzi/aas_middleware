@@ -137,7 +137,7 @@ class Operation(HasSemantics, Referable):
     output_variables: List[SubmodelElement]
     inoutput_variables: List[SubmodelElement]
     # TODO: add a method that allows definition of an operations from a function
-    # TODO: check usage of operations of this is conversion to AAS standard
+    # and check usage of operations of this with conversion to AAS standard
 
 
 PrimitiveSubmodelElement = int | float | str | bool

@@ -15,7 +15,7 @@ import aas_middleware
 from aas_middleware.connect.connectors.connector import Connector
 from aas_middleware.connect.connectors.model_connector import ModelConnector
 from aas_middleware.middleware import persistence_factory
-from aas_middleware.middleware.connections import ConnectionManager, PersistenceConnectionManager
+from aas_middleware.middleware.connections import ConnectionRegistry, PersistenceConnectionRegistry
 from aas_middleware.middleware.model_registry_api import generate_model_api
 from aas_middleware.middleware.persistence_factory import PersistenceFactory
 from aas_middleware.middleware.rest_routers import RestRouter
@@ -63,10 +63,9 @@ class Middleware:
         self.on_shutdown_callbacks: typing.List[typing.Callable] = []
 
         self.all_workflows: typing.List[Workflow] = []
-        self.connectors: typing.List[Connector] = []
         
-        self.persistence_connections: PersistenceConnectionManager = Field(default_factory=PersistenceConnectionManager, init=False)
-        self.connections: ConnectionManager = Field(default_factory=ConnectionManager, init=False)
+        self.persistence_connections: PersistenceConnectionRegistry = Field(default_factory=PersistenceConnectionRegistry, init=False)
+        self.connections: ConnectionRegistry = Field(default_factory=ConnectionRegistry, init=False)
        
 
         # TODO: think about using a connection manager for the workflows as well (or put workflows in normal connection_manager...)
@@ -74,8 +73,6 @@ class Middleware:
 
         # TODO: persistence factories should be part of the persistence connection manager
         self.persistence_factories: typing.Dict[str, typing.Dict[str, PersistenceFactory]] = {}
-
-
 
 
     def add_callback(self, callback_type: typing.Literal["on_start_up", "on_shutdown"], callback: typing.Callable, *args, **kwargs):

@@ -63,8 +63,6 @@ class Workflow:
             raise ValueError(
                 f"Decorated arguments do not match function signature of function '{func.__qualname__}': {e}"
             )
-        # TODO: make a check, that the args and kwargs are only consumers or providers
-        # TODO: add an option, whether the workflow is run in the background of fastAPI or it is waited for
         workflow_function = functools.partial(
             func, *bound_args.args, **bound_args.kwargs
         )

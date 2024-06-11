@@ -164,8 +164,7 @@ def get_data_specification_for_model(
         ),
         data_specification_content=model.DataSpecificationIEC61360(
             preferred_name=model.LangStringSet({"en": "class"}),
-            # TODO: use only the last element of . seperated class name
-            value=item.__class__.__name__,
+            value=item.__class__.__name__.split(".")[-1],
         ),
     )
 

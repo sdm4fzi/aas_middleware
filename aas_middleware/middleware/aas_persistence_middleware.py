@@ -48,6 +48,8 @@ class AasMiddleware(Middleware):
             if not name in self.persistence_factories:
                 self.persistence_factories[name] = {}
             class_name = model.__class__.__name__
+
+            # TODO: save persistence factory in persistence manager...
             self.persistence_factories[name][class_name] = persistence_factory
 
             for model in models_of_type:

@@ -11,9 +11,6 @@ class ConnectionInfo(BaseModel):
     data_model_name: str
     model_id: typing.Optional[str] = None
     field_id: typing.Optional[str] = None
-    # TODO: add the type annotation of the connection type -> remove the type from provider / consumer, since it is used better here.... This allows to have a better overview of the connections
-    # and also removes one layer of abstraction. Saves these connecction infos in classes that make dict based mappings and queries on their attributes possible
-    # Also think about saving these connectionInfos as meta data. 
     model_type : typing.Optional[typing.Type[typing.Any]] = None
 
     model_config = ConfigDict(frozen=True, protected_namespaces=())
@@ -26,7 +23,7 @@ class ConnectionInfo(BaseModel):
             return "model"
         return "data_model"
     
-class ConnectionManager:
+class ConnectionRegistry:
     """
     Class that manages the connections of the middleware.
     """
@@ -124,7 +121,7 @@ class ConnectionManager:
         return self.type_connection_infos[type_name]
     
 
-class PersistenceConnectionManager(ConnectionManager):
+class PersistenceConnectionRegistry(ConnectionRegistry):
     """
     Class that manages the connections of the middleware.
     """

@@ -230,7 +230,6 @@ def set_required_fields(
             ):
                 new_type = set_required_fields(model_sub_type, original_sub_type)
                 new_types.append(new_type)
-            # TODO: rework this with typing.Union[*new_types] for python 3.11
             model.model_fields[field_name].annotation = typing.Union[tuple(new_types)]
         elif core_model_check(fieldinfo):
             new_type = set_required_fields(
@@ -304,11 +303,10 @@ def get_pydantic_models_from_instances(
     Returns:
         List[Type[BaseModel]]: List of pydantic models.
     """
-    # TODO: update method with new style pydantic
+    # TODO: update method with pydantic v2 arguments of create_model
     models = []
     for instance in instances:
         model_name = type(instance).__name__
-        # TODO: make it work, even if an optional value is None -> Replace with empty string or so
         pydantic_model = create_model(model_name, **vars(instance))
         pydantic_model = set_example_values(pydantic_model)
         pydantic_model = set_required_fields(pydantic_model, instance.__class__)
