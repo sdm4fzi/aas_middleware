@@ -29,31 +29,19 @@ class AasMiddleware(Middleware):
         """
         aas_data_model = DataModelRebuilder(data_model).rebuild_data_model_for_AAS_structure()
         self.load_data_model(name, aas_data_model)
-        # TODO: resolve this later with types in data model
+        
         aas_persistence_factory = PersistenceFactory(BasyxAASConnector, host=aas_host, port=aas_port, submodel_host=submodel_host, submodel_port=submodel_port)
         submodel_persistence_factory = PersistenceFactory(BasyxSubmodelConnector, host=submodel_host, port=submodel_port)
+        self.add_default_persistence(aas_persistence_factory, name, None, AAS)
+        self.add_default_persistence(submodel_persistence_factory, name, None, Submodel)
 
         for models_of_type in aas_data_model.get_top_level_models().values():
             if not models_of_type:
                 continue
             model = models_of_type[0]
 
-            if isinstance(model, AAS):
-                persistence_factory = aas_persistence_factory
-            elif isinstance(model, Submodel):
-                persistence_factory = submodel_persistence_factory
-            else:
-                raise ValueError("Model is not of type AAS or Submodel")
-            
-            if not name in self.persistence_factories:
-                self.persistence_factories[name] = {}
-            class_name = model.__class__.__name__
-
-            # TODO: save persistence factory in persistence manager...
-            self.persistence_factories[name][class_name] = persistence_factory
-
             for model in models_of_type:
-                self.create_persistence(name, model, persistence_factory)
+                self.persist(name, model)
                 self.add_callback("on_start_up", self.update_value, model, name, model.id)
         
         self.generate_rest_api_for_data_model(name)

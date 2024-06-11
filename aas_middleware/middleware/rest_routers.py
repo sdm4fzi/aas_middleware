@@ -50,7 +50,7 @@ class RestRouter:
         self.middleware = middleware
 
     def get_connector(self, item_id: str) -> Connector:
-        return self.middleware.persistence_connections[middleware.ConnectionInfo(data_model_name=self.data_model_name, model_id=item_id)]
+        return self.middleware.persistence_registry[middleware.ConnectionInfo(data_model_name=self.data_model_name, model_id=item_id)]
     
     def generate_submodel_endpoints_from_model(
             self,
@@ -108,8 +108,7 @@ class RestRouter:
 
             @router.delete("/")
             async def delete_item(item_id: str):
-                # TODO: add functionality that an empty execute bdoy is a delete
-                await self.get_connector(item_id).provide()
+                await self.get_connector(item_id).consume()
                 # TODO: also update the submodel in the aas containing the submodel
                 return {
                     "message": f"Succesfully deleted submodel {submodel_name} of aas with id {item_id}"
@@ -137,19 +136,16 @@ class RestRouter:
         @router.get("/", response_model=List[aas_model_type])
         async def get_items():
             aas_list = []
-            # FIXME: resolve bug that posted aas is not found... go through persistence providers and search for all providers of that specific type
-            all_model_ids = [model.id for model in self.data_model.get_models_of_type(aas_model_type)]
-            for model_id in all_model_ids:
-                retrieved_aas = await self.get_connector(model_id).provide()
+            connection_infos = self.middleware.persistence_registry.get_type_connection_info(aas_model_type.__name__)
+            for connection_info in connection_infos:
+                connector = self.middleware.persistence_registry.get_connection(connection_info)
+                retrieved_aas = await connector.provide()
                 aas_list.append(retrieved_aas)
             return aas_list
 
         @router.post(f"/", response_model=Dict[str, str])
         async def post_item(item: aas_model_type) -> Dict[str, str]:
-            # TODO: use here a persistence factory and only add persistence to middleware if consuming is succesfull... Otherwise persistence is not added
-            self.middleware.add_model_to_persistence(data_model_name=self.data_model_name, model=item)
-            connector = self.get_connector(item.id)
-            await connector.consume(item)
+            await self.middleware.persist(data_model_name=self.data_model_name, model=item)
             return {
                 "message": f"Succesfully created aas {aas_model_type.__name__} with id {item.id}"
             }
@@ -162,19 +158,15 @@ class RestRouter:
         async def put_item(item_id: str, item: aas_model_type) -> Dict[str, str]:
             try:
                 consumer = self.get_connector(item_id)
+                await consumer.consume(item)
             except KeyError:
-                self.middleware.add_model_to_persistence(data_model_name=self.data_model_name, model=item)
-                consumer = self.get_connector(item.id)
-            await consumer.consume(item)
-            # TODO: make a try except if the execute is not possible...
-            # TODO: also update the item_id in the consumer if the new item has another id.
+                await self.middleware.persist(data_model_name=self.data_model_name, model=item)     
+                # TODO: remove the previous persistence       
             return {"message": f"Succesfully updated aas with id {item.id}"}
 
         @router.delete("/{item_id}")
         async def delete_item(item_id: str):
-            # FIXME: resolve bug with deleting aas that execute needs an argument -> add default argument = None
-            await self.get_connector(item_id).provide()
-            # TODO: implement logic in consumers, that if nothing is send, a delete method is performed.
+            await self.get_connector(item_id).consume()
             return {"message": f"Succesfully deleted aas with id {item_id}"}
 
         return router

@@ -1,4 +1,3 @@
-from aas_middleware.middleware.middleware import Middleware
 import toml
 import importlib_metadata
 import logging
@@ -19,3 +18,5 @@ def get_version() -> str:
     raise ModuleNotFoundError("Could not find version in package metadata or pyproject.toml")
 
 VERSION = get_version()
+
+from aas_middleware.middleware.middleware import Middleware

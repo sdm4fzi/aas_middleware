@@ -15,7 +15,7 @@ import aas_middleware
 from aas_middleware.connect.connectors.connector import Connector
 from aas_middleware.connect.connectors.model_connector import ModelConnector
 from aas_middleware.middleware import persistence_factory
-from aas_middleware.middleware.connections import ConnectionRegistry, PersistenceConnectionRegistry
+from aas_middleware.middleware.registries import ConnectionInfo, ConnectionRegistry, PersistenceConnectionRegistry, WorkflowRegistry
 from aas_middleware.middleware.model_registry_api import generate_model_api
 from aas_middleware.middleware.persistence_factory import PersistenceFactory
 from aas_middleware.middleware.rest_routers import RestRouter
@@ -23,32 +23,34 @@ from aas_middleware.middleware.workflow_router import generate_workflow_endpoint
 from aas_middleware.connect.workflows.workflow import Workflow
 from aas_middleware.model.core import Identifiable
 from aas_middleware.model.data_model import DataModel
+from aas_middleware.model.formatting.aas.aas_middleware_util import get_pydantic_model_from_dict
 from aas_middleware.model.formatting.aas.basyx_formatter import BasyxFormatter
 from aas_middleware.model.formatting.aas.aas_model import AAS, Submodel
 
 
 
-class ConnectionInfo(BaseModel):
-    """
-    Class that contains the information of a connection of a provider and a consumer to the persistence layer.
-    """
-    data_model_name: str
-    model_id: typing.Optional[str] = None
-    field_id: typing.Optional[str] = None
-    # TODO: add the type annotation of the connection type -> remove the type from provider / consumer, since it is used better here.... This allows to have a better overview of the connections
-    # and also removes one layer of abstraction. Saves these connecction infos in classes that make dict based mappings and queries on their attributes possible
-    # Also think about saving these connectionInfos as meta data. 
-    model_type : typing.Optional[typing.Type[typing.Any]] = None
+def get_license_info() -> str:
+    return {
+        "name": "MIT License",
+        "url": "https://mit-license.org/",
+    }
 
-    model_config = ConfigDict(frozen=True, protected_namespaces=())
+class MiddlewareMetaData(BaseModel):
+    """
+    Meta data for the middleware.
+    """
+    title: str = "aas-middleware"
+    description: str = """
+    The aas-middleware allows to convert aas models to pydantic models and generate a REST or GraphQL API from them.
+    """
+    version: str = Field(default=aas_middleware.VERSION)
+    contact: typing.Dict[str, str] = {
+        "name": "Sebastian Behrendt",
+        "email": "sebastian.behrendt@kit.edu",
+    }
+    license_info: typing.Dict[str, str] = Field(init=False, default_factory=get_license_info)
 
-    @property
-    def connection_type(self) -> typing.Literal["data_model", "model", "field"]:
-        if self.model_id:
-            if self.field_id:
-                return "field"
-            return "model"
-        return "data_model"
+    
 
 class Middleware:
     """
@@ -56,24 +58,35 @@ class Middleware:
     """
 
     def __init__(self):
+        self._app: typing.Optional[FastAPI] = None
+        self.meta_data: MiddlewareMetaData = MiddlewareMetaData()
+
         self.data_models: typing.Dict[str, DataModel] = {}
 
-        self._app: typing.Optional[FastAPI] = None
         self.on_start_up_callbacks: typing.List[typing.Callable] = []
         self.on_shutdown_callbacks: typing.List[typing.Callable] = []
 
-        self.all_workflows: typing.List[Workflow] = []
-        
-        self.persistence_connections: PersistenceConnectionRegistry = Field(default_factory=PersistenceConnectionRegistry, init=False)
-        self.connections: ConnectionRegistry = Field(default_factory=ConnectionRegistry, init=False)
-       
+        self.persistence_registry: PersistenceConnectionRegistry = PersistenceConnectionRegistry()
+        self.connection_registry: ConnectionRegistry = ConnectionRegistry()
+        self.workflow_registry: WorkflowRegistry = WorkflowRegistry()
 
-        # TODO: think about using a connection manager for the workflows as well (or put workflows in normal connection_manager...)
-        self.connected_workflows: typing.Dict[typing.Tuple[ConnectionInfo, ConnectionInfo], Workflow] = {}
+    def set_meta_data(self, title: str, description: str, version: str, contact: typing.Dict[str, str]):
+        """
+        Function to set the meta data of the middleware.
 
-        # TODO: persistence factories should be part of the persistence connection manager
-        self.persistence_factories: typing.Dict[str, typing.Dict[str, PersistenceFactory]] = {}
-
+        Args:
+            title (str): The title of the middleware.
+            description (str): The description of the middleware.
+            version (str): The version of the middleware.
+            contact (typing.Dict[str, str]): The contact information of the middleware.
+            license_info (typing.Dict[str, str]): The license information of the middleware.
+        """
+        self.meta_data = MiddlewareMetaData(
+            title=title,
+            description=description,
+            version=version,
+            contact=contact
+        )
 
     def add_callback(self, callback_type: typing.Literal["on_start_up", "on_shutdown"], callback: typing.Callable, *args, **kwargs):
         """
@@ -97,14 +110,14 @@ class Middleware:
         Args:
             app (FastAPI): The FastAPI app that should be used for the lifespan.
         """
-        for workflow in self.all_workflows:
+        for workflow in self.workflow_registry.get_workflows():
             if workflow.on_startup:
                 # TODO: make a case distinction for workflows that postpone start up or not...
                 asyncio.create_task(workflow.execute())
         for callback in self.on_start_up_callbacks:
             await callback()
         yield
-        for workflow in self.all_workflows:
+        for workflow in self.workflow_registry.get_workflows():
             if workflow.on_shutdown:
                 if workflow.running:
                     await workflow.interrupt()
@@ -116,19 +129,11 @@ class Middleware:
     @property
     def app(self):
         if not self._app:
-            # TODO: update the meta data
-            description = """
-             The aas-middleware allows to convert aas models to pydantic models and generate a REST or GraphQL API from them.
-                """
-
             app = FastAPI(
-                title="aas-middelware",
-                description=description,
-                version=aas_middleware.VERSION,
-                contact={
-                    "name": "Sebastian Behrendt",
-                    "email": "sebastian.behrendt@kit.edu",
-                },
+                title=self.meta_data.title,
+                description=self.meta_data.description,
+                version=self.meta_data.version,
+                contact=self.meta_data.contact,
                 license_info={
                     "name": "MIT License",
                     "url": "https://mit-license.org/",
@@ -137,6 +142,7 @@ class Middleware:
             )
 
             app.add_middleware(
+                # TODO: make CORS more sophisticated for individual connectors
                 CORSMiddleware,
                 allow_origins=["*"],
                 allow_credentials=["*"],
@@ -173,9 +179,8 @@ class Middleware:
 
         Args:
             json_models (dict): Dictionary of aas' and submodels.
+            all_fields_required (bool): If all fields are required in the models.
         """
-        if not json_models:
-            raise ValueError("Either json_models or file_path must be specified.")
         # TODO: use here the function to load a DataModel from a dict
         # for model_name, model_values in json_models.items():
         #     pydantic_model = get_pydantic_model_from_dict(
@@ -194,67 +199,7 @@ class Middleware:
         data_model = DataModel.from_models(*instances)
         self.load_data_model(name, data_model)
 
-    async def update_value(self, value: typing.Any, data_model_name: str, model_id: typing.Optional[str]=None, field_name: typing.Optional[str]=None):
-        """
-        Function to update a value in the persistence.
 
-        Args:
-            data_model_name (str): _description_
-            model_id (typing.Optional[str]): _description_
-            field_name (typing.Optional[str]): _description_
-            value (typing.Any): _description_
-        """
-        # TODO: think about making this functionality with callbacks in the execute function with subscribers
-        connection_info = ConnectionInfo(data_model_name=data_model_name, model_id=model_id, field_id=field_name)
-        try:
-            connector = self.persistence_connections.get_connection(connection_info)
-            await connector.consume(value)
-        except KeyError:
-            raise KeyError(f"No consumer found for {connection_info}")
-        
-    async def get_value(self, data_model_name: str, model_id: typing.Optional[str], field_name: typing.Optional[str]) -> typing.Any:
-        """
-        Function to get a value from the persistence.
-
-        Args:
-            data_model_name (str): _description_
-            model_id (typing.Optional[str]): _description_
-            field_name (typing.Optional[str]): _description_
-
-        Returns:
-            typing.Any: _description_
-        """
-        connection_info = ConnectionInfo(data_model_name=data_model_name, model_id=model_id, field_id=field_name)
-        try:
-            connector = self.persistence_connections.get_connection(connection_info)
-            return await connector.provide()
-        except KeyError:
-            raise KeyError(f"No provider found for {connection_info}")
-
-    def create_persistence(self, data_model_name: str, model: typing.Optional[Identifiable], persistence_factory: PersistenceFactory = persistence_factory.PersistenceFactory(connector_type=ModelConnector)):
-        """
-        Function to create persistence for a data model.
-
-        Args:
-            name (str): The name of the data model.
-            instances (DataModel): The data model instances.
-        """
-        if not data_model_name in self.data_models:
-            raise ValueError(f"No data model {data_model_name} found.")
-        connector = persistence_factory.create(model)
-        self.add_connection(connector, data_model_name, model.id, None, type(model), persistence=True)
-
-    def add_model_to_persistence(self, data_model_name: str, model: Identifiable, persistence_factory: typing.Optional[PersistenceFactory]=None):
-        if not persistence_factory:
-            if not self.persistence_factories.get(data_model_name):
-                raise ValueError(f"No persistence factory for data model {data_model_name} found.")
-            if not self.persistence_factories[data_model_name].get(model.__class__.__name__):
-                raise ValueError(f"No persistence factory for model {model.__class__.__name__} found.")
-            persistence_factory = self.persistence_factories[data_model_name].get(model.__class__.__name__)
-
-        self.create_persistence(data_model_name, model, persistence_factory)
-    
-    
     def load_pydantic_models(self, name: str, *models: typing.Tuple[typing.Type[BaseModel]]):
         """
         Functions that loads pydantic models into the middleware that can be used for synchronization.
@@ -275,9 +220,76 @@ class Middleware:
         data_model = BasyxFormatter().deserialize(models)
         self.load_data_model(data_model)
 
-    def add_connection(self, connector: Connector, data_model_name: str, model_id: typing.Optional[str]=None, field_id: typing.Optional[str]=None, model_type: typing.Type[typing.Any]=typing.Any, persistence: bool=False):
+    async def update_value(self, value: typing.Any, data_model_name: str, model_id: typing.Optional[str]=None, field_name: typing.Optional[str]=None):
         """
-        Function to connect a consumer to the middleware.
+        Function to update a value in the persistence.
+
+        Args:
+            data_model_name (str): _description_
+            model_id (typing.Optional[str]): _description_
+            field_name (typing.Optional[str]): _description_
+            value (typing.Any): _description_
+        """
+        connection_info = ConnectionInfo(data_model_name=data_model_name, model_id=model_id, model_type=type(value), field_id=field_name)
+        try:
+            connector = self.persistence_registry.get_connection(connection_info)
+            await connector.consume(value)
+        except KeyError as e:
+            await self.persist(data_model_name, value)
+        
+    async def get_value(self, data_model_name: str, model_id: typing.Optional[str], field_name: typing.Optional[str]) -> typing.Any:
+        """
+        Function to get a value from the persistence.
+
+        Args:
+            data_model_name (str): _description_
+            model_id (typing.Optional[str]): _description_
+            field_name (typing.Optional[str]): _description_
+
+        Returns:
+            typing.Any: _description_
+        """
+        connection_info = ConnectionInfo(data_model_name=data_model_name, model_id=model_id, field_id=field_name)
+        try:
+            connector = self.persistence_registry.get_connection(connection_info)
+            return await connector.provide()
+        except KeyError:
+            raise KeyError(f"No provider found for {connection_info}")
+    
+    def add_default_persistence(self, persistence_factory: PersistenceFactory, data_model_name: typing.Optional[str], model_id: typing.Optional[Identifiable], model_type: typing.Type[typing.Any] = typing.Any):
+        """
+        Function to add a default persistence for a model.
+
+        Args:
+            data_model_name (str): The name of the data model.
+            model (Identifiable): The model that should be persisted.
+        """
+        if not data_model_name in self.data_models:
+            raise ValueError(f"No data model {data_model_name} found.")
+        
+        connection_info = ConnectionInfo(data_model_name=data_model_name, model_id=model_id, field_id=None, model_type=model_type)
+        print(type(self.persistence_registry))
+        self.persistence_registry.add_persistence_factory(connection_info, persistence_factory)
+    
+
+    async def persist(self, data_model_name: str, model: typing.Optional[Identifiable]=None, persistence_factory: typing.Optional[PersistenceFactory]=None):
+        """
+        Function to add a model to the persistence.
+
+        Args:
+            data_model_name (str): The name of the data model.
+            model (Identifiable): The model that should be persisted.
+            persistence_factory (PersistenceFactory): The persistence factory that should be used.
+        """
+        connection_info = ConnectionInfo(data_model_name=data_model_name, model_id=model.id, field_id=None, model_type=type(model))
+        self.persistence_registry.add_to_persistence(connection_info, model, persistence_factory)
+        connector = self.persistence_registry.get_connection(connection_info)
+        # TODO: raise an error if consume is not possible and remove the persistence in the persistence registry
+        await connector.consume(model)
+
+    def connect(self, connector: Connector, data_model_name: str, model_id: typing.Optional[str]=None, field_id: typing.Optional[str]=None, model_type: typing.Type[typing.Any]=typing.Any):
+        """
+        Function to connect a connector to a data entity in the middleware.
 
         Args:
             consumer (Consumer): The consumer that should be connected.
@@ -285,14 +297,9 @@ class Middleware:
             model_id (typing.Optional[str], optional): The id of the model in the data model. Defaults to None.
             field_id (typing.Optional[str], optional): The id of the field in the model. Defaults to None.
             model_type (typing.Type[typing.Any], optional): The type of the model. Defaults to typing.Any.
-            persistence (bool, optional): If the connection should be persisted. Defaults to False.
         """
         connection_info = ConnectionInfo(data_model_name=data_model_name, model_id=model_id, field_id=field_id, model_type=model_type)
-        
-        if persistence:
-            self.persistence_connections.add_connection(connection_info, connector)
-        else:
-            self.connections.add_connection(connection_info, connector)
+        self.connection_registry.add_connection(connection_info, connector)
 
     def generate_model_registry_api(self):
         """
