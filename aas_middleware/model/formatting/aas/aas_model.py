@@ -101,7 +101,7 @@ def is_valid_submodel_element(submodel_element: Any) -> bool:
         return True
     elif isinstance(submodel_element, SubmodelElementCollection):
         return True
-    elif isinstance(submodel_element, list):
+    elif isinstance(submodel_element, list) or isinstance(submodel_element, tuple) or isinstance(submodel_element, set):
         return all(is_valid_submodel_element(element) for element in submodel_element)
     elif isinstance(submodel_element, Operation):
         return True
@@ -128,7 +128,7 @@ class SubmodelElementCollection(HasSemantics, Referable):
                 continue
             assert is_valid_submodel_element(
                 getattr(self, field_name)
-            ), f"All attributes of a SubmodelElementCollection must be valid SubmodelElements."
+            ), f"All attributes of a SubmodelElementCollection must be valid SubmodelElements. Field {field_name} is not valid."
         return self
 
 

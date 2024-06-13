@@ -77,12 +77,11 @@ def convert_model_to_aas(
         if isinstance(attribute_value, aas_model.Submodel):
             tempsubmodel = convert_model_to_submodel(model_submodel=attribute_value)
             aas_submodels.append(tempsubmodel)
-            aas_submodel_data_specification = (
-                convert_util.get_data_specification_for_attribute(
-                    attribute_name, attribute_value.id
-                )
+            attribute_data_specifications = convert_util.get_data_specification_for_attribute(
+                    attribute_name, attribute_value.id, attribute_value
+                
             )
-            aas_submodel_data_specifications.append(aas_submodel_data_specification)
+            aas_submodel_data_specifications += attribute_data_specifications
 
     asset_information = model.AssetInformation(
         global_asset_id=model.Identifier(model_aas.id),
@@ -96,10 +95,7 @@ def convert_model_to_aas(
         submodel={
             model.ModelReference.from_referable(submodel) for submodel in aas_submodels
         },
-        embedded_data_specifications=[
-            convert_util.get_data_specification_for_model(model_aas)
-        ]
-        + aas_submodel_data_specifications,
+        embedded_data_specifications=convert_util.get_data_specification_for_model(model_aas) + aas_submodel_data_specifications,
     )
     obj_store: model.DictObjectStore[model.Identifiable] = model.DictObjectStore()
     obj_store.add(basyx_aas)
@@ -120,20 +116,16 @@ def convert_model_to_submodel(
             sm_attribute_name, sm_attribute_value
         )
         submodel_elements.append(submodel_element)
-        submodel_element_data_specification = (
-            convert_util.get_data_specification_for_attribute(
-                sm_attribute_name, submodel_element.id_short
+        attribute_data_specifications = convert_util.get_data_specification_for_attribute(
+                sm_attribute_name, submodel_element.id_short, sm_attribute_value
             )
-        )
-        submodel_element_data_specifications.append(submodel_element_data_specification)
+        submodel_element_data_specifications += attribute_data_specifications
 
     basyx_submodel = model.Submodel(
         id_short=get_id_short(model_submodel),
         id_=model.Identifier(model_submodel.id),
         description=convert_util.get_basyx_description_from_model(model_submodel),
-        embedded_data_specifications=[
-            convert_util.get_data_specification_for_model(model_submodel)
-        ]
+        embedded_data_specifications=convert_util.get_data_specification_for_model(model_submodel)
         + submodel_element_data_specifications,
         semantic_id=get_semantic_id(model_submodel),
         submodel_element=submodel_elements,
@@ -161,12 +153,17 @@ def create_submodel_element(
     if isinstance(attribute_value, aas_model.SubmodelElementCollection):
         smc = create_submodel_element_collection(attribute_value)
         return smc
-    elif isinstance(attribute_value, list) or isinstance(attribute_value, tuple):
+    elif isinstance(attribute_value, list):
         sml = create_submodel_element_list(attribute_name, attribute_value)
         return sml
+    elif isinstance(attribute_value, tuple):
+        attribute_value_as_list = list(attribute_value)
+        sml = create_submodel_element_list(attribute_name, attribute_value_as_list)
+        return sml
     elif isinstance(attribute_value, set):
+        attribute_value_as_list = list(attribute_value)	
         sml = create_submodel_element_list(
-            attribute_name, attribute_value, ordered=False
+            attribute_name, attribute_value_as_list, ordered=False
         )
         return sml
     elif (isinstance(attribute_value, str)) and (
@@ -217,12 +214,12 @@ def create_submodel_element_collection(
     for attribute_name, attribute_value in smc_attributes.items():
         sme = create_submodel_element(attribute_name, attribute_value)
         value.append(sme)
-        submodel_element_data_specfication = (
+        attribute_data_specifications = (
             convert_util.get_data_specification_for_attribute(
-                attribute_name, sme.id_short
+                attribute_name, sme.id_short, model_sec
             )
         )
-        submodel_element_data_specifications.append(submodel_element_data_specfication)
+        submodel_element_data_specifications += attribute_data_specifications
 
     id_short = get_id_short(model_sec)
 
@@ -230,17 +227,14 @@ def create_submodel_element_collection(
         id_short=id_short,
         value=value,
         description=convert_util.get_basyx_description_from_model(model_sec),
-        embedded_data_specifications=[
-            convert_util.get_data_specification_for_model(model_sec)
-        ]
-        + submodel_element_data_specifications,
+        embedded_data_specifications=convert_util.get_data_specification_for_model(model_sec) + submodel_element_data_specifications,
         semantic_id=get_semantic_id(model_sec),
     )
     return smc
 
-
+    
 def create_submodel_element_list(
-    name: str, value: list, ordered=True
+    name: str, value: list | tuple | set, ordered=True
 ) -> model.SubmodelElementList:
     submodel_elements = []
     for el in value:

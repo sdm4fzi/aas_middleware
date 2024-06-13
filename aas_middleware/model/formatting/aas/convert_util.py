@@ -142,12 +142,50 @@ def get_attribute_name_from_basyx_model(
     )
 
 
+def is_attribute_from_basyx_model_immutable(
+    item: typing.Union[
+        model.AssetAdministrationShell, model.Submodel, model.SubmodelElementCollection
+    ],
+    referenced_item_id: str,
+) -> bool:
+    """
+    Returns if the referenced item of the item is immutable.
+
+    Args:
+        item (typing.Union[model.AssetAdministrationShell, model.Submodel, model.SubmodelElementCollection]): The container of the refernced item
+        referenced_item_id (str): The id of the referenced item
+
+    Raises:
+        ValueError: If not data specifications are found in the item or if no attribute name is found
+
+    Returns:
+        bool: If the referenced item is immutable
+    """
+    if not item.embedded_data_specifications:
+        raise ValueError("No data specifications found in item:", item)
+    for data_spec in item.embedded_data_specifications:
+        content = data_spec.data_specification_content
+        if not isinstance(content, model.DataSpecificationIEC61360):
+            continue
+        if not any(
+            key.value == referenced_item_id for key in data_spec.data_specification.key
+        ):
+            continue
+        if not content.preferred_name.get("en") == "immutable":
+            continue
+        return content.value == "true"
+    raise ValueError(
+        f"Attribute reference to {referenced_item_id} could not be found in {item.id_short} of type {type(item)}"
+    )
+
+
 def get_data_specification_for_model(
     item: typing.Union[
         aas_model.AAS, aas_model.Submodel, aas_model.SubmodelElementCollection
     ],
-) -> model.EmbeddedDataSpecification:
-    return model.EmbeddedDataSpecification(
+) -> typing.List[model.EmbeddedDataSpecification]:
+    # TODO: maybe hide here the information if an attribute is optional or not
+    return [model.EmbeddedDataSpecification(
         data_specification=model.ExternalReference(
             key=(
                 model.Key(
@@ -166,13 +204,17 @@ def get_data_specification_for_model(
             preferred_name=model.LangStringSet({"en": "class"}),
             value=item.__class__.__name__.split(".")[-1],
         ),
-    )
+    )]
 
 
 def get_data_specification_for_attribute(
-    attribute_name: str, attribute_id: str
-) -> model.EmbeddedDataSpecification:
-    return model.EmbeddedDataSpecification(
+    attribute_name: str, attribute_id: str, attribute_value: typing.Any
+) -> typing.List[model.EmbeddedDataSpecification]:
+    if isinstance(attribute_value, tuple):
+        immutable = "true"
+    else:
+        immutable = "false"
+    return [model.EmbeddedDataSpecification(
         data_specification=model.ExternalReference(
             key=(
                 model.Key(
@@ -185,7 +227,25 @@ def get_data_specification_for_attribute(
             preferred_name=model.LangStringSet({"en": "attribute"}),
             value=attribute_name,
         ),
+    ),
+    model.EmbeddedDataSpecification(
+        data_specification=model.ExternalReference(
+            key=(
+                model.Key(
+                    type_=model.KeyTypes.GLOBAL_REFERENCE,
+                    value=attribute_id,
+                ),
+            ),
+        ),
+        data_specification_content=model.DataSpecificationIEC61360(
+            preferred_name=model.LangStringSet({"en": "immutable"}),
+            value=immutable,
+        ),
     )
+    
+    
+    
+    ]
 
 
 def get_id_short(

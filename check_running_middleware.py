@@ -5,25 +5,25 @@
 from __future__ import annotations
 
 from tests.conftest import (
-    ProductAas,
-    ProductInfo,
-    SubmodelBom,
-    Version,
+    ValidAAS,
+    ExampleSubmodel,
+    ExampleSubmodel2,
+    ExampleSEC,
 )
 
 from aas_middleware.model.data_model import DataModel
 from aas_middleware.middleware.aas_persistence_middleware import AasMiddleware
 
-example_aas = ProductAas(
+example_aas = ValidAAS(
     id_short="product_aas",
-    example_submodel=SubmodelBom(
+    example_submodel_2=ExampleSubmodel2(
         id_short="bom", components=["comp1", "comp2"], num_components=2
     ),
-    info=ProductInfo(
+    info=ExampleSubmodel(
         id_short="product_info",
         product_name="product1",
         manufacturer="manufacturer1",
-        product_version=Version(
+        product_version=ExampleSEC(
             id_short="version_info", version="1.2.2", product_type="type1"
         ),
     ),

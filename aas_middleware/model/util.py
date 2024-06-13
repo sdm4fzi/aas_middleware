@@ -449,6 +449,28 @@ def get_attribute_name_encoded_references(model: Identifiable) -> List[str]:
     return referenced_ids
 
 
+
+def convert_to_fitting_identifiable_container_type(list_container: List[Identifiable], container_type: Type[Any]) -> List[Identifiable] | Tuple[Identifiable] | Set[Identifiable]:
+    """
+    Function to convert a list of identifiables to a fitting container type.
+
+    Args:
+        list_container (List[Identifiable]): The list of identifiables.
+        container_type (Type[Any]): The container type.
+
+    Returns:
+        List[Identifiable] | Tuple[Identifiable] | Set[Identifiable]: The container type.
+    """
+    if container_type == list:
+        return list_container
+    elif container_type == tuple:
+        return tuple(list_container)
+    elif container_type == set:
+        return set(list_container)
+    else:
+        raise ValueError("Container type not supported.")
+
+
 def replace_attribute_with_model(model: Identifiable, existing_model: Identifiable):
     """
     Function to replace an attribute with a model.
@@ -464,11 +486,13 @@ def replace_attribute_with_model(model: Identifiable, existing_model: Identifiab
             else:
                 replace_attribute_with_model(attribute_value, existing_model)
         elif is_identifiable_container(attribute_value):
-            for i, item in enumerate(attribute_value):
+            list_attribute_value = list(attribute_value)
+            for i, item in enumerate(list_attribute_value):
                 if item == existing_model:
-                    attribute_value[i] = existing_model
+                    list_attribute_value[i] = existing_model
                 else:
                     replace_attribute_with_model(item, existing_model)
+            setattr(model, attribute_name, convert_to_fitting_identifiable_container_type(list_attribute_value, type(attribute_value)))
 
 
 STANDARD_AAS_FIELDS = {"id", "description", "id_short", "semantic_id"}

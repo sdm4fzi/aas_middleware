@@ -41,8 +41,7 @@ class AasMiddleware(Middleware):
             model = models_of_type[0]
 
             for model in models_of_type:
-                self.persist(name, model)
-                self.add_callback("on_start_up", self.update_value, model, name, model.id)
+                self.add_callback("on_start_up", self.persist, name, model)
         
         self.generate_rest_api_for_data_model(name)
 

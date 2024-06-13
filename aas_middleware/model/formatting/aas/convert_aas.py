@@ -10,6 +10,7 @@ from basyx.aas import model
 
 from aas_middleware.model.formatting.aas import convert_util
 from aas_middleware.model.formatting.aas.convert_util import (
+    is_attribute_from_basyx_model_immutable,
     get_semantic_id_value_of_model,
 )
 
@@ -82,7 +83,7 @@ def convert_aas_to_pydantic_model(
 
 
 def get_submodel_element_value(
-    sm_element: model.SubmodelElement,
+    sm_element: model.SubmodelElement, immutable: bool = False
 ) -> aas_model.SubmodelElement:
     """
     Returns the value of a SubmodelElement.
@@ -96,7 +97,7 @@ def get_submodel_element_value(
     if isinstance(sm_element, model.SubmodelElementCollection):
         return convert_submodel_collection_to_pydantic_model(sm_element)
     elif isinstance(sm_element, model.SubmodelElementList):
-        return convert_submodel_list_to_pydantic_model(sm_element)
+        return convert_submodel_list_to_pydantic_model(sm_element, immutable)
     elif isinstance(sm_element, model.ReferenceElement):
         return convert_reference_element_to_pydantic_model(sm_element)
     elif isinstance(sm_element, model.Property):
@@ -106,7 +107,7 @@ def get_submodel_element_value(
 
 
 def get_dynamic_model_creation_dict_from_submodel_element(
-    attribute_name: str, sm_element: model.SubmodelElement
+    attribute_name: str, sm_element: model.SubmodelElement, immutable: bool = False
 ) -> typing.Dict[str, typing.Any]:
     """
     Converts a SubmodelElement to a dict.
@@ -118,7 +119,7 @@ def get_dynamic_model_creation_dict_from_submodel_element(
     Returns:
         dict: Dictionary that can be used to create a Pydantic model, with Annoated types for the attributes and examples.
     """
-    attribute_value = get_submodel_element_value(sm_element)
+    attribute_value = get_submodel_element_value(sm_element, immutable)
     return {
         attribute_name: typing.Annotated[
             type(attribute_value), Field(examples=[attribute_value])
@@ -127,7 +128,7 @@ def get_dynamic_model_creation_dict_from_submodel_element(
 
 
 def get_model_instantiation_dict_from_submodel_element(
-    attribute_name: str, sm_element: model.SubmodelElement
+    attribute_name: str, sm_element: model.SubmodelElement, immutable: bool = False
 ) -> typing.Dict[str, typing.Any]:
     """
     Converts a SubmodelElement to a dict.
@@ -139,7 +140,7 @@ def get_model_instantiation_dict_from_submodel_element(
     Returns:
         dict: Dictionary that can be used to instantiate a Pydantic model.
     """
-    attribute_value = get_submodel_element_value(sm_element)
+    attribute_value = get_submodel_element_value(sm_element, immutable)
     if isinstance(attribute_value, BaseModel):
         attribute_value = attribute_value.model_dump()
     return {attribute_name: attribute_value}
@@ -226,13 +227,14 @@ def convert_submodel_to_model(sm: model.Submodel) -> aas_model.Submodel:
         attribute_name = convert_util.get_attribute_name_from_basyx_model(
             sm, sm_element.id_short
         )
+        immutable = is_attribute_from_basyx_model_immutable(sm, sm_element.id_short)
         sme_model_creation_dict = get_dynamic_model_creation_dict_from_submodel_element(
-            attribute_name, sm_element
+            attribute_name, sm_element, immutable
         )
         dict_dynamic_model_creation.update(sme_model_creation_dict)
         sme_model_instantiation_dict = (
             get_model_instantiation_dict_from_submodel_element(
-                attribute_name, sm_element
+                attribute_name, sm_element, immutable
             )
         )
         dict_model_instantiation.update(sme_model_instantiation_dict)
@@ -264,12 +266,15 @@ def convert_submodel_collection_to_pydantic_model(
         attribute_name = convert_util.get_attribute_name_from_basyx_model(
             sm_element, sub_sm_element.id_short
         )
+        immutable = is_attribute_from_basyx_model_immutable(
+            sm_element, sub_sm_element.id_short
+        )
         dict_sme = get_dynamic_model_creation_dict_from_submodel_element(
-            attribute_name, sub_sm_element
+            attribute_name, sub_sm_element, immutable
         )
         dict_dynamic_model_creation.update(dict_sme)
         dict_sme_instantiation = get_model_instantiation_dict_from_submodel_element(
-            attribute_name, sub_sm_element
+            attribute_name, sub_sm_element, immutable
         )
         dict_model_instantiation.update(dict_sme_instantiation)
     model_type = create_model(
@@ -281,8 +286,8 @@ def convert_submodel_collection_to_pydantic_model(
 
 
 def convert_submodel_list_to_pydantic_model(
-    sm_element: model.SubmodelElementList,
-) -> typing.List[aas_model.SubmodelElement]:
+    sm_element: model.SubmodelElementList, immutable: bool = False
+) -> typing.Union[typing.List[aas_model.SubmodelElement], typing.List[aas_model.SubmodelElement], typing.Tuple[aas_model.SubmodelElement]]:
     """
     Converts a SubmodelElementList to a Pydantic model.
 
@@ -306,6 +311,10 @@ def convert_submodel_list_to_pydantic_model(
             sme_pydantic_models.append(sme.value)
         else:
             raise NotImplementedError("Type not implemented:", type(sme))
+    if not sm_element.order_relevant:
+        return set(sme_pydantic_models)
+    if immutable:
+        return tuple(sme_pydantic_models)
     return sme_pydantic_models
 
 

@@ -2,116 +2,122 @@ from aas_middleware.model.data_model import DataModel
 
 from aas_middleware.model.util import get_id_with_patch
 from tests.conftest import (
-    ProductAas,
-    SubmodelBom,
-    SubmodelBomWithReferenceComponents,
+    ExampleSubmodel,
+    ValidAAS,
+    ExampleSubmodel2,
+    ExampleSubmodelWithReference,
     ObjectBomWithId,
-    BaseModelBomWithId,
-    BaseModelBomWithIdentifierAttribute,
-    ObjectBomWithIdentifierAttribute,
-    SubmodelBomWithIdReferenceComponents,
-    SubmodelBomWithProductAssociation,
+    ExampleBaseMdelWithId,
+    BaseModelWithIdentifierAttribute,
+    ObjectWithIdentifierAttribute,
+    ExampleSubmodelWithIdReference,
+    ExampleBasemodelWithAssociation,
 )
 
 
-def test_minimal_example_with_AAS(example_aas: ProductAas):
+def test_minimal_example_with_AAS(example_aas: ValidAAS):
     data_model = DataModel.from_models(example_aas)
-    assert data_model.get_model("product_aas") == example_aas
-    assert data_model.get_model("product_info") == example_aas.info
-    assert len(data_model._models_key_id) == 4
-    assert data_model.get_models_of_type_name("ProductAas") == [example_aas]
-    assert data_model.get_models_of_type(ProductAas) == [example_aas]
-    assert data_model.get_models_of_type_name("SubmodelBom") == [
-        example_aas.example_submodel
-    ]
-    assert data_model.get_models_of_type(SubmodelBom) == [example_aas.example_submodel]
-    assert data_model.get_referencing_models(example_aas.info) == [example_aas]
-    assert data_model.get_referenced_models(example_aas.example_submodel) == []
-    assert data_model.get_referenced_models(example_aas.info) == [
-        example_aas.info.product_version
+    assert data_model.get_model("valid_aas_id") == example_aas
+    assert data_model.get_model("example_submodel_id") == example_aas.example_submodel
+    assert len(data_model._models_key_id) == 7 # 1 aas, 3 submodels, 3 submodel element collections
+    assert data_model.get_models_of_type_name("ValidAAS") == [example_aas]
+    assert data_model.get_models_of_type(ValidAAS) == [example_aas]
+    example_submodel_models = data_model.get_models_of_type_name("ExampleSubmodel")
+    example_submodel_ids = set([get_id_with_patch(model) for model in example_submodel_models])
+    assert example_submodel_ids == {"example_submodel_id", "example_submodel_for_union_id"}
+    example_submodel_models = data_model.get_models_of_type(ExampleSubmodel)
+    example_submodel_ids = set([get_id_with_patch(model) for model in example_submodel_models])
+    assert example_submodel_ids == {"example_submodel_id", "example_submodel_for_union_id"}
+    assert data_model.get_referencing_models(example_aas.example_submodel) == [example_aas]
+    submodel_references = data_model.get_referenced_models(example_aas.example_submodel)
+    submodel_references_id_set = set([get_id_with_patch(reference) for reference in submodel_references])
+    assert submodel_references_id_set == {"example_submodel_element_collection_id", "simple_submodel_element_collection_id", "example_submodel_element_collection_for_union_id"}
+    assert data_model.get_referenced_models(example_aas.example_submodel.submodel_element_collection_attribute_simple) == [
     ]
 
 
 def test_more_complex_example(
-    example_aas: ProductAas,
-    example_aas_comp1: ProductAas,
-    example_aas_comp2: ProductAas,
-    example_submodel_with_reference_components: SubmodelBomWithReferenceComponents,
-    example_submodel_with_id_reference_components: SubmodelBomWithIdReferenceComponents,
-    example_submodel_with_product_association: SubmodelBomWithProductAssociation,
-    example_basemodel_bom_with_id: BaseModelBomWithId,
-    example_object_bom_with_id: ObjectBomWithId,
-    example_basemodel_bom_with_identifier_attribute: BaseModelBomWithIdentifierAttribute,
-    example_object_with_identifier_attribute: ObjectBomWithIdentifierAttribute,
+    example_aas: ValidAAS,
+    referenced_aas_1: ValidAAS,
+    referenced_aas_2: ValidAAS,
+    example_submodel_with_reference: ExampleSubmodelWithReference,
+    example_submodel_with_id_reference: ExampleSubmodelWithIdReference,
+    example_submodel_with_product_association: ExampleBasemodelWithAssociation,
+    example_basemodel_with_id: ExampleBaseMdelWithId,
+    example_object_with_id: ObjectBomWithId,
+    example_basemodel_with_identifier_attribute: BaseModelWithIdentifierAttribute,
+    example_object_with_identifier_attribute: ObjectWithIdentifierAttribute,
 ):
     data_model = DataModel.from_models(
         example_aas,
-        example_aas_comp1,
-        example_aas_comp2,
-        example_submodel_with_reference_components,
-        example_submodel_with_id_reference_components,
+        referenced_aas_1,
+        referenced_aas_2,
+        example_submodel_with_reference,
+        example_submodel_with_id_reference,
         example_submodel_with_product_association,
-        example_basemodel_bom_with_id,
-        example_object_bom_with_id,
-        example_basemodel_bom_with_identifier_attribute,
+        example_basemodel_with_id,
+        example_object_with_id,
+        example_basemodel_with_identifier_attribute,
         example_object_with_identifier_attribute,
     )
-    assert data_model.get_model("product_aas") == example_aas
-    assert data_model.get_model("product_info") == example_aas.info
+    assert data_model.get_model("valid_aas_id") == example_aas
+    assert data_model.get_model("example_submodel_id") == example_aas.example_submodel
     assert (
-        data_model.get_model("example_basemodel_bom_with_id")
-        == example_basemodel_bom_with_id
+        data_model.get_model("example_basemodel_with_id")
+        == example_basemodel_with_id
     )
     assert (
-        data_model.get_model("example_object_bom_with_id") == example_object_bom_with_id
+        data_model.get_model("example_object_with_id") == example_object_with_id
     )
     assert (
-        data_model.get_model("example_basemodel_bom_with_identifier_attribute_id")
-        == example_basemodel_bom_with_identifier_attribute
+        data_model.get_model("example_basemodel_with_identifier_attribute_id")
+        == example_basemodel_with_identifier_attribute
     )
     assert (
         data_model.get_model("example_object_with_identifier_attribute_id")
         == example_object_with_identifier_attribute
     )
 
-    assert len(data_model._models_key_id) == 19
-    assert data_model.get_models_of_type_name("ProductAas") == [
-        example_aas,
-        example_aas_comp1,
-        example_aas_comp2,
-    ]
-    assert data_model.get_models_of_type(ProductAas) == [
-        example_aas,
-        example_aas_comp1,
-        example_aas_comp2,
-    ]
-    assert len(data_model.get_models_of_type_name("SubmodelBom")) == 3
-    assert len(data_model.get_models_of_type(SubmodelBom)) == 3
-    assert data_model.get_models_of_type_name("SubmodelBomWithReferenceComponents") == [
-        example_submodel_with_reference_components
+    assert len(data_model._models_key_id) == 16
+    valid_aas_models = data_model.get_models_of_type_name("ValidAAS") 
+    valid_aas_model_ids = set([get_id_with_patch(model) for model in valid_aas_models])
+    assert valid_aas_model_ids == {"valid_aas_id", "referenced_aas_1_id", "referenced_aas_2_id"}
+    valid_aas_models = data_model.get_models_of_type(ValidAAS)
+    valid_aas_model_ids = set([get_id_with_patch(model) for model in valid_aas_models])
+    assert valid_aas_model_ids == {"valid_aas_id", "referenced_aas_1_id", "referenced_aas_2_id"}
+    submodel_models = data_model.get_models_of_type_name("ExampleSubmodel")
+    submodel_model_ids = set([get_id_with_patch(model) for model in submodel_models])
+    assert submodel_model_ids == {"example_submodel_id", "example_submodel_for_union_id"}
+    submodel_models = data_model.get_models_of_type(ExampleSubmodel)
+    submodel_model_ids = set([get_id_with_patch(model) for model in submodel_models])
+    assert submodel_model_ids == {"example_submodel_id", "example_submodel_for_union_id"}
+    submodel_2_models = data_model.get_models_of_type_name("ExampleSubmodel2")
+    submodel_2_model_ids = set([get_id_with_patch(model) for model in submodel_2_models])
+    assert submodel_2_model_ids == {"example_submodel_2_id"}
+    assert data_model.get_models_of_type_name("ExampleSubmodelWithReference") == [
+        example_submodel_with_reference
     ]
     assert data_model.get_referencing_models(example_aas) == []
-    assert len(data_model.get_referencing_models(example_aas_comp1)) == 3
+    
+    referencing_models = data_model.get_referencing_models(referenced_aas_1)
+    referencing_model_ids = set([get_id_with_patch(model) for model in referencing_models])
+    assert referencing_model_ids == {"example_submodel_with_reference_components_id", "example_submodel_with_id_reference_components_id", "example_submodel_with_product_association_id"}
 
-    assert (
-        len(
-            data_model.get_referenced_models(example_submodel_with_reference_components)
-        )
-        == 2
-    )
-    assert (
-        len(
-            data_model.get_referenced_models(
-                example_submodel_with_id_reference_components
-            )
-        )
-        == 2
-    )
-    assert (
-        len(data_model.get_referenced_models(example_submodel_with_product_association))
-        == 2
-    )
 
+    referenced_models = data_model.get_referenced_models(example_submodel_with_reference)
+    assert len(referenced_models) == 2
+    referenced_model_ids = set([get_id_with_patch(model) for model in referenced_models])
+    assert referenced_model_ids == {"referenced_aas_1_id", "referenced_aas_2_id"}
+
+    referenced_models = data_model.get_referenced_models(example_submodel_with_id_reference)
+    assert len(referenced_models) == 2
+    referenced_model_ids = set([get_id_with_patch(model) for model in referenced_models])
+    assert referenced_model_ids == {"referenced_aas_1_id", "referenced_aas_2_id"}
+
+    referenced_models = data_model.get_referenced_models(example_submodel_with_product_association)
+    assert len(referenced_models) == 2
+    referenced_model_ids = set([get_id_with_patch(model) for model in referenced_models])
+    assert referenced_model_ids == {"referenced_aas_1_id", "referenced_aas_2_id"}
 
 # TODO: add tests to rebuild data model with direct / indirect references / aas structure
 # TODO: also add tests for subclassing Dataclass and making mixed use as data model and basemodel

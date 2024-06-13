@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from tests.conftest import (
-    ProductAas,
+    ValidAAS,
 )
 
 from aas_middleware.model.data_model import DataModel
 from aas_middleware.middleware.aas_persistence_middleware import AasMiddleware
 
-def test_loading_data_model_into_aas_middleware(example_aas: ProductAas):
+def test_loading_data_model_into_aas_middleware(example_aas: ValidAAS):
 
     data_model = DataModel.from_models(example_aas)
 
@@ -27,3 +27,7 @@ def test_loading_data_model_into_aas_middleware(example_aas: ProductAas):
 
 #     uvicorn.run(middleware.app)
 #     print(143)
+
+
+
+# TODO: make test to load models and retrieve them from the api!
