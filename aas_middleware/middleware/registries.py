@@ -16,6 +16,8 @@ class ConnectionInfo(BaseModel):
     data_model_name: str
     model_id: typing.Optional[str] = None
     field_id: typing.Optional[str] = None
+
+    # FIXME: remove the model_type attribute and save it somewhere else...
     model_type : typing.Optional[typing.Type[typing.Any]] = None
 
     model_config = ConfigDict(frozen=True, protected_namespaces=())
@@ -123,7 +125,6 @@ class ConnectionRegistry:
         Returns:
             typing.Set[ConnectionInfo]: The connection info of the type.
         """
-        # FIXME: restructure that connection infos can be queried more easily and that this function is working...
         return self.type_connection_infos[type_name]
     
 

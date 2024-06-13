@@ -1,24 +1,34 @@
 from __future__ import annotations
 from enum import Enum
 import enum
-from typing import List, Literal, Set, Tuple, Type, Union
+import threading
+import time
+from typing import List, Literal, Optional, Set, Tuple, Type, Union
+
+from fastapi.testclient import TestClient
+from fastapi import FastAPI
 
 from pydantic import BaseModel
 import pytest
+import uvicorn
 
+from aas_middleware.middleware.aas_persistence_middleware import AasMiddleware
 from aas_middleware.model.core import Identifier, Reference
 
+from aas_middleware.model.data_model import DataModel
 from aas_middleware.model.formatting.aas.aas_model import (
     AAS,
     Submodel,
     SubmodelElementCollection,
 )
 
+from aas_middleware.middleware.middleware import Middleware
 
 class ExampleEnum(str, Enum):
     value1 = "value1"
     value2 = "value2"
 
+# TODO: also add optional attribute!
 
 class SimpleExampleSEC(SubmodelElementCollection):
     integer_attribute: int
@@ -381,3 +391,27 @@ def example_object_with_identifier_attribute() -> ObjectWithIdentifierAttribute:
         other_name_id_attribute="example_object_with_identifier_attribute_id",
         id="id_named_attribute",
     )
+
+AAS_SERVER_ADDRESS = "localhost"
+AAS_SERVER_PORT = 8081
+SUBMODEL_SERVER_ADDRESS = "localhost"
+SUBMODEL_SERVER_PORT = 8081
+
+@pytest.fixture(scope="function")
+def example_middleware(example_aas: ValidAAS) -> Middleware:
+    data_model = DataModel.from_models(example_aas)
+
+    middleware  = AasMiddleware()
+    middleware.load_aas_persistent_data_model("test", data_model, AAS_SERVER_ADDRESS, AAS_SERVER_PORT, SUBMODEL_SERVER_ADDRESS, SUBMODEL_SERVER_PORT)
+    return middleware
+
+
+@pytest.fixture(scope="function")
+def client(
+    example_middleware: Middleware
+) -> TestClient:
+    """
+    Create a new FastAPI TestClient based on the current app.
+    """
+    with TestClient(example_middleware.app) as client:
+        return client

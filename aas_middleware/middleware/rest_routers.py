@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from typing import TYPE_CHECKING, List, Type, Dict
 from aas_middleware.connect.connectors.connector import Connector
 from aas_middleware.middleware import middleware
+from aas_middleware.middleware.registries import ConnectionInfo
 from aas_middleware.model import data_model
 from aas_middleware.model.data_model import DataModel
 from aas_middleware.model.formatting.aas.aas_middleware_util import get_all_submodels_from_model
@@ -50,7 +51,7 @@ class RestRouter:
         self.middleware = middleware
 
     def get_connector(self, item_id: str) -> Connector:
-        return self.middleware.persistence_registry[middleware.ConnectionInfo(data_model_name=self.data_model_name, model_id=item_id)]
+        return self.middleware.persistence_registry.get_connection(ConnectionInfo(data_model_name=self.data_model_name, model_id=item_id))
     
     def generate_submodel_endpoints_from_model(
             self,
