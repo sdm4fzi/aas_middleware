@@ -30,9 +30,17 @@ class BasyxAASConnector(Generic[T]):
         self.aas_server_address = f"http://{host}:{port}"
         self.submodel_server_address = f"http://{submodel_host}:{submodel_port}"
 
-        self.aas_client = AASClient(base_url=self.aas_server_address)
-        # TODO: make it possible that multiple submodel clients can be used mapped to different submodel repos for different submodels by their id
-        self.submodel_client = SubmodelClient(base_url=self.submodel_server_address)
+        # self.aas_client = AASClient(base_url=self.aas_server_address)
+        # # TODO: make it possible that multiple submodel clients can be used mapped to different submodel repos for different submodels by their id
+        # self.submodel_client = SubmodelClient(base_url=self.submodel_server_address)
+
+    @property
+    def aas_client(self):
+        return AASClient(base_url=self.aas_server_address)
+    
+    @property
+    def submodel_client(self):
+        return SubmodelClient(base_url=self.submodel_server_address)
 
     async def connect(self):
         await check_aas_and_sm_server_online(self.aas_server_address, self.submodel_server_address)
@@ -45,18 +53,18 @@ class BasyxAASConnector(Generic[T]):
         try:
             if not body:
                 await delete_aas_from_server(self.aas_id, self.aas_client)
-            if await aas_is_on_server(self.aas_id, self.aas_client):
+            elif await aas_is_on_server(self.aas_id, self.aas_client):
                 await put_aas_to_server(body, self.aas_client, self.submodel_client)
             else:
                 await post_aas_to_server(body, self.aas_client, self.submodel_client)
         except Exception as e:
-            raise HTTPException(status_code=400, detail=f"Error consuming AAS: {e}")
+            raise ConnectionError(f"Error consuming AAS: {e}")
 
     async def provide(self) -> T:
         try:
             return await get_aas_from_server(self.aas_id, self.aas_client, self.submodel_client)
         except Exception as e:
-            raise HTTPException(status_code=400, detail=f"Error providing AAS: {e}")
+            raise ConnectionError(f"Error providing AAS: {e}")
 
 
 class BasyxSubmodelConnector(Generic[S]):
@@ -79,15 +87,15 @@ class BasyxSubmodelConnector(Generic[S]):
         try:
             if not body:
                 await delete_submodel_from_server(self.submodel_id, self.submodel_client)
-            if await submodel_is_on_server(self.submodel_id, self.submodel_client):
+            elif await submodel_is_on_server(self.submodel_id, self.submodel_client):
                 await put_submodel_to_server(self.submodel_id, self.submodel_client)
             else:
                 await post_submodel_to_server(self.submodel_id, self.submodel_client)
         except Exception as e:
-            raise HTTPException(status_code=400, detail=f"Error consuming Submodel: {e}")
+            raise ConnectionError(f"Error consuming Submodel: {e}")
 
     async def provide(self) -> S:
         try:
             return await get_submodel_from_server(self.submodel_id, self.submodel_client)
         except Exception as e:
-            raise HTTPException(status_code=400, detail=f"Error providing Submodel: {e}")
+            raise ConnectionError(f"Error providing Submodel: {e}")

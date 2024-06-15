@@ -109,7 +109,7 @@ class RestRouter:
 
             @router.delete("/")
             async def delete_item(item_id: str):
-                await self.get_connector(item_id).consume()
+                await self.get_connector(item_id).consume(None)
                 # TODO: also update the submodel in the aas containing the submodel
                 return {
                     "message": f"Succesfully deleted submodel {submodel_name} of aas with id {item_id}"
@@ -159,10 +159,11 @@ class RestRouter:
         @router.get("/{item_id}", response_model=aas_model_type)
         async def get_item(item_id: str):
             try:
-                return await self.get_connector(item_id).provide()
+                connector = self.get_connector(item_id)
+                return await connector.provide()
             except Exception as e:
                 raise HTTPException(
-                    status_code=400, detail=f"AAS with id {item_id} does not exist. Error: {e}"
+                    status_code=400, detail=f"AAS with id {item_id} could not be retrieved. Error: {e}"
                 )
 
         @router.put("/{item_id}")
@@ -177,7 +178,8 @@ class RestRouter:
 
         @router.delete("/{item_id}")
         async def delete_item(item_id: str):
-            await self.get_connector(item_id).consume()
+            await self.get_connector(item_id).consume(None)
+            self.middleware.persistence_registry.remove_connection(ConnectionInfo(data_model_name=self.data_model_name, model_id=item_id))
             return {"message": f"Succesfully deleted aas with id {item_id}"}
 
         return router

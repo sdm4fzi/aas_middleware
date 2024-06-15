@@ -120,8 +120,8 @@ async def get_basyx_aas_from_server(aas_id: str, aas_client: AASClient) -> model
         )
         return client_utils.transform_client_to_basyx_model(aas_data.to_dict())
     except Exception as e:
-        raise HTTPException(
-            status_code=400, detail=f"AAS with id {aas_id} does not exist"
+        raise ConnectionError(
+            e
         )
 
 
@@ -140,7 +140,7 @@ async def get_aas_from_server(aas_id: str, aas_client: AASClient, submodel_clien
         aas = await get_basyx_aas_from_server(aas_id, aas_client)
     except Exception as e:
         raise HTTPException(
-            status_code=400, detail=f"AAS with id {aas_id} does not exist"
+            status_code=400, detail=f"AAS with id {aas_id} could not be retrieved. Error: {e}"
         )
     try:
         aas_submodels = await get_all_basyx_submodels_from_server(aas, submodel_client)

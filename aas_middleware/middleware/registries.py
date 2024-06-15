@@ -132,7 +132,6 @@ class ConnectionRegistry:
                 if not connection[1].__name__ == type_name:
                     continue
                 connection_infos.append(connection_info)
-                break
         return connection_infos
     
 
@@ -200,6 +199,16 @@ class PersistenceConnectionRegistry(ConnectionRegistry):
         """
         self.connections[connection_info] = (connector, type_connection_info)
 
+
+    def remove_connection(self, connection_info: ConnectionInfo):
+        """
+        Function to remove a connection from the connection manager.
+
+        Args:
+            connection_info (ConnectionInfo): The connection info of the connection.
+        """
+        del self.connections[connection_info]
+
     def get_connection(self, connection_info: ConnectionInfo) -> Connector:
         """
         Function to get a connection from the connection manager.
@@ -217,6 +226,23 @@ class PersistenceConnectionRegistry(ConnectionRegistry):
             return self.connections[connection_info][0]
         raise KeyError(f"Data model Connection info {connection_info} is not in the connection manager.")
 
+    def get_type_connection_info(self, type_name: str) -> typing.List[ConnectionInfo]:
+        """
+        Function to get the connection info of a type.
+
+        Args:
+            type_name (str): The name of the type.
+
+        Returns:
+            typing.Set[ConnectionInfo]: The connection info of the type.
+        """
+        connection_infos = []
+        for connection_info, connection in self.connections.items():
+            print(type_name, connection[1].__name__)
+            if not connection[1].__name__ == type_name:
+                continue
+            connection_infos.append(connection_info)
+        return connection_infos
 
 
 class WorkflowRegistry:
