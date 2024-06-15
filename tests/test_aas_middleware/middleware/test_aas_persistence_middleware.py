@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import time
 import pytest
 from fastapi.testclient import TestClient
 
@@ -12,9 +11,6 @@ from tests.conftest import (
     SUBMODEL_SERVER_PORT,
     ValidAAS,
 )
-
-import uvicorn
-import threading
 
 from aas_middleware.model.data_model import DataModel
 from aas_middleware.middleware.aas_persistence_middleware import AasMiddleware

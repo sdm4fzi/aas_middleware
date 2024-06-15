@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from typing import TYPE_CHECKING, List, Type, Dict
@@ -146,14 +146,24 @@ class RestRouter:
 
         @router.post(f"/", response_model=Dict[str, str])
         async def post_item(item: aas_model_type) -> Dict[str, str]:
-            await self.middleware.persist(data_model_name=self.data_model_name, model=item)
-            return {
-                "message": f"Succesfully created aas {aas_model_type.__name__} with id {item.id}"
-            }
+            try:
+                await self.middleware.persist(data_model_name=self.data_model_name, model=item)
+                return {
+                    "message": f"Succesfully created aas {aas_model_type.__name__} with id {item.id}"
+                }
+            except ValueError:
+                raise HTTPException(
+                    status_code=400, detail=f"AAS with id {item.id} already exists"
+                )
 
         @router.get("/{item_id}", response_model=aas_model_type)
         async def get_item(item_id: str):
-            return await self.get_connector(item_id).provide()
+            try:
+                return await self.get_connector(item_id).provide()
+            except Exception as e:
+                raise HTTPException(
+                    status_code=400, detail=f"AAS with id {item_id} does not exist. Error: {e}"
+                )
 
         @router.put("/{item_id}")
         async def put_item(item_id: str, item: aas_model_type) -> Dict[str, str]:

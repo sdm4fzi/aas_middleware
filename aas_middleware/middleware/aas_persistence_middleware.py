@@ -15,7 +15,7 @@ class AasMiddleware(Middleware):
     def __init__(self):
         super().__init__()
 
-    def load_aas_persistent_data_model(self, name: str, data_model: DataModel, aas_host: str, aas_port: int, submodel_host: str, submodel_port: int):
+    def load_aas_persistent_data_model(self, name: str, data_model: DataModel, aas_host: str, aas_port: int, submodel_host: str, submodel_port: int, initial_loading: bool = False):
         """
         Function to load a data model into the middleware to be used for synchronization.
 
@@ -35,13 +35,14 @@ class AasMiddleware(Middleware):
         self.add_default_persistence(aas_persistence_factory, name, None, AAS)
         self.add_default_persistence(submodel_persistence_factory, name, None, Submodel)
 
-        for models_of_type in aas_data_model.get_top_level_models().values():
-            if not models_of_type:
-                continue
-            model = models_of_type[0]
+        if initial_loading:
+            for models_of_type in aas_data_model.get_top_level_models().values():
+                if not models_of_type:
+                    continue
+                model = models_of_type[0]
 
-            for model in models_of_type:
-                self.add_callback("on_start_up", self.persist, name, model)
+                for model in models_of_type:
+                    self.add_callback("on_start_up", self.persist, name, model)
         
         self.generate_rest_api_for_data_model(name)
 

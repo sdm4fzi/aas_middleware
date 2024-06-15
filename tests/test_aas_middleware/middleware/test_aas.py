@@ -11,14 +11,14 @@ from tests.conftest import ValidAAS
 def test_aas_endpoint(client: TestClient, example_aas: ValidAAS):
     assert_empty_aas(client, example_aas)
     post_aas(client, example_aas)
-    changed_aas = example_aas
+    changed_aas = example_aas.model_copy(deep=True)
     changed_aas.id = "new_id"
     post_aas(client, changed_aas)
-
+    
     get_aas(client, example_aas)
     get_aas(client, changed_aas)
-    get_all_aas(client, example_aas)
 
+    get_all_aas(client, example_aas)
 
     update_aas(client, example_aas)
     delete_aas(client, example_aas)
@@ -34,6 +34,7 @@ def post_aas(client: TestClient, example_aas: ValidAAS):
     assert response.status_code == 400
 
 def get_aas(client: TestClient, example_aas: ValidAAS):
+    # FIXME: this endpoint is not working properly...
     class_name = example_aas.__class__.__name__
     response = client.get(url=f"/{class_name}/{example_aas.id}/")
     assert response.status_code == 200
@@ -49,7 +50,7 @@ def get_all_aas(client: TestClient, example_aas: ValidAAS):
 
 def assert_empty_aas(client: TestClient, example_aas: ValidAAS):
     class_name = example_aas.__class__.__name__
-    response = client.get(url=f"/{class_name}/{example_aas.id}/")
+    response = client.get(url=f"/{class_name}/")
     assert response.status_code == 200
     assert response.json() == []
 

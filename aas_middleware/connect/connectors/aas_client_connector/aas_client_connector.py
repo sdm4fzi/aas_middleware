@@ -1,5 +1,7 @@
 
 from typing import Generic, Optional, TypeVar
+
+from fastapi import HTTPException
 from aas_middleware.connect.connectors.aas_client_connector.aas_client import aas_is_on_server, delete_aas_from_server, get_aas_from_server, post_aas_to_server, put_aas_to_server
 
 from ba_syx_aas_environment_component_client import Client as AASClient
@@ -39,15 +41,22 @@ class BasyxAASConnector(Generic[T]):
         pass
 
     async def consume(self, body: Optional[T]) -> None:
-        if not body:
-            await delete_aas_from_server(self.aas_id, self.aas_client)
-        if await aas_is_on_server(self.aas_id, self.aas_client):
-            await put_aas_to_server(body, self.aas_client, self.submodel_client)
-        else:
-            await post_aas_to_server(body, self.aas_client, self.submodel_client)
+        # TODO: add here logic that aas_id is changed if the body has a different id
+        try:
+            if not body:
+                await delete_aas_from_server(self.aas_id, self.aas_client)
+            if await aas_is_on_server(self.aas_id, self.aas_client):
+                await put_aas_to_server(body, self.aas_client, self.submodel_client)
+            else:
+                await post_aas_to_server(body, self.aas_client, self.submodel_client)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Error consuming AAS: {e}")
 
     async def provide(self) -> T:
-        return await get_aas_from_server(self.aas_id, self.aas_client, self.submodel_client)
+        try:
+            return await get_aas_from_server(self.aas_id, self.aas_client, self.submodel_client)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Error providing AAS: {e}")
 
 
 class BasyxSubmodelConnector(Generic[S]):
@@ -67,12 +76,18 @@ class BasyxSubmodelConnector(Generic[S]):
         pass
 
     async def consume(self, body: Optional[S]) -> None:
-        if not body:
-            await delete_submodel_from_server(self.submodel_id, self.submodel_client)
-        if await submodel_is_on_server(self.submodel_id, self.submodel_client):
-            await put_submodel_to_server(self.submodel_id, self.submodel_client)
-        else:
-            await post_submodel_to_server(self.submodel_id, self.submodel_client)
+        try:
+            if not body:
+                await delete_submodel_from_server(self.submodel_id, self.submodel_client)
+            if await submodel_is_on_server(self.submodel_id, self.submodel_client):
+                await put_submodel_to_server(self.submodel_id, self.submodel_client)
+            else:
+                await post_submodel_to_server(self.submodel_id, self.submodel_client)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Error consuming Submodel: {e}")
 
     async def provide(self) -> S:
-        return await get_submodel_from_server(self.submodel_id, self.submodel_client)
+        try:
+            return await get_submodel_from_server(self.submodel_id, self.submodel_client)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Error providing Submodel: {e}")

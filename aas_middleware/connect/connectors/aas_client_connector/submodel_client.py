@@ -25,13 +25,20 @@ async def get_basyx_submodel_from_server(submodel_id: str, submodel_client: Subm
 
     Returns:
         model.Submodel: submodel retrieved from the server
+
+    Raises:
+        HTTPException: If submodel with the given id does not exist
     """
     base_64_id = client_utils.get_base64_from_string(submodel_id)
-    submodel_data = await get_submodel_by_id.asyncio(
-        client=submodel_client, submodel_identifier=base_64_id
-    )
-    return client_utils.transform_client_to_basyx_model(submodel_data.to_dict())
-
+    try:
+        submodel_data = await get_submodel_by_id.asyncio(
+            client=submodel_client, submodel_identifier=base_64_id
+        )
+        return client_utils.transform_client_to_basyx_model(submodel_data.to_dict())
+    except Exception as e:
+        raise HTTPException(
+            status_code=400, detail=f"Submodel with id {submodel_id} could not be retrieved. Error: {e}"
+        )
 
 async def get_all_basyx_submodels_from_server(aas: model.AssetAdministrationShell, submodel_client: SubmodelClient) -> List[ClientSubmodel]:
     """
@@ -50,7 +57,7 @@ async def get_all_basyx_submodels_from_server(aas: model.AssetAdministrationShel
     return submodels
 
 
-async def submodel_is_on_server(submodel: aas_model.Submodel, submodel_client: SubmodelClient) -> bool:
+async def submodel_is_on_server(submodel_id: str, submodel_client: SubmodelClient) -> bool:
     """
     Function to check if a submodel with the given id is on the server
     Args:
@@ -61,10 +68,9 @@ async def submodel_is_on_server(submodel: aas_model.Submodel, submodel_client: S
         bool: True if submodel is on server, False if not
     """
     try:
-        await get_submodel_from_server(submodel.id, submodel_client)
+        await get_submodel_from_server(submodel_id, submodel_client)
         return True
-    # TODO: use here a clearer Exception Type
-    except Exception as e:
+    except HTTPException as e:
         return False
 
 
@@ -99,7 +105,7 @@ async def put_submodel_to_server(submodel: aas_model.Submodel, submodel_client: 
     Raises:
         HTTPException: If submodel with the given id does not exist
     """
-    if not await submodel_is_on_server(submodel, submodel_client):
+    if not await submodel_is_on_server(submodel.id, submodel_client):
         raise HTTPException(
             status_code=400, detail=f"Submodel with id {submodel.id} does not exist. Try posting it first."
         )
@@ -118,9 +124,17 @@ async def get_submodel_from_server(submodel_id: str, submodel_client: SubmodelCl
         submodel_id (str): id of the submodel
     Returns:
         aas_model.Submodel: submodel retrieved from the server
+
+    Raises:
+        HTTPException: If submodel with the given id does not exist
     """
-    basyx_submodel = await get_basyx_submodel_from_server(submodel_id, submodel_client)
-    return convert_submodel_to_model(basyx_submodel)
+    try:
+        basyx_submodel = await get_basyx_submodel_from_server(submodel_id, submodel_client)
+        return convert_submodel_to_model(basyx_submodel)
+    except HTTPException as e:
+        raise HTTPException(
+            status_code=400, detail=f"Submodel with id {submodel_id} could not be retrieved. Error: {e}"
+        )
 
 
 async def get_all_submodel_data_from_server(submodel_client: SubmodelClient) -> List[ClientSubmodel]:
@@ -158,6 +172,13 @@ async def delete_submodel_from_server(submodel_id: str, submodel_client: Submode
     Args:
         submodel_id (str): id of the submodel
         submodel_client (SubmodelClient): client to connect to the server
+
+    Raises:
+        HTTPException: If submodel with the given id does not exist
     """
+    if not await submodel_is_on_server(submodel_id, submodel_client):
+        raise HTTPException(
+            status_code=400, detail=f"Submodel with id {submodel_id} does not exist. Cannot delete it."
+        )
     base_64_id = client_utils.get_base64_from_string(submodel_id)
     await delete_submodel_by_id.asyncio(client=submodel_client, submodel_identifier=base_64_id)

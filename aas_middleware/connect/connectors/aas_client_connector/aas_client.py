@@ -69,8 +69,7 @@ async def post_aas_to_server(aas: aas_model.AAS, aas_client: AASClient, submodel
 
     aas_attributes = get_value_attributes(aas)
     for submodel in aas_attributes.values():
-        if not await submodel_is_on_server(submodel, submodel_client):
-            logger.info(f"Submodel with id {submodel.id} already exists on the server. Updating the value.")
+        if not await submodel_is_on_server(submodel.id, submodel_client):
             await post_submodel_to_server(submodel, submodel_client)
         else:
             logger.info(f"Submodel with id {submodel.id} already exists on the server. Updating the value.")
@@ -98,7 +97,7 @@ async def put_aas_to_server(aas: aas_model.AAS, aas_client: AASClient, submodel_
     )
 
     for submodel in get_value_attributes(aas).values():
-        if await submodel_is_on_server(submodel, submodel_client):
+        if await submodel_is_on_server(submodel.id, submodel_client):
             await put_submodel_to_server(submodel, submodel_client)
         else:
             await post_submodel_to_server(submodel, submodel_client)
@@ -133,9 +132,23 @@ async def get_aas_from_server(aas_id: str, aas_client: AASClient, submodel_clien
         aas_id (str): id of the AAS
     Returns:
         aas_model.AAS: AAS retrieved from the server
+
+    Raises:
+        HTTPException: If AAS with the given id does not exist
     """
-    aas = await get_basyx_aas_from_server(aas_id, aas_client)
-    aas_submodels = await get_all_basyx_submodels_from_server(aas, submodel_client)
+    try: 
+        aas = await get_basyx_aas_from_server(aas_id, aas_client)
+    except Exception as e:
+        raise HTTPException(
+            status_code=400, detail=f"AAS with id {aas_id} does not exist"
+        )
+    try:
+        aas_submodels = await get_all_basyx_submodels_from_server(aas, submodel_client)
+    except Exception as e:
+        raise HTTPException(
+            status_code=400, detail=f"Submodels of AAS with id {aas_id} could not be retrieved. Error: {e}"
+        )
+
     obj_store = model.DictObjectStore()
     obj_store.add(aas)
     [obj_store.add(submodel) for submodel in aas_submodels]
@@ -174,7 +187,14 @@ async def delete_aas_from_server(aas_id: str, aas_client: AASClient):
     Function to delete an AAS from the server
     Args:
         aas_id (str): id of the AAS
+
+    Raises:
+        HTTPException: If AAS with the given id does not exist
     """
+    if not await aas_is_on_server(aas_id, aas_client):
+        raise HTTPException(
+            status_code=400, detail=f"AAS with id {aas_id} does not exist. Cannot delete it."
+        )
     base_64_id = client_utils.get_base64_from_string(aas_id)
     response = await delete_asset_administration_shell_by_id.asyncio(
         client=aas_client, aas_identifier=base_64_id

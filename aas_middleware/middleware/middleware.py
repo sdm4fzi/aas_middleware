@@ -230,7 +230,7 @@ class Middleware:
             field_name (typing.Optional[str]): _description_
             value (typing.Any): _description_
         """
-        connection_info = ConnectionInfo(data_model_name=data_model_name, model_id=model_id, model_type=type(value), field_id=field_name)
+        connection_info = ConnectionInfo(data_model_name=data_model_name, model_id=model_id, field_id=field_name)
         try:
             connector = self.persistence_registry.get_connection(connection_info)
             await connector.consume(value)
@@ -267,9 +267,8 @@ class Middleware:
         if not data_model_name in self.data_models:
             raise ValueError(f"No data model {data_model_name} found.")
         
-        connection_info = ConnectionInfo(data_model_name=data_model_name, model_id=model_id, field_id=None, model_type=model_type)
-        print(type(self.persistence_registry))
-        self.persistence_registry.add_persistence_factory(connection_info, persistence_factory)
+        connection_info = ConnectionInfo(data_model_name=data_model_name, model_id=model_id, field_id=None)
+        self.persistence_registry.add_persistence_factory(connection_info, model_type, persistence_factory)
     
 
     async def persist(self, data_model_name: str, model: typing.Optional[Identifiable]=None, persistence_factory: typing.Optional[PersistenceFactory]=None):
@@ -280,8 +279,13 @@ class Middleware:
             data_model_name (str): The name of the data model.
             model (Identifiable): The model that should be persisted.
             persistence_factory (PersistenceFactory): The persistence factory that should be used.
+
+        Raises:
+            ValueError: If the connection already exists.
         """
-        connection_info = ConnectionInfo(data_model_name=data_model_name, model_id=model.id, field_id=None, model_type=type(model))
+        connection_info = ConnectionInfo(data_model_name=data_model_name, model_id=model.id, field_id=None)
+        if connection_info in self.persistence_registry.connections:
+            raise ValueError(f"Connection {connection_info} already exists. Try using the existing connector or remove it first.")
         self.persistence_registry.add_to_persistence(connection_info, model, persistence_factory)
         connector = self.persistence_registry.get_connection(connection_info)
         # TODO: raise an error if consume is not possible and remove the persistence in the persistence registry
@@ -298,8 +302,8 @@ class Middleware:
             field_id (typing.Optional[str], optional): The id of the field in the model. Defaults to None.
             model_type (typing.Type[typing.Any], optional): The type of the model. Defaults to typing.Any.
         """
-        connection_info = ConnectionInfo(data_model_name=data_model_name, model_id=model_id, field_id=field_id, model_type=model_type)
-        self.connection_registry.add_connection(connection_info, connector)
+        connection_info = ConnectionInfo(data_model_name=data_model_name, model_id=model_id, field_id=field_id)
+        self.connection_registry.add_connection(connection_info, connector, model_type)
 
     def generate_model_registry_api(self):
         """
