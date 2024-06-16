@@ -72,7 +72,7 @@ def test_aas_endpoint(client: TestClient, example_aas: ValidAAS):
     update_aas(client, example_aas)
     all_ids = get_all_aas(client, example_aas)
     assert all_ids == {example_aas.id, changed_aas.id}
-    
+
     delete_aas(client, example_aas)
     delete_aas(client, changed_aas)
 
@@ -105,11 +105,14 @@ def get_all_aas(client: TestClient, example_aas: ValidAAS) -> Set[str]:
 
 def update_aas(client: TestClient, example_aas: ValidAAS):
     class_name = example_aas.__class__.__name__
+
+    old_example_aas_id = example_aas.id
+
     example_aas.id_short = "new_changed_id"
     example_aas.id = "new_changed_id"
     example_aas.example_submodel.list_attribute = ["new_list_element"]
-    # FIXME: make sure aas with old id is deleted...
-    response = client.put(url=f"/{class_name}/{example_aas.id}/", content=example_aas.model_dump_json())
+
+    response = client.put(url=f"/{class_name}/{old_example_aas_id}/", content=example_aas.model_dump_json())
     assert response.status_code == 200
 
     updated_aas = client.get(url=f"/{class_name}/{example_aas.id}/")
@@ -119,7 +122,7 @@ def update_aas(client: TestClient, example_aas: ValidAAS):
     example_aas.example_submodel.id = "new_changed_submodel_id"
     example_aas.example_submodel.id_short = "new_changed_submodel_id"
     response = client.put(url=f"/{class_name}/{example_aas.id}/", content=example_aas.model_dump_json())
-    # TODO: validate if this status code makes sense...
+
     assert response.status_code == 200
     updated_aas = client.get(url=f"/{class_name}/{example_aas.id}/")
     assert updated_aas.json()["example_submodel"]["id"] == "new_changed_submodel_id"

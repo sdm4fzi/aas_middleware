@@ -170,10 +170,18 @@ class RestRouter:
         async def put_item(item_id: str, item: aas_model_type) -> Dict[str, str]:
             try:
                 consumer = self.get_connector(item_id)
+            except KeyError as e:
+                raise HTTPException(
+                    status_code=400, detail=f"AAS with id {item_id} could not be retrieved. Try posting it at first."
+                )
+        
+            # TODO: add some exception handling below
+            if item_id == item.id:
                 await consumer.consume(item)
-            except KeyError:
+            else:
                 await self.middleware.persist(data_model_name=self.data_model_name, model=item)     
-                # TODO: remove the previous persistence       
+                await delete_item(item_id)
+                
             return {"message": f"Succesfully updated aas with id {item.id}"}
 
         @router.delete("/{item_id}")
