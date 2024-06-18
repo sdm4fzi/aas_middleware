@@ -1,20 +1,21 @@
+import typing
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from typing import TYPE_CHECKING, List, Type, Dict
+from typing import TYPE_CHECKING, List, Type, Dict, Union
 from aas_middleware.connect.connectors.connector import Connector
 from aas_middleware.middleware import middleware
 from aas_middleware.middleware.registries import ConnectionInfo
 from aas_middleware.model import data_model
 from aas_middleware.model.data_model import DataModel
-from aas_middleware.model.formatting.aas.aas_middleware_util import get_all_submodels_from_model
+from aas_middleware.model.formatting.aas.aas_middleware_util import get_contained_models_attribute_info
 from aas_middleware.model.formatting.aas.aas_model import AAS, Submodel
 
 if TYPE_CHECKING:
     from aas_middleware.middleware.middleware import Middleware
 
-def check_if_submodel_is_optional_in_aas(
-    aas: Type[AAS], submodel: Type[Submodel]
+def check_if_attribute_is_optional_in_aas(
+    aas: Type[AAS], attribute_name: str
     ) -> bool:
     """
     Checks if a submodel is an optional attribute in an aas.
@@ -29,23 +30,23 @@ def check_if_submodel_is_optional_in_aas(
     Returns:
         bool: True if the submodel is an optional attribute in the aas, False otherwise.
     """
-    for field_info in aas.model_fields.values():
-        if field_info.annotation == submodel:
-            if field_info.is_required():
-                return False
-            else:
-                return True
-    raise ValueError(
-        f"Submodel {submodel.__name__} is not a submodel of {aas.__name__}."
-    )
+    if attribute_name not in aas.model_fields:
+        raise ValueError(
+            f"Submodel {attribute_name} is not a submodel attribute of {aas.__name__}."
+        )
+    field_info = aas.model_fields[attribute_name]
+    if not field_info.is_required():
+        return True
+    elif typing.get_origin(field_info.annotation) == Union and type(None) in typing.get_args(field_info.annotation):
+        return True
+    else:
+        return False
 
 
 class RestRouter:
     def __init__(self, data_model: DataModel, data_model_name: str, middleware: "Middleware"):
         self.data_model = data_model
         self.data_model_name = data_model_name
-        # TODO: potentially remove dependancy for data model rebuilder here
-        # self.aas_data_model = DataModelRebuilder(data_model=data_model).rebuild_data_model_for_AAS_structure()
         self.aas_data_model = data_model
 
         self.middleware = middleware
@@ -53,9 +54,11 @@ class RestRouter:
     def get_connector(self, item_id: str) -> Connector:
         return self.middleware.persistence_registry.get_connection(ConnectionInfo(data_model_name=self.data_model_name, model_id=item_id))
     
-    def generate_submodel_endpoints_from_model(
+    def generate_endpoints_from_contained_model(
             self,
-        aas_model_type: Type[AAS], submodel_model_type: Type[Submodel],
+        aas_model_type: Type[AAS], 
+        attribute_name: str,
+        submodel_model_type: Type[Submodel],
     ) -> APIRouter:
         """
         Generates CRUD endpoints for a submodel of a pydantic model representing an aas.
@@ -68,11 +71,11 @@ class RestRouter:
             APIRouter: FastAPI router with CRUD endpoints for the given submodel that performs Middleware syxnchronization.
         """
         model_name = aas_model_type.__name__
-        submodel_name = submodel_model_type.__name__
-        optional_submodel = check_if_submodel_is_optional_in_aas(aas_model_type, submodel_model_type)
+        optional_submodel = check_if_attribute_is_optional_in_aas(aas_model_type, attribute_name)
         # TODO: the data model name should be used for creating the endpoint
+        # TODO: adjust that no aas or submodel reference appears in the router -> should work for all models.
         router = APIRouter(
-            prefix=f"/{model_name}/{{item_id}}/{submodel_name}",
+            prefix=f"/{model_name}/{{item_id}}/{attribute_name}",
             tags=[model_name],
             responses={404: {"description": "Not found"}},
         )
@@ -82,38 +85,68 @@ class RestRouter:
             response_model=submodel_model_type,
         )
         async def get_item(item_id: str):
-            # TODO: item_id represents the aas_id of the submodel -> execute provider of aas and retrieve only submodel field from it.
-            # FIXME: this is not working -> fastapi.exceptions.ResponseValidationError:
-            return await self.get_connector(item_id).provide()
+            try:
+                model = await self.get_connector(item_id).provide()
+                return getattr(model, attribute_name)
+            except Exception as e:
+                raise HTTPException(
+                    status_code=400, detail=f"Submodel with id {item_id} could not be retrieved. Error: {e}"
+                )
 
         if optional_submodel:
             @router.post("/")
             async def post_item(item_id: str, item: submodel_model_type) -> Dict[str, str]:
-                # TODO: also update data model with the new submodel and and a persistence provider and consumer
-                await self.get_connector(item.id).consume(item)
-                # TODO: also update the submodel in the aas containing the submodel
-                return {
-                    "message": f"Succesfully created submodel {submodel_name} of aas with id {item_id}"
-                }
+                connector = self.get_connector(item_id)
+                try: 
+                    provided_data = await connector.provide()
+                    # TODO: update that the correct type is immediately returned -> using model validate inside the connector
+                    provided_data_dict = provided_data.model_dump()
+                    model = aas_model_type.model_validate(provided_data_dict)
+                    setattr(model, attribute_name, item)
+                    await connector.consume(model)
+                    return {
+                        "message": f"Succesfully created attribute {attribute_name} of aas with id {item_id}"
+                    }
+                except Exception as e:
+                    raise HTTPException(
+                        status_code=400, detail=f"Attribute {attribute_name} for model with id {item_id} could not be set. Error: {e}"
+                    )
 
         @router.put("/")
         async def put_item(item_id: str, item: submodel_model_type) -> Dict[str, str]:
-            await self.get_connector(item_id).consume(item)
-            # TODO: also update the submodel in the aas containing the submodel
-            # TODO: also update the item_id in the consumer if the new item has another id.
-            return {
-                "message": f"Succesfully updated submodel {submodel_name} of aas with id {item_id}"
-            }
+            connector = self.get_connector(item_id)
+            try:
+                model = await connector.provide()
+                if getattr(model, attribute_name) == item:
+                    return {
+                        "message": f"Attribute {attribute_name} of model with id {item_id} is already up to date"
+                    }
+                setattr(model, attribute_name, item)
+                await connector.consume(model)
+                return {
+                    "message": f"Succesfully updated attribute {attribute_name} of model with id {item_id}"
+                }
+            except Exception as e:
+                raise HTTPException(
+                    status_code=400, detail=f"Attribute {attribute_name} of model with id {item_id} could not be updated. Error: {e}"
+                )
 
         if optional_submodel:
 
             @router.delete("/")
             async def delete_item(item_id: str):
-                await self.get_connector(item_id).consume(None)
-                # TODO: also update the submodel in the aas containing the submodel
-                return {
-                    "message": f"Succesfully deleted submodel {submodel_name} of aas with id {item_id}"
-                }
+                connector = self.get_connector(item_id)
+                try:
+                    model = await connector.provide()
+                    setattr(model, attribute_name, None)
+                    await connector.consume(model)
+                    return {
+                        "message": f"Succesfully deleted attribute {attribute_name} of model with id {item_id}"
+                    }
+                except Exception as e:
+                    raise HTTPException(
+                        status_code=400, detail=f"attribute {attribute_name} of model with id {item_id} could not be deleted. Error: {e}"
+                    )
 
         return router
 
@@ -160,7 +193,10 @@ class RestRouter:
         async def get_item(item_id: str):
             try:
                 connector = self.get_connector(item_id)
-                return await connector.provide()
+                provided_data = await connector.provide()
+                # TODO: update that the correct type is immediately returned -> using model validate inside the connector
+                provided_data_dict = provided_data.model_dump()
+                return aas_model_type.model_validate(provided_data_dict)
             except Exception as e:
                 raise HTTPException(
                     status_code=400, detail=f"AAS with id {item_id} could not be retrieved. Error: {e}"
@@ -206,9 +242,9 @@ class RestRouter:
         """
         routers = []
         routers.append(self.generate_aas_endpoints_from_model(pydantic_model))
-        submodels = get_all_submodels_from_model(pydantic_model)
-        for submodel in submodels:
-            routers.append(self.generate_submodel_endpoints_from_model(pydantic_model, submodel))
+        attribute_infos = get_contained_models_attribute_info(pydantic_model)
+        for attribute_name, contained_model in attribute_infos:
+            routers.append(self.generate_endpoints_from_contained_model(pydantic_model, attribute_name, contained_model))
         return routers
     
 

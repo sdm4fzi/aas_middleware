@@ -91,7 +91,7 @@ def get_aas(client: TestClient, example_aas: ValidAAS):
     class_name = example_aas.__class__.__name__
     response = client.get(url=f"/{class_name}/{example_aas.id}/")
     assert response.status_code == 200
-    # TODO: fix bug with enum values
+    # FIXME: fix bug with enum values
     # assert response.json() == example_aas.model_dump()
     assert response.text == example_aas.model_dump_json()
 

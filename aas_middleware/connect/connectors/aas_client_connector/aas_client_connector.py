@@ -71,7 +71,7 @@ class BasyxSubmodelConnector(Generic[S]):
     def __init__(self, submodel: S, host: str, port: int):
         self.host = host
         self.port = port
-        self.submodel_id = S.id
+        self.submodel_id = submodel.id
 
         self.submodel_server_address = f"http://{host}:{port}"
 

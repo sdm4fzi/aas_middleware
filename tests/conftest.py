@@ -164,6 +164,7 @@ class ValidAAS(AAS):
     example_submodel: ExampleSubmodel
     example_submodel_2: ExampleSubmodel2
     union_submodel: Union[ExampleSubmodel, ExampleSubmodel2]
+    optional_submodel: Optional[ExampleSubmodel]
 
 
 class FaultyAas(AAS):
@@ -278,6 +279,24 @@ def example_submodel_for_union(simple_submodel_element_collection: SubmodelEleme
         union_submodel_element_collection_attribute=example_submodel_element_collection_for_union,
     )
 
+@pytest.fixture(scope="function")
+def example_optional_submodel(simple_submodel_element_collection: SubmodelElementCollection, example_submodel_element_collection: SubmodelElementCollection, example_submodel_element_collection_for_union: SubmodelElementCollection) -> Submodel:
+    return ExampleSubmodel(
+        id_short="example_optional_submodel_id",
+        integer_attribute=1,
+        string_attribute="string",
+        float_attribute=1.1,
+        literal_attribute="value1",
+        enum_attribute=ExampleEnum.value1,
+        list_attribute=["string1", "string2"],
+        tuple_attribute=("string1", "string2"),
+        set_attribute={"string1", "string2"},
+        union_attribute="string",
+        submodel_element_collection_attribute_simple=simple_submodel_element_collection,
+        submodel_element_collection_attribute=example_submodel_element_collection,
+        union_submodel_element_collection_attribute=example_submodel_element_collection_for_union,
+    )
+
 
 @pytest.fixture(scope="function")
 def example_submodel_with_reference() -> ExampleSubmodelWithReference:
@@ -314,32 +333,35 @@ def example_submodel_with_product_association(
 
 
 @pytest.fixture(scope="function")
-def example_aas(example_submodel: ExampleSubmodel, example_submodel_2: ExampleSubmodel2, example_submodel_for_union: ExampleSubmodel) -> AAS:
+def example_aas(example_submodel: ExampleSubmodel, example_submodel_2: ExampleSubmodel2, example_submodel_for_union: ExampleSubmodel, example_optional_submodel: ExampleSubmodel) -> AAS:
     return ValidAAS(
         id_short="valid_aas_id",
         example_submodel=example_submodel,
         example_submodel_2=example_submodel_2,
         union_submodel=example_submodel_for_union,
+        optional_submodel=example_optional_submodel,
     )
 
 
 @pytest.fixture(scope="function")
-def referenced_aas_1(example_submodel: ExampleSubmodel, example_submodel_2: ExampleSubmodel2, example_submodel_for_union: ExampleSubmodel) -> AAS:
+def referenced_aas_1(example_submodel: ExampleSubmodel, example_submodel_2: ExampleSubmodel2, example_submodel_for_union: ExampleSubmodel, example_optional_submodel: ExampleSubmodel) -> AAS:
     return ValidAAS(
         id_short="referenced_aas_1_id",
         example_submodel=example_submodel,
         example_submodel_2=example_submodel_2,
-        union_submodel=example_submodel_for_union,        
+        union_submodel=example_submodel_for_union, 
+        optional_submodel=example_optional_submodel,       
     )
 
 
 @pytest.fixture(scope="function")
-def referenced_aas_2(example_submodel: ExampleSubmodel, example_submodel_2: ExampleSubmodel2, example_submodel_for_union: ExampleSubmodel) -> AAS:
+def referenced_aas_2(example_submodel: ExampleSubmodel, example_submodel_2: ExampleSubmodel2, example_submodel_for_union: ExampleSubmodel, example_optional_submodel: ExampleSubmodel) -> AAS:
     return ValidAAS(
         id_short="referenced_aas_2_id",
         example_submodel=example_submodel,
         example_submodel_2=example_submodel_2,
         union_submodel=example_submodel_for_union,
+        optional_submodel=example_optional_submodel,
     )
 
 

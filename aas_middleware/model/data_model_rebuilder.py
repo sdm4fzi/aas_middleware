@@ -1,6 +1,6 @@
-from typing import Type, TypeVar
-from httpx import patch
-from pydantic import Field, create_model
+from typing import Any, Literal, Optional, Type, TypeVar, Union
+import typing
+from pydantic import BaseModel, Field, create_model
 
 from aas_middleware.model.data_model import DataModel
 from aas_middleware.model.formatting.aas import aas_model
@@ -27,7 +27,28 @@ T = TypeVar(
 )
 
 
-def get_patched_aas_object(model: object, patch_type: Type[T]) -> T:
+def get_type_hints_for_attribute(
+    model: Any, attribute_name: str
+) -> Type:
+    if isinstance(model, BaseModel):
+        return model.model_fields[attribute_name].annotation
+    else:
+        return typing.get_type_hints(model.__init__)[attribute_name]
+
+def get_patched_type(
+    model: Any, attribute_name: str, attribute_value: Any
+) -> Type[T]:
+    # TODO: this function should work without the specified attribute_value...
+    attribute_type_hints = get_type_hints_for_attribute(model, attribute_name)
+    if typing.get_origin(attribute_type_hints) == Union	and type(None) in typing.get_args(attribute_type_hints):
+        return Optional[type(attribute_value)]
+    elif typing.get_origin(attribute_type_hints) == Literal:
+        return attribute_type_hints
+    # TODO: fix bug with list containing type hints
+    return type(attribute_value)
+
+
+def get_patched_aas_object(model: Any, patch_type: Type[T]) -> T:
     """
     Rebuilds an Identifiable object to an AAS object.
 
@@ -61,10 +82,12 @@ def get_patched_aas_object(model: object, patch_type: Type[T]) -> T:
         else:
             patched_attribute_value = attribute_value
 
+        attribute_patch_type = get_patched_type(model, attribute_name, patched_attribute_value)
+
         dict_dynamic_model_creation.update(
             {
                 attribute_name: (
-                    type(patched_attribute_value),
+                    attribute_patch_type,
                     Field(examples=[patched_attribute_value]),
                 )
             }
@@ -131,6 +154,7 @@ class DataModelRebuilder:
 
         submodel_objects = []
         for submodel_candidate in submodel_candidates:
+            # TODO: remove the need to patch models that are already subclasses of submodel...
             patched_submodel_object = get_patched_aas_object(
                 submodel_candidate, patch_type=aas_model.Submodel
             )
@@ -138,6 +162,7 @@ class DataModelRebuilder:
 
         aas_objects = []
         for aas_candidate in aas_candidates:
+            # TODO: remove the need to patch models that are already subclasses of aas...
             patched_aas_object = get_patched_aas_object(
                 aas_candidate, patch_type=aas_model.AAS
             )

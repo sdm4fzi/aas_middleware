@@ -19,15 +19,15 @@ def test_minimal_example_with_AAS(example_aas: ValidAAS):
     data_model = DataModel.from_models(example_aas)
     assert data_model.get_model("valid_aas_id") == example_aas
     assert data_model.get_model("example_submodel_id") == example_aas.example_submodel
-    assert len(data_model._models_key_id) == 7 # 1 aas, 3 submodels, 3 submodel element collections
+    assert len(data_model._models_key_id) == 8 # 1 aas, 4 submodels, 3 submodel element collections
     assert data_model.get_models_of_type_name("ValidAAS") == [example_aas]
     assert data_model.get_models_of_type(ValidAAS) == [example_aas]
     example_submodel_models = data_model.get_models_of_type_name("ExampleSubmodel")
     example_submodel_ids = set([get_id_with_patch(model) for model in example_submodel_models])
-    assert example_submodel_ids == {"example_submodel_id", "example_submodel_for_union_id"}
+    assert example_submodel_ids == {"example_submodel_id", "example_submodel_for_union_id", "example_optional_submodel_id"}
     example_submodel_models = data_model.get_models_of_type(ExampleSubmodel)
     example_submodel_ids = set([get_id_with_patch(model) for model in example_submodel_models])
-    assert example_submodel_ids == {"example_submodel_id", "example_submodel_for_union_id"}
+    assert example_submodel_ids == {"example_submodel_id", "example_submodel_for_union_id", "example_optional_submodel_id"}
     assert data_model.get_referencing_models(example_aas.example_submodel) == [example_aas]
     submodel_references = data_model.get_referenced_models(example_aas.example_submodel)
     submodel_references_id_set = set([get_id_with_patch(reference) for reference in submodel_references])
@@ -78,7 +78,7 @@ def test_more_complex_example(
         == example_object_with_identifier_attribute
     )
 
-    assert len(data_model._models_key_id) == 16
+    assert len(data_model._models_key_id) == 17
     valid_aas_models = data_model.get_models_of_type_name("ValidAAS") 
     valid_aas_model_ids = set([get_id_with_patch(model) for model in valid_aas_models])
     assert valid_aas_model_ids == {"valid_aas_id", "referenced_aas_1_id", "referenced_aas_2_id"}
@@ -87,10 +87,10 @@ def test_more_complex_example(
     assert valid_aas_model_ids == {"valid_aas_id", "referenced_aas_1_id", "referenced_aas_2_id"}
     submodel_models = data_model.get_models_of_type_name("ExampleSubmodel")
     submodel_model_ids = set([get_id_with_patch(model) for model in submodel_models])
-    assert submodel_model_ids == {"example_submodel_id", "example_submodel_for_union_id"}
+    assert submodel_model_ids == {"example_submodel_id", "example_submodel_for_union_id", "example_optional_submodel_id"}
     submodel_models = data_model.get_models_of_type(ExampleSubmodel)
     submodel_model_ids = set([get_id_with_patch(model) for model in submodel_models])
-    assert submodel_model_ids == {"example_submodel_id", "example_submodel_for_union_id"}
+    assert submodel_model_ids == {"example_submodel_id", "example_submodel_for_union_id", "example_optional_submodel_id"}
     submodel_2_models = data_model.get_models_of_type_name("ExampleSubmodel2")
     submodel_2_model_ids = set([get_id_with_patch(model) for model in submodel_2_models])
     assert submodel_2_model_ids == {"example_submodel_2_id"}

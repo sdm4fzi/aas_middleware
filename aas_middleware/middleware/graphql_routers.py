@@ -30,7 +30,7 @@ from starlette_graphene3 import (
     make_playground_handler,
 )
 
-from aas_middleware.model.formatting.aas.aas_middleware_util import get_all_submodels_from_model, union_type_check
+from aas_middleware.model.formatting.aas.aas_middleware_util import get_contained_models_attribute_info, union_type_check
 from aas_middleware.model.formatting.aas.aas_model import AAS, Submodel, SubmodelElementCollection
 
 
@@ -239,7 +239,7 @@ def generate_graphql_endpoint(models: typing.List[typing.Type[BaseModel]]) -> Gr
     for model in models:
         model_name = model.__name__
 
-        submodels = get_all_submodels_from_model(model)
+        submodels = get_contained_models_attribute_info(model)
         graphene_submodels = []
         for submodel in submodels:
             graphene_submodels.append(

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Annotated, Any, Callable, List, Self
+from typing import Annotated, Any, Callable, List, Self, Union
+import typing
 
 from basyx.aas.model import AssetAdministrationShell, DictObjectStore, Submodel
 from pydantic import BaseModel, BeforeValidator, ValidationError, model_validator
@@ -82,10 +83,24 @@ class AAS(Identifiable):
         description (str, optional): Description of the object. Defaults to None.
     """
 
+    @model_validator(mode="before")
+    @classmethod
+    def set_optional_fields_to_None(cls, data):
+        if isinstance(data, BaseModel):
+            data = data.model_dump()
+        for field_name, field_info in cls.model_fields.items():
+            if field_name in data:
+                continue
+            if typing.get_origin(field_info.annotation) == Union and type(None) in typing.get_args(field_info.annotation):
+                data[field_name] = None
+        return data
+
     @model_validator(mode="after")
     def check_submodels(self) -> Self:
-        for field_name in self.model_fields:
+        for field_name, field_info in self.model_fields.items():
             if field_name in ["id", "id_short", "description"]:
+                continue
+            elif typing.get_origin(field_info.annotation) == Union and type(None) in typing.get_args(field_info.annotation) and getattr(self, field_name) is None:
                 continue
             try:
                 Submodel.model_validate(getattr(self, field_name))

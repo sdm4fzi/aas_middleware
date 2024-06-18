@@ -1,6 +1,6 @@
 import json
 import re
-from typing import List, Type, Dict
+from typing import List, Tuple, Type, Dict
 from basyx.aas import model
 
 from pydantic import BaseModel, ConfigDict, create_model
@@ -41,20 +41,22 @@ def save_model_list_with_schema(model_list: typing.List[BaseModel], path: str):
         json.dump(save_dict, json_file, indent=4)
 
 
-def get_all_submodels_from_model(
+def get_contained_models_attribute_info(
     model: Type[BaseModel],
-) -> List[Type[aas_model.Submodel]]:
+) -> List[Tuple[str, Type[aas_model.Submodel]]]:
     """
     Function to get all submodels from a pydantic model
     Args:
         model (Type[BaseModel]): The pydantic model to get the submodels from
     Returns:
-        List[Type[model.Submodel]]: A list of all submodel types in the pydantic model
+        List[Tuple[str, Type[aas_model.Submodel]]]: List of attribute name and value of all submodels in the pydantic model
     """
     submodels = []
-    for fieldinfo in model.model_fields.values():
-        if issubclass(fieldinfo.annotation, aas_model.Submodel):
-            submodels.append(fieldinfo.annotation)
+    for attribute_name, fieldinfo in model.model_fields.items():
+        if typing.get_args(fieldinfo.annotation) != () and any(issubclass(arg, aas_model.Submodel) for arg in typing.get_args(fieldinfo.annotation)):
+            submodels.append((attribute_name, fieldinfo.annotation))
+        elif issubclass(fieldinfo.annotation, aas_model.Submodel):
+            submodels.append((attribute_name, fieldinfo.annotation))
     return submodels
 
 
