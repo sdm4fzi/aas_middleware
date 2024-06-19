@@ -1,5 +1,6 @@
-from typing import Optional, Protocol, Any
+from typing import Optional, Protocol, Any, runtime_checkable
 
+@runtime_checkable
 class Provider(Protocol):
     async def connect(self):
         """
@@ -28,6 +29,7 @@ class Provider(Protocol):
         ...
 
 
+@runtime_checkable
 class Consumer(Protocol):
     async def connect(self):
         """

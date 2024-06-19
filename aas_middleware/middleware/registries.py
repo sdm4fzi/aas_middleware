@@ -20,15 +20,18 @@ class ConnectionInfo(BaseModel):
     """
     data_model_name: str
     model_id: typing.Optional[str] = None
+    contained_model_id: typing.Optional[str] = None
     field_id: typing.Optional[str] = None
 
     model_config = ConfigDict(frozen=True, protected_namespaces=())
 
     @property
-    def connection_type(self) -> typing.Literal["data_model", "model", "field"]:
+    def connection_type(self) -> typing.Literal["data_model", "model", "contained_model", "field"]:
         if self.model_id:
-            if self.field_id:
-                return "field"
+            if self.contained_model_id:
+                if self.field_id:
+                    return "field"
+                return "contained_model"
             return "model"
         return "data_model"
     
@@ -39,19 +42,72 @@ class ConnectionRegistry:
     """
 
     def __init__(self):
-        self.connections: typing.Dict[ConnectionInfo, typing.List[typing.Tuple[Connector, typing.Type[typing.Any]]]] = {}
+        self.connectors: typing.Dict[str, Connector] = {}
+        self.connection_types: typing.Dict[str, typing.Type[Connector]] = {}
+        self.connections: typing.Dict[ConnectionInfo, typing.List[str]] = {}
 
-    def add_connection(self, connection_info: ConnectionInfo, connector: Connector, type_connection_info: typing.Type[typing.Any]):
+
+    def get_connector_id(self, connector: Connector) -> str:
+        """
+        Function to get a connector id from the connection manager.
+
+        Args:
+            connector (Connector): The connector of the connection.
+
+        Returns:
+            str: The id of the connector.
+
+        Raises:
+            KeyError: If the connector is not in the connection manager.
+        """
+        for connector_id, connector_ in self.connectors.items():
+            if connector == connector_:
+                return connector_id
+        raise KeyError(f"Connector {connector} is not in the connection manager.")
+
+
+    def get_connector(self, connector_id: str) -> Connector:
+        """
+        Function to get a connector from the connection manager.
+
+        Args:
+            connector_id (str): The id of the connector.
+
+        Returns:
+            Connector: The connector of the connection.
+
+        Raises:
+            KeyError: If the connector id is not in the connection manager.
+        """
+        return self.connectors[connector_id]
+
+
+    def add_connector(self, connector_id: str, connector: Connector, connection_type: typing.Type[Connector]):
+        """
+        Function to add a connector to the connection manager.
+
+        Args:
+            connector_id (str): The name of the connector.
+            connector (Connector): The connector to be added.
+            connection_type (typing.Type[Connector]): The type of the connector.
+        """
+        self.connectors[connector_id] = connector
+        self.connection_types[connector_id] = connection_type
+
+    def add_connection(self, connector_id: str, connection_info: ConnectionInfo, connector: Connector, type_connection_info: typing.Type[typing.Any]):
         """
         Function to add a connection to the connection manager.
 
         Args:
+            connector_id (str): The id of the connector.
             connection_info (ConnectionInfo): The connection info of the connection.
             connector (Connector): The connector of the connection.
+            type_connection_info (typing.Type[typing.Any]): The type of the connection info of the connection.
         """
         if not connection_info in self.connections:
             self.connections[connection_info] = []
-        self.connections[connection_info].append((connector, type_connection_info))
+        self.connections[connection_info].append(connector_id)
+        self.add_connector(connector_id, connector, type_connection_info)
 
     def get_connections(self, connection_info: ConnectionInfo) -> typing.List[typing.Tuple[Connector, typing.Type[typing.Any]]]:
         """
@@ -63,7 +119,11 @@ class ConnectionRegistry:
         Returns:
             Connector: The connector of the connection.
         """
-        return self.connections[connection_info]
+        connector_ids = self.connections[connection_info]
+        connections = []
+        for connector_id in connector_ids:
+            connections.append((self.get_connector(connector_id), self.connection_types[connector_id]))
+        return connections
     
     def get_data_model_connection_info(self, data_model_name: str) -> typing.List[ConnectionInfo]:
         """
@@ -142,8 +202,28 @@ class PersistenceConnectionRegistry(ConnectionRegistry):
 
     def __init__(self):
         super().__init__()
-        self.connections: typing.Dict[ConnectionInfo, typing.Tuple[Connector, typing.Type[typing.Any]]] = {}
+        self.connectors: typing.Dict[str, Connector] = {}
+        self.connection_types: typing.Dict[str, typing.Type[Connector]] = {}
+        self.connections: typing.Dict[ConnectionInfo, str] = {}
         self.persistence_factories: typing.Dict[ConnectionInfo, typing.List[typing.Tuple[PersistenceFactory, typing.Type[typing.Any]]]] = {}
+
+
+    def get_connector_by_data_model_and_model_id(self, data_model_name: str, model_id: str) -> Connector:
+        """
+        Function to get a connector from the connection manager.
+
+        Args:
+            data_model_name (str): The name of the data model.
+            model_id (str): The id of the model.
+
+        Returns:
+            Connector: The connector of the connection.
+
+        Raises:
+            KeyError: If the model id is not in the connection manager.
+        """
+        connector_id = data_model_name + model_id + "_persistence"
+        return self.get_connector(connector_id)
 
     def add_persistence_factory(self, connection_info: ConnectionInfo, model_type: typing.Type[typing.Any], persistence_factory: PersistenceFactory):
         """
@@ -197,7 +277,9 @@ class PersistenceConnectionRegistry(ConnectionRegistry):
             connection_info (ConnectionInfo): The connection info of the connection.
             connector (Connector): The connector of the connection.
         """
-        self.connections[connection_info] = (connector, type_connection_info)
+        connector_id = connection_info.data_model_name + connection_info.model_id + "_persistence"
+        self.add_connector(connector_id, connector, type_connection_info)
+        self.connections[connection_info] = connector_id
 
 
     def remove_connection(self, connection_info: ConnectionInfo):
@@ -208,6 +290,7 @@ class PersistenceConnectionRegistry(ConnectionRegistry):
             connection_info (ConnectionInfo): The connection info of the connection.
         """
         del self.connections[connection_info]
+        # TODO: also delete connector and connection type
 
     def get_connection(self, connection_info: ConnectionInfo) -> Connector:
         """
@@ -223,7 +306,7 @@ class PersistenceConnectionRegistry(ConnectionRegistry):
             KeyError: If the connection info is not in the connection manager.
         """
         if connection_info in self.connections:
-            return self.connections[connection_info][0]
+            return self.get_connector(self.connections[connection_info])
         raise KeyError(f"Data model Connection info {connection_info} is not in the connection manager.")
 
     def get_type_connection_info(self, type_name: str) -> typing.List[ConnectionInfo]:
@@ -237,9 +320,9 @@ class PersistenceConnectionRegistry(ConnectionRegistry):
             typing.Set[ConnectionInfo]: The connection info of the type.
         """
         connection_infos = []
-        for connection_info, connection in self.connections.items():
-            print(type_name, connection[1].__name__)
-            if not connection[1].__name__ == type_name:
+        for connection_info, connector_id in self.connections.items():
+            model_type = self.connection_types[connector_id]
+            if not model_type.__name__ == type_name:
                 continue
             connection_infos.append(connection_info)
         return connection_infos

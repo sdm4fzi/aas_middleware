@@ -4,28 +4,30 @@
 
 from __future__ import annotations
 
-from tests.conftest import (
-    ValidAAS,
-    ExampleSubmodel,
-    ExampleSubmodel2,
-    ExampleSEC,
-)
+from aas_middleware.model.formatting.aas import aas_model
+from tests.conftest import TrivialFloatConnector
 
 from aas_middleware.model.data_model import DataModel
 from aas_middleware.middleware.aas_persistence_middleware import AasMiddleware
 
-example_aas = ValidAAS(
-    id_short="product_aas",
-    example_submodel_2=ExampleSubmodel2(
-        id_short="bom", components=["comp1", "comp2"], num_components=2
-    ),
-    info=ExampleSubmodel(
-        id_short="product_info",
-        product_name="product1",
-        manufacturer="manufacturer1",
-        product_version=ExampleSEC(
-            id_short="version_info", version="1.2.2", product_type="type1"
-        ),
+
+class ExampleSubmodel(aas_model.Submodel):
+    float_attribute: float = 0.0
+
+
+class ExampleAAS(aas_model.AAS):
+    example_submodel: ExampleSubmodel
+
+
+example_aas = ExampleAAS(
+    id="example_aas_id",
+    id_short="example_aas_id",
+    description="Example AAS",
+    example_submodel=ExampleSubmodel(
+        id="example_submodel_id",
+        id_short="example_submodel_id",
+        description="Example Submodel",
+        float_attribute=0.0,
     ),
 )
 
@@ -33,41 +35,23 @@ data_model = DataModel.from_models(example_aas)
 
 middleware = AasMiddleware()
 middleware.load_aas_persistent_data_model(
-    "test", data_model, "localhost", 8081, "localhost", 8081
+    "test", data_model, "localhost", 8081, "localhost", 8081, initial_loading=True
 )
 
+trivial_float_connector = TrivialFloatConnector()
+middleware.add_connector("test_connector", trivial_float_connector, model_type=float)
+middleware.add_connector(
+    "test_persistence",
+    trivial_float_connector,
+    model_type=float,
+    data_model_name="test",
+    model_id="example_aas_id",
+    contained_model_id="example_submodel_id",
+    field_id="float_attribute",
+)
 
-# example body:
-"""
-{
-    "id_short": "string",
-    "description": "",
-    "id": "string",
-    "example_submodel": {
-        "id_short": "string3",
-        "description": "",
-        "id": "string3",
-        "semantic_id": "",
-        "components": ["string"],
-        "num_components": 0,
-    },
-    "info": {
-        "id_short": "string1",
-        "description": "",
-        "id": "string1",
-        "semantic_id": "",
-        "product_name": "string",
-        "manufacturer": "string",
-        "product_version": {
-            "id_short": "string2",
-            "description": "",
-            "semantic_id": "",
-            "version": "string",
-            "product_type": "string",
-        },
-    },
-}
-"""
+middleware.generate_connector_endpoints()
+
 if __name__ == "__main__":
     import uvicorn
 

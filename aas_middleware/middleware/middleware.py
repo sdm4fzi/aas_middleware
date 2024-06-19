@@ -15,6 +15,7 @@ import aas_middleware
 from aas_middleware.connect.connectors.connector import Connector
 from aas_middleware.connect.connectors.model_connector import ModelConnector
 from aas_middleware.middleware import persistence_factory
+from aas_middleware.middleware.connector_router import generate_connector_endpoint, generate_persistence_connector_endpoint
 from aas_middleware.middleware.registries import ConnectionInfo, ConnectionRegistry, PersistenceConnectionRegistry, WorkflowRegistry
 from aas_middleware.middleware.model_registry_api import generate_model_api
 from aas_middleware.middleware.persistence_factory import PersistenceFactory
@@ -220,7 +221,7 @@ class Middleware:
         data_model = BasyxFormatter().deserialize(models)
         self.load_data_model(data_model)
 
-    async def update_value(self, value: typing.Any, data_model_name: str, model_id: typing.Optional[str]=None, field_name: typing.Optional[str]=None):
+    async def update_value(self, value: typing.Any, data_model_name: str, model_id: typing.Optional[str]=None, contained_model_id: typing.Optional[str]=None, field_name: typing.Optional[str]=None):
         """
         Function to update a value in the persistence.
 
@@ -230,14 +231,14 @@ class Middleware:
             field_name (typing.Optional[str]): _description_
             value (typing.Any): _description_
         """
-        connection_info = ConnectionInfo(data_model_name=data_model_name, model_id=model_id, field_id=field_name)
+        connection_info = ConnectionInfo(data_model_name=data_model_name, model_id=model_id, contained_model_id=contained_model_id, field_id=field_name)
         try:
             connector = self.persistence_registry.get_connection(connection_info)
             await connector.consume(value)
         except KeyError as e:
             await self.persist(data_model_name, value)
         
-    async def get_value(self, data_model_name: str, model_id: typing.Optional[str], field_name: typing.Optional[str]) -> typing.Any:
+    async def get_value(self, data_model_name: str, model_id: typing.Optional[str]=None, contained_model_id: typing.Optional[str]=None, field_name: typing.Optional[str]=None) -> typing.Any:
         """
         Function to get a value from the persistence.
 
@@ -249,7 +250,7 @@ class Middleware:
         Returns:
             typing.Any: _description_
         """
-        connection_info = ConnectionInfo(data_model_name=data_model_name, model_id=model_id, field_id=field_name)
+        connection_info = ConnectionInfo(data_model_name=data_model_name, model_id=model_id, contained_model_id=contained_model_id, field_id=field_name)
         try:
             connector = self.persistence_registry.get_connection(connection_info)
             return await connector.provide()
@@ -267,7 +268,7 @@ class Middleware:
         if not data_model_name in self.data_models:
             raise ValueError(f"No data model {data_model_name} found.")
         
-        connection_info = ConnectionInfo(data_model_name=data_model_name, model_id=model_id, field_id=None)
+        connection_info = ConnectionInfo(data_model_name=data_model_name, model_id=model_id, contained_model_id=None, field_id=None)
         self.persistence_registry.add_persistence_factory(connection_info, model_type, persistence_factory)
     
 
@@ -283,7 +284,7 @@ class Middleware:
         Raises:
             ValueError: If the connection already exists.
         """
-        connection_info = ConnectionInfo(data_model_name=data_model_name, model_id=model.id, field_id=None)
+        connection_info = ConnectionInfo(data_model_name=data_model_name, model_id=model.id, contained_model_id=None, field_id=None)
         if connection_info in self.persistence_registry.connections:
             raise ValueError(f"Connection {connection_info} already exists. Try using the existing connector or remove it first.")
         self.persistence_registry.add_to_persistence(connection_info, model, persistence_factory)
@@ -291,19 +292,35 @@ class Middleware:
         # TODO: raise an error if consume is not possible and remove the persistence in the persistence registry
         await connector.consume(model)
 
-    def connect(self, connector: Connector, data_model_name: str, model_id: typing.Optional[str]=None, field_id: typing.Optional[str]=None, model_type: typing.Type[typing.Any]=typing.Any):
+
+    def add_connector(self, connector_id: str, connector: Connector, model_type: typing.Type[typing.Any], data_model_name: typing.Optional[str]=None, model_id: typing.Optional[str]=None, contained_model_id: typing.Optional[str]=None, field_id: typing.Optional[str]=None):
+        """
+        Function to add a connector to the middleware.
+
+        Args:
+            connector_id (str): The name of the connector.
+            connector (Connector): The connector that should be added.
+        """
+        self.connection_registry.add_connector(connector_id, connector, model_type)
+        if data_model_name:
+            self.connect_connector_to_persistence(connector_id, data_model_name, model_id, contained_model_id, field_id)
+
+    def connect_connector_to_persistence(self, connector_id: str, data_model_name: str, model_id: typing.Optional[str]=None, contained_model_id: typing.Optional[str]=None, field_id: typing.Optional[str]=None):
         """
         Function to connect a connector to a data entity in the middleware.
 
         Args:
-            consumer (Consumer): The consumer that should be connected.
+            connector_id (str): The name of the connector.
+            connector (Connector): The connector that should be connected.
             data_model_name (str): The name of the data model used for identifying the data model in the middleware.
             model_id (typing.Optional[str], optional): The id of the model in the data model. Defaults to None.
             field_id (typing.Optional[str], optional): The id of the field in the model. Defaults to None.
             model_type (typing.Type[typing.Any], optional): The type of the model. Defaults to typing.Any.
         """
-        connection_info = ConnectionInfo(data_model_name=data_model_name, model_id=model_id, field_id=field_id)
-        self.connection_registry.add_connection(connection_info, connector, model_type)
+        connection_info = ConnectionInfo(data_model_name=data_model_name, model_id=model_id, contained_model_id=contained_model_id, field_id=field_id)
+        connector = self.connection_registry.get_connector(connector_id)
+        type_connection_info = self.connection_registry.connection_types[connector_id]
+        self.connection_registry.add_connection(connector_id, connection_info, connector, type_connection_info)
 
     def generate_model_registry_api(self):
         """
@@ -353,9 +370,31 @@ class Middleware:
                 interval=interval,
                 **kwargs
             )
+            # TODO: rework this function...
             self.all_workflows.append(workflow)
             workflows_app = generate_workflow_endpoint(workflow)
             self.app.include_router(workflows_app)
             return func
 
         return decorator
+
+    def generate_connector_endpoints(self):
+        """
+        Generates endpoints for all connectors that are connected to the middleware.
+        """
+        persistence_connector_ids = set()
+        # TODO: maybe adjust storage of connection_infos in the connection registry by the connector_id -> one endpoint for one connector with 
+        # possibly multiple connection_infos to persistence
+        for connection_info, connector_ids in self.connection_registry.connections.items():
+            for connector_id in connector_ids:
+                connector = self.connection_registry.get_connector(connector_id)
+                model_type = self.connection_registry.connection_types[connector_id]
+                persistence_connector_ids.add(connector_id)
+                router = generate_persistence_connector_endpoint(connector_id, connector, connection_info, model_type, self.persistence_registry)
+                self.app.include_router(router)
+        no_persistence_connectors = set(self.connection_registry.connectors.keys()) - persistence_connector_ids
+        for connector_id in no_persistence_connectors:
+            connector = self.connection_registry.get_connector(connector_id)
+            model_type = self.connection_registry.connection_types[connector_id]
+            router = generate_connector_endpoint(connector_id, connector, model_type)
+            self.app.include_router(router)

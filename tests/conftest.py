@@ -3,7 +3,7 @@ from enum import Enum
 import enum
 import threading
 import time
-from typing import List, Literal, Optional, Set, Tuple, Type, Union
+from typing import Any, List, Literal, Optional, Set, Tuple, Type, Union
 
 from fastapi.testclient import TestClient
 from fastapi import FastAPI
@@ -437,3 +437,23 @@ def client(
     """
     with TestClient(example_middleware.app) as client:
         return client
+    
+class TrivialFloatConnector(BaseModel):
+    def __init__(self):
+        pass
+
+    async def connect(self):
+        pass
+
+    async def disconnect(self):
+        pass
+
+    async def consume(self, body: float) -> None:
+        print(body)
+        pass
+
+    async def provide(self) -> Any:
+        return 1.0
+    
+
+

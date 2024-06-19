@@ -133,22 +133,43 @@ Thus there need to be two methods to add the consumer:
 - connect_consumer(consumer: Consumer, data_model_id: str, model_id: str, field_name: str, on_start_up: bool, on_shutdown: bool, interval: float, event_trigger: Event)
 
 
-## How to trigger something when a data model / model / field changes
+# Functionalities of connectors in the middleware
 
-Maybe with Events and EventCallbacks and an update method that is executed when a data model / model / fields is changed. 
-
-The udpate method is the only method that changes values in the middleware. In this function, all related EventCallbacks are searched for and executed with the updated value, if needed.
-
-Different EventTypes should be provided by the middleware to define these events and define the associated callbacks:
-- ModelChangeEvent, ModelCreationEvent, ModelDeletionEvent, -> datamodel_id and model_id need to be provided
-- FieldChangeEvent, ... -> datamodel_id, model_id and field_name
-- ExecutionEvent -> associated consumer, provider or workflow
-
-a EventCallback has an Event and an assocaited workflow / consumer / provider that is executed when the event has happened. 
-
-When the event happens in the Middleware, the EventListener is informed about the event_type with all meta information. The event listener goes through all EventCallbacks and searches for suiting Callbacks, these are executed then. 
+Connectors can be added to the middleware with the following information:
+- name: the name of the connector
+- connector: the connector that should be added
 
 
+Connectors can be connected to the middleware with the following information:
+- connector_id: the name of the connector
+- connector: the connector that should be connected
+- data_model_id: the data model id to which the connector should be connected
+- model_id: the model id to which the connector should be connected
+- contained_model_id: the contained model id in the model with model_id to which the connector should be connected
+- field_name: the field name to which the connector should be connected
+- on_start_up: if the connector should be executed on start up
+- on_shutdown: if the connector should be executed on shut down
+- interval: the interval in which the connector should be executed (if 0, no waiting time)
+
+## 1. Connectors without persistence
+
+The connectors can be executed by an API call to the middleware in the connection API. 
+
+endpoints:
+- post connector/value: The API has a post method that allows to execute a consumer with a payload, this payload is then send to the consumer
+- get connector/value: The API has a get method that allows to retrieve the value of a provider
+
+This works fine for request/response based connectors. However, publish / subscribe connectors need to be executed in a different way -> maybe use a async queue to save the values.
+
+## 2. Connectors with persistence
+
+The connectors can be executed by an API call to the middleware in the connection API.
+
+endpoints:
+- post connector/value: The API has a post method that allows to execute a consumer with a payload, this payload is then send to the consumer and also send to the persistence to update the data model. If no payload is given, the persistence is executed to get the data.
+- get connector/value: The API has a get method that allows to retrieve the value of a provider. The provider is executed and the value is returned. If the provider is connected to the persistence, the persistence is updated with the new value.
 
 
+## 3. Connectors that are executed in the background to automatically update the persistence
 
+Use workflows for this and maybe add convenience functions to do this. (Workflow executed on start up, on shut down, periodic trigger, event trigger...) -> e.g. an example function / class called persistence_connector_workflow that automatically updates the persistence with the new value of the connector.
