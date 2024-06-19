@@ -20,6 +20,7 @@ from aas_middleware.middleware.registries import ConnectionInfo, ConnectionRegis
 from aas_middleware.middleware.model_registry_api import generate_model_api
 from aas_middleware.middleware.persistence_factory import PersistenceFactory
 from aas_middleware.middleware.rest_routers import RestRouter
+from aas_middleware.middleware.synchronization import synchronize_connector_with_persistence
 from aas_middleware.middleware.workflow_router import generate_workflow_endpoint
 from aas_middleware.connect.workflows.workflow import Workflow
 from aas_middleware.model.core import Identifiable
@@ -322,6 +323,8 @@ class Middleware:
         type_connection_info = self.connection_registry.connection_types[connector_id]
         self.connection_registry.add_connection(connector_id, connection_info, connector, type_connection_info)
 
+        synchronize_connector_with_persistence(connector, connection_info, self.persistence_registry)
+
     def generate_model_registry_api(self):
         """
         Adds a REST API so that new models can be registered and unregistered from the Middleware.
@@ -390,7 +393,7 @@ class Middleware:
                 connector = self.connection_registry.get_connector(connector_id)
                 model_type = self.connection_registry.connection_types[connector_id]
                 persistence_connector_ids.add(connector_id)
-                router = generate_persistence_connector_endpoint(connector_id, connector, connection_info, model_type, self.persistence_registry)
+                router = generate_persistence_connector_endpoint(connector_id, connector, connection_info, model_type)
                 self.app.include_router(router)
         no_persistence_connectors = set(self.connection_registry.connectors.keys()) - persistence_connector_ids
         for connector_id in no_persistence_connectors:

@@ -438,7 +438,7 @@ def client(
     with TestClient(example_middleware.app) as client:
         return client
     
-class TrivialFloatConnector(BaseModel):
+class TrivialFloatConnector:
     def __init__(self):
         pass
 
