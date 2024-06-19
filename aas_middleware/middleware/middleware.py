@@ -118,6 +118,10 @@ class Middleware:
                 asyncio.create_task(workflow.execute())
         for callback in self.on_start_up_callbacks:
             await callback()
+        for connector in self.connection_registry.connectors.values():
+            await connector.connect()
+        for persistence in self.persistence_registry.connectors.values():
+            await persistence.connect()
         yield
         for workflow in self.workflow_registry.get_workflows():
             if workflow.on_shutdown:
@@ -127,6 +131,11 @@ class Middleware:
 
         for callback in self.on_shutdown_callbacks:
             await callback()
+
+        for connector in self.connection_registry.connectors.values():
+            await connector.disconnect()
+        for persistence in self.persistence_registry.connectors.values():
+            await persistence.disconnect()
 
     @property
     def app(self):

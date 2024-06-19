@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+from aas_middleware.connect.connectors.opc_ua_client_connector import OpcUaConnector
 from aas_middleware.model.formatting.aas import aas_model
 from tests.conftest import TrivialFloatConnector
 
@@ -43,6 +44,21 @@ middleware.add_connector("test_connector", trivial_float_connector, model_type=f
 middleware.add_connector(
     "test_persistence",
     trivial_float_connector,
+    model_type=float,
+    data_model_name="test",
+    model_id="example_aas_id",
+    contained_model_id="example_submodel_id",
+    field_id="float_attribute",
+)
+
+
+url = "opc.tcp://localhost:4840/freeopcua/server/"
+namespace = "http://examples.freeopcua.github.io"
+opc_ua_connector = OpcUaConnector(url, namespace, "MyObject", "MyVariable")
+
+middleware.add_connector(
+    "opc_ua_connector",
+    opc_ua_connector,
     model_type=float,
     data_model_name="test",
     model_id="example_aas_id",
