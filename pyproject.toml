@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "aas-middleware"
-version = "0.1.0"
+version = "0.1.1"
 description = ""
 authors = ["Sebastian Behrendt <sebastianbehrendt97@gmail.com>"]
 readme = "README.md"
@@ -17,6 +17,7 @@ aiohttp = "^3.9.5"
 toml = "^0.10.2"
 ba-syx-aas-environment-component-client = "^2.1"
 datamodel-code-generator = "^0.25.6"
+importlib-metadata = "^8.0.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.2.0"
