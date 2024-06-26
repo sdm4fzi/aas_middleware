@@ -1,7 +1,3 @@
-# def test_starting_aas_middleware(example_aas: ProductAas):
-# TODO: make this test work so that it does not stop after running the uvicorn.run() function
-
-
 from __future__ import annotations
 import logging
 
