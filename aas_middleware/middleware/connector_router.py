@@ -23,8 +23,8 @@ def generate_persistence_connector_endpoint(connector_id: str, connector: Union[
         APIRouter: FastAPI router with an endpoint to execute the workflow.
     """
     router = APIRouter(
-        prefix=f"/{connector_id}",
-        tags=["workflows"],
+        prefix=f"/connectors/{connector_id}",
+        tags=["connectors"],
         responses={404: {"description": "Not found"}},
     )
  
@@ -70,8 +70,8 @@ def generate_connector_endpoint(connector_id: str, connector: Union[Consumer, Pr
         APIRouter: FastAPI router with an endpoint to execute the workflow.
     """
     router = APIRouter(
-        prefix=f"/{connector_id}",
-        tags=["workflows"],
+        prefix=f"/connectors/{connector_id}",
+        tags=["connectors"],
         responses={404: {"description": "Not found"}},
     )
  

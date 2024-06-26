@@ -1,3 +1,4 @@
+import logging
 import os
 import time
 from typing import Set
@@ -15,19 +16,24 @@ from tests.conftest import AAS_SERVER_ADDRESS, AAS_SERVER_PORT, SUBMODEL_SERVER_
 async def get_clear_aas_and_submodel_server():
     aas_response = None
     submodel_response = None
-    async with aiohttp.ClientSession() as session:
-        async with session.get(f"http://{AAS_SERVER_ADDRESS}:{AAS_SERVER_PORT}/shells") as response_aas:
-            if response_aas.status == 200: 
-                aas_response = await response_aas.json()
-        async with session.get(f"http://{SUBMODEL_SERVER_ADDRESS}:{SUBMODEL_SERVER_PORT}/submodels") as response_sm:
-            if response_sm.status == 200:
-                submodel_response = await response_sm.json()
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f"http://{AAS_SERVER_ADDRESS}:{AAS_SERVER_PORT}/shells") as response_aas:
+                if response_aas.status == 200: 
+                    aas_response = await response_aas.json()
+            async with session.get(f"http://{SUBMODEL_SERVER_ADDRESS}:{SUBMODEL_SERVER_PORT}/submodels") as response_sm:
+                if response_sm.status == 200:
+                    submodel_response = await response_sm.json()
+    except:
+        pass
     
     if not aas_response or not submodel_response:
+        logging.info("Could not connect to the docker container. Starting a new one.")
         result = os.system("docker-compose -f docker/docker-compose-dev.yaml up -d")
         if result != 0:
             raise Exception("Could not start the docker container.")
     elif aas_response["result"] != [] or submodel_response["result"] != []:
+        logging.info("Docker container is not empty. Restarting it.")
         result = os.system("docker-compose -f docker/docker-compose-dev.yaml restart")
         if result != 0:
             raise Exception("Could not restart the docker container.")
@@ -41,6 +47,7 @@ async def get_clear_aas_and_submodel_server():
                 async with session.get(f"http://{AAS_SERVER_ADDRESS}:{AAS_SERVER_PORT}/shells") as response_aas:
                     async with session.get(f"http://{SUBMODEL_SERVER_ADDRESS}:{SUBMODEL_SERVER_PORT}/submodels") as response_sm:
                         if response_aas.status == 200 and response_sm.status == 200:
+                            logging.info("AAS Docker containers are running.")
                             break
         except:
             pass

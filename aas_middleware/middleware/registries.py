@@ -348,31 +348,31 @@ class WorkflowRegistry:
         """
         self.workflows[workflow.get_name()] = workflow
 
-    def add_provider_to_workflow(self, workflow_name: str, connection_info: ConnectionInfo, provider: Provider):
-        """
-        Function to add a provider to a workflow.
+    # def add_provider_to_workflow(self, workflow_name: str, connection_info: ConnectionInfo, provider: Provider):
+    #     """
+    #     Function to add a provider to a workflow.
 
-        Args:
-            workflow_name (str): The name of the workflow.
-            connection_info (ConnectionInfo): The connection info of the provider.
-            provider (Provider): The provider to be added.
-        """
-        if not workflow_name in self.workflow_providers:
-            self.workflow_providers[workflow_name] = []
-        self.workflow_providers[workflow_name].append((connection_info, provider))
+    #     Args:
+    #         workflow_name (str): The name of the workflow.
+    #         connection_info (ConnectionInfo): The connection info of the provider.
+    #         provider (Provider): The provider to be added.
+    #     """
+    #     if not workflow_name in self.workflow_providers:
+    #         self.workflow_providers[workflow_name] = []
+    #     self.workflow_providers[workflow_name].append((connection_info, provider))
 
-    def add_consumer_to_workflow(self, workflow_name: str, connection_info: ConnectionInfo, connector: Connector):
-        """
-        Function to add a consumer to a workflow.
+    # def add_consumer_to_workflow(self, workflow_name: str, connection_info: ConnectionInfo, connector: Connector):
+    #     """
+    #     Function to add a consumer to a workflow.
 
-        Args:
-            workflow_name (str): The name of the workflow.
-            connection_info (ConnectionInfo): The connection info of the consumer.
-            connector (Connector): The connector to be added.
-        """
-        if not workflow_name in self.workflow_consumers:
-            self.workflow_consumers[workflow_name] = []
-        self.workflow_consumers[workflow_name].append((connection_info, connector))
+    #     Args:
+    #         workflow_name (str): The name of the workflow.
+    #         connection_info (ConnectionInfo): The connection info of the consumer.
+    #         connector (Connector): The connector to be added.
+    #     """
+    #     if not workflow_name in self.workflow_consumers:
+    #         self.workflow_consumers[workflow_name] = []
+    #     self.workflow_consumers[workflow_name].append((connection_info, connector))
 
     def get_workflows(self) -> typing.List[Workflow]:
         """
@@ -398,29 +398,29 @@ class WorkflowRegistry:
         """
         return self.workflows[workflow_name]
     
-    def get_providers(self, workflow_name: str) -> typing.List[typing.Tuple[ConnectionInfo, Provider]]:
-        """
-        Function to get the providers of a workflow.
+    # def get_providers(self, workflow_name: str) -> typing.List[typing.Tuple[ConnectionInfo, Provider]]:
+    #     """
+    #     Function to get the providers of a workflow.
 
-        Args:
-            workflow_name (str): The name of the workflow.
+    #     Args:
+    #         workflow_name (str): The name of the workflow.
 
-        Returns:
-            typing.List[typing.Tuple[ConnectionInfo, Provider]]: The providers of the workflow.
-        """
-        return self.workflow_providers[workflow_name]
+    #     Returns:
+    #         typing.List[typing.Tuple[ConnectionInfo, Provider]]: The providers of the workflow.
+    #     """
+    #     return self.workflow_providers[workflow_name]
     
-    def get_consumers(self, workflow_name: str) -> typing.List[typing.Tuple[ConnectionInfo, Connector]]:
-        """
-        Function to get the consumers of a workflow.
+    # def get_consumers(self, workflow_name: str) -> typing.List[typing.Tuple[ConnectionInfo, Connector]]:
+    #     """
+    #     Function to get the consumers of a workflow.
 
-        Args:
-            workflow_name (str): The name of the workflow.
+    #     Args:
+    #         workflow_name (str): The name of the workflow.
 
-        Returns:
-            typing.List[typing.Tuple[ConnectionInfo, Connector]]: The consumers of the workflow.
-        """
-        return self.workflow_consumers[workflow_name]
+    #     Returns:
+    #         typing.List[typing.Tuple[ConnectionInfo, Connector]]: The consumers of the workflow.
+    #     """
+    #     return self.workflow_consumers[workflow_name]
     
     def get_workflow_names(self) -> typing.List[str]:
         """

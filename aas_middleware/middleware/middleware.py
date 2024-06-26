@@ -334,6 +334,30 @@ class Middleware:
 
         synchronize_connector_with_persistence(connector, connection_info, self.persistence_registry)
 
+    def workflow(
+        self,
+        *args,
+        on_startup: bool = False,
+        on_shutdown: bool = False,
+        interval: typing.Optional[float] = None,
+        **kwargs
+    ):
+        def decorator(func):
+            workflow = Workflow.define(
+                func,
+                *args,
+                on_startup=on_startup,
+                on_shutdown=on_shutdown,
+                interval=interval,
+                **kwargs
+            )
+            self.workflow_registry.add_workflow(workflow)
+            workflows_app = generate_workflow_endpoint(workflow)
+            self.app.include_router(workflows_app)
+            return func
+
+        return decorator
+
     def generate_model_registry_api(self):
         """
         Adds a REST API so that new models can be registered and unregistered from the Middleware.
@@ -364,31 +388,6 @@ class Middleware:
     #     """
     #     graphql_app = generate_graphql_endpoint(self.models)
     #     self.app.mount("/graphql", graphql_app)
-
-    def workflow(
-        self,
-        *args,
-        on_startup: bool = False,
-        on_shutdown: bool = False,
-        interval: typing.Optional[float] = None,
-        **kwargs
-    ):
-        def decorator(func):
-            workflow = Workflow.define(
-                func,
-                *args,
-                on_startup=on_startup,
-                on_shutdown=on_shutdown,
-                interval=interval,
-                **kwargs
-            )
-            # TODO: rework this function...
-            self.all_workflows.append(workflow)
-            workflows_app = generate_workflow_endpoint(workflow)
-            self.app.include_router(workflows_app)
-            return func
-
-        return decorator
 
     def generate_connector_endpoints(self):
         """

@@ -10,6 +10,8 @@ from aas_middleware.model.formatting.aas import aas_model
 from aas_middleware.model.formatting.aas.basyx_formatter import BasyxFormatter
 from aas_middleware.model.reference_finder import ReferenceType
 
+# TODO: use something like this to create tests for this...
+
 class Child(BaseModel):
     Id: str
     age: int
@@ -48,5 +50,5 @@ print(instance_graph)
 type_graph = get_type_graph(patched_data_model)
 print(type_graph)
 
-visualize_graph(instance_graph)
-visualize_graph(type_graph)
+visualize_graph(instance_graph, show=True)
+visualize_graph(type_graph, show=True)

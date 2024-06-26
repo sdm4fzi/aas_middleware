@@ -18,7 +18,7 @@ def generate_workflow_endpoint(workflow: Workflow) -> List[APIRouter]:
         APIRouter: FastAPI router with an endpoint to execute the workflow.
     """
     router = APIRouter(
-        prefix=f"/{workflow.get_name()}",
+        prefix=f"/workflows/{workflow.get_name()}",
         tags=["workflows"],
         responses={404: {"description": "Not found"}},
     )

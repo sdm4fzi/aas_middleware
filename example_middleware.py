@@ -3,6 +3,7 @@
 
 
 from __future__ import annotations
+import logging
 
 from aas_middleware.connect.connectors.opc_ua_client_connector import OpcUaConnector
 from aas_middleware.model.formatting.aas import aas_model
@@ -14,6 +15,8 @@ from aas_middleware.middleware.aas_persistence_middleware import AasMiddleware
 
 class ExampleSubmodel(aas_model.Submodel):
     float_attribute: float = 0.0
+    rfid_tag_id: str
+    position: tuple[int, int]
 
 
 class ExampleAAS(aas_model.AAS):
@@ -29,6 +32,8 @@ example_aas = ExampleAAS(
         id_short="example_submodel_id",
         description="Example Submodel",
         float_attribute=0.0,
+        rfid_tag_id="1234",
+        position=(1, 0),
     ),
 )
 
@@ -68,8 +73,41 @@ middleware.add_connector(
 
 middleware.generate_connector_endpoints()
 
+
+class ExampleSensorConnector:
+    # This class is a placeholder for a real connector to a sensor with opc ua, mqtt or so...
+    def __init__(self, rfid_id: str):
+        self.rfid_id = rfid_id
+
+    async def provide(self) -> str:
+        return self.rfid_id
+    
+example_rfid_connector_1 = ExampleSensorConnector("1234")
+example_rfid_connector_2 = ExampleSensorConnector("5678")
+
+resource_positions = {
+    example_rfid_connector_1: (0, 0),
+    example_rfid_connector_2: (1, 1),
+}
+    
+@middleware.workflow(interval=10)
+async def read_rfid():
+    logging.info("Reading RFID")
+    for connector, position in resource_positions.items():
+        rfid_id = await connector.provide()
+        if rfid_id is None:
+            continue
+        if not rfid_id == "1234":
+            logging.info(f"RFID {rfid_id} not found in resource_positions")
+            continue
+        model_persistence = middleware.persistence_registry.get_connector_by_data_model_and_model_id("test", "example_aas_id")
+        model: ExampleAAS = await model_persistence.provide()
+        model.example_submodel.position = position
+        await model_persistence.consume(model)
+        logging.info(f"Updated position of resource with RFID {rfid_id} to {position}")
+
+
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("check_running_middleware:middleware.app", reload=True)
-    print(143)
+    uvicorn.run("example_middleware:middleware.app", reload=True)
