@@ -19,7 +19,7 @@ def test_minimal_example_with_AAS(example_aas: ValidAAS):
     data_model = DataModel.from_models(example_aas)
     assert data_model.get_model("valid_aas_id") == example_aas
     assert data_model.get_model("example_submodel_id") == example_aas.example_submodel
-    assert len(data_model._models_key_id) == 8 # 1 aas, 4 submodels, 3 submodel element collections
+    assert len(data_model._key_ids_models) == 8 # 1 aas, 4 submodels, 3 submodel element collections
     assert data_model.get_models_of_type_name("ValidAAS") == [example_aas]
     assert data_model.get_models_of_type(ValidAAS) == [example_aas]
     example_submodel_models = data_model.get_models_of_type_name("ExampleSubmodel")
@@ -78,7 +78,7 @@ def test_more_complex_example(
         == example_object_with_identifier_attribute
     )
 
-    assert len(data_model._models_key_id) == 17
+    assert len(data_model._key_ids_models) == 17
     valid_aas_models = data_model.get_models_of_type_name("ValidAAS") 
     valid_aas_model_ids = set([get_id_with_patch(model) for model in valid_aas_models])
     assert valid_aas_model_ids == {"valid_aas_id", "referenced_aas_1_id", "referenced_aas_2_id"}

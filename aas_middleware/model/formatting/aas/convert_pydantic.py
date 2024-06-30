@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from urllib import parse
 from enum import Enum
+import uuid
 
 
 from basyx.aas import model
@@ -232,13 +233,39 @@ def create_submodel_element_collection(
     )
     return smc
 
+def patch_id_short_with_temp_attribute(
+        submodel_element_collection: model.SubmodelElementCollection
+    ) -> None:
+    """
+    Patch the id_short of a SubmodelElementCollection as an attribute in the value of the SubmodelElementCollection, to make it accesible after retrieving from the value list.
+
+    Args:
+        submodel_element_collection (model.SubmodelElementCollection): SubmodelElementCollection to patch
+    """
+    temp_id_short_property = model.Property(
+        id_short="temp_id_short_attribute_" + uuid.uuid4().hex,
+        value_type=get_value_type_of_attribute(str),
+        value=submodel_element_collection.id_short,
+    )
+    submodel_element_collection.value.add(temp_id_short_property)
+        
+        
+
     
 def create_submodel_element_list(
     name: str, value: list | tuple | set, ordered=True
 ) -> model.SubmodelElementList:
     submodel_elements = []
+    submodel_element_ids = set()
     for el in value:
         submodel_element = create_submodel_element(name, el)
+        if isinstance(submodel_element, model.SubmodelElementCollection):
+            if submodel_element.id_short in submodel_element_ids:
+                raise ValueError(
+                    f"Submodel element collection with id {submodel_element.id_short} already exists in list"
+                )
+            submodel_element_ids.add(submodel_element.id_short)
+            patch_id_short_with_temp_attribute(submodel_element)
         submodel_element.id_short = None
         submodel_elements.append(submodel_element)
 
@@ -248,8 +275,8 @@ def create_submodel_element_list(
     elif submodel_elements and isinstance(
         submodel_elements[0], model.Reference | model.SubmodelElementCollection
     ):
-        type_value_list_element = type(submodel_elements[0])
         value_type_list_element = None
+        type_value_list_element = type(submodel_elements[0])
     else:
         value_type_list_element = str
         type_value_list_element = model.Property

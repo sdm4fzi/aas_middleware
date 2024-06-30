@@ -27,7 +27,8 @@ class AasMiddleware(Middleware):
             submodel_host (str): The host of the submodel server.
             submodel_port (int): The port of the submodel server.
         """
-        aas_data_model = DataModelRebuilder(data_model).rebuild_data_model_for_AAS_structure()
+        # aas_data_model = DataModelRebuilder(data_model).rebuild_data_model_for_AAS_structure()
+        aas_data_model = data_model
         self.load_data_model(name, aas_data_model)
         
         aas_persistence_factory = PersistenceFactory(BasyxAASConnector, host=aas_host, port=aas_port, submodel_host=submodel_host, submodel_port=submodel_port)

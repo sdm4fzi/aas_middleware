@@ -1,7 +1,7 @@
 from typing import Any, Dict, List, Optional, Type, Union
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from aas_middleware.connect.connectors.connector import Connector, Consumer, Provider
 from aas_middleware.middleware.registries import ConnectionInfo
 
@@ -10,6 +10,8 @@ class ConnectorDescription(BaseModel):
     connector_type: str
     persistence_connection: Optional[ConnectionInfo]
     model_type: str
+
+    model_config = ConfigDict(protected_namespaces=())
 
 
 def generate_persistence_connector_endpoint(connector_id: str, connector: Union[Consumer, Provider, Connector], connection_info: ConnectionInfo, model_type: Type[Any]) -> List[APIRouter]:

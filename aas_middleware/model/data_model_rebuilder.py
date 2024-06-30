@@ -1,4 +1,4 @@
-from typing import Any, Literal, Optional, Type, TypeVar, Union
+from typing import Any, Literal, Optional, Type, TypeVar, Union, List
 import typing
 from pydantic import BaseModel, Field, create_model
 
@@ -44,7 +44,8 @@ def get_patched_type(
         return Optional[type(attribute_value)]
     elif typing.get_origin(attribute_type_hints) == Literal:
         return attribute_type_hints
-    # TODO: fix bug with list containing type hints
+    elif typing.get_origin(attribute_type_hints) == list:
+        return List[type(attribute_value[0])]
     return type(attribute_value)
 
 

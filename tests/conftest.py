@@ -67,7 +67,9 @@ class ExampleSubmodel(Submodel):
     union_attribute: Union[str, int]
     submodel_element_collection_attribute_simple: SimpleExampleSEC
     submodel_element_collection_attribute: ExampleSEC
-    union_submodel_element_collection_attribute: Union[SimpleExampleSEC, ExampleSEC]
+    # FIXME: order of union arguments matters -> other way rounds leads to bug
+    union_submodel_element_collection_attribute: Union[ExampleSEC, SimpleExampleSEC]
+    list_submodel_element_collection_attribute: List[SimpleExampleSEC]
 
 
 class ExampleSubmodel2(Submodel):
@@ -82,7 +84,8 @@ class ExampleSubmodel2(Submodel):
     union_attribute: Union[str, int]
     submodel_element_collection_attribute_simple: SimpleExampleSEC
     submodel_element_collection_attribute: ExampleSEC
-    union_submodel_element_collection_attribute: Union[SimpleExampleSEC, ExampleSEC]
+    union_submodel_element_collection_attribute: Union[ExampleSEC, SimpleExampleSEC]
+    list_submodel_element_collection_attribute: List[SimpleExampleSEC]
 
 
 class ExampleSubmodelWithReference(Submodel):
@@ -226,7 +229,12 @@ def example_submodel_element_collection_for_union(simple_submodel_element_collec
 
 
 @pytest.fixture(scope="function")
-def example_submodel(simple_submodel_element_collection: SubmodelElementCollection, example_submodel_element_collection: SubmodelElementCollection, example_submodel_element_collection_for_union: SubmodelElementCollection) -> Submodel:
+def example_list_submodel_element_collection(simple_submodel_element_collection: SubmodelElementCollection) -> List[SubmodelElementCollection]:
+    return [simple_submodel_element_collection]
+
+
+@pytest.fixture(scope="function")
+def example_submodel(simple_submodel_element_collection: SubmodelElementCollection, example_submodel_element_collection: SubmodelElementCollection, example_submodel_element_collection_for_union: SubmodelElementCollection, example_list_submodel_element_collection: List[SubmodelElementCollection]) -> Submodel:
     return ExampleSubmodel(
         id_short="example_submodel_id",
         integer_attribute=1,
@@ -241,10 +249,11 @@ def example_submodel(simple_submodel_element_collection: SubmodelElementCollecti
         submodel_element_collection_attribute_simple=simple_submodel_element_collection,
         submodel_element_collection_attribute=example_submodel_element_collection,
         union_submodel_element_collection_attribute=example_submodel_element_collection_for_union,
+        list_submodel_element_collection_attribute=example_list_submodel_element_collection,
     )
 
 @pytest.fixture(scope="function")
-def example_submodel_2(simple_submodel_element_collection: SubmodelElementCollection, example_submodel_element_collection: SubmodelElementCollection, example_submodel_element_collection_for_union: SubmodelElementCollection) -> Submodel:
+def example_submodel_2(simple_submodel_element_collection: SubmodelElementCollection, example_submodel_element_collection: SubmodelElementCollection, example_submodel_element_collection_for_union: SubmodelElementCollection, example_list_submodel_element_collection: List[SubmodelElementCollection]) -> Submodel:
     return ExampleSubmodel2(
         id_short="example_submodel_2_id",
         integer_attribute=1,
@@ -259,10 +268,11 @@ def example_submodel_2(simple_submodel_element_collection: SubmodelElementCollec
         submodel_element_collection_attribute_simple=simple_submodel_element_collection,
         submodel_element_collection_attribute=example_submodel_element_collection,
         union_submodel_element_collection_attribute=example_submodel_element_collection_for_union,
+        list_submodel_element_collection_attribute=example_list_submodel_element_collection,
     )
 
 @pytest.fixture(scope="function")
-def example_submodel_for_union(simple_submodel_element_collection: SubmodelElementCollection, example_submodel_element_collection: SubmodelElementCollection, example_submodel_element_collection_for_union: SubmodelElementCollection) -> Submodel:
+def example_submodel_for_union(simple_submodel_element_collection: SubmodelElementCollection, example_submodel_element_collection: SubmodelElementCollection, example_submodel_element_collection_for_union: SubmodelElementCollection, example_list_submodel_element_collection: List[SubmodelElementCollection]) -> Submodel:
     return ExampleSubmodel(
         id_short="example_submodel_for_union_id",
         integer_attribute=1,
@@ -277,10 +287,11 @@ def example_submodel_for_union(simple_submodel_element_collection: SubmodelEleme
         submodel_element_collection_attribute_simple=simple_submodel_element_collection,
         submodel_element_collection_attribute=example_submodel_element_collection,
         union_submodel_element_collection_attribute=example_submodel_element_collection_for_union,
+        list_submodel_element_collection_attribute=example_list_submodel_element_collection,
     )
 
 @pytest.fixture(scope="function")
-def example_optional_submodel(simple_submodel_element_collection: SubmodelElementCollection, example_submodel_element_collection: SubmodelElementCollection, example_submodel_element_collection_for_union: SubmodelElementCollection) -> Submodel:
+def example_optional_submodel(simple_submodel_element_collection: SubmodelElementCollection, example_submodel_element_collection: SubmodelElementCollection, example_submodel_element_collection_for_union: SubmodelElementCollection, example_list_submodel_element_collection: List[SubmodelElementCollection]) -> Submodel:
     return ExampleSubmodel(
         id_short="example_optional_submodel_id",
         integer_attribute=1,
@@ -295,6 +306,7 @@ def example_optional_submodel(simple_submodel_element_collection: SubmodelElemen
         submodel_element_collection_attribute_simple=simple_submodel_element_collection,
         submodel_element_collection_attribute=example_submodel_element_collection,
         union_submodel_element_collection_attribute=example_submodel_element_collection_for_union,
+        list_submodel_element_collection_attribute=example_list_submodel_element_collection,
     )
 
 

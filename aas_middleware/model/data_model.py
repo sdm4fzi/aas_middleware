@@ -1,15 +1,14 @@
 from __future__ import annotations
 
 import json
-from typing import Dict, List, Literal, Set, Tuple, TypeVar, Union, Any, Type
+from typing import Dict, List, Set, Tuple, TypeVar, Union, Any, Type
 from datetime import datetime
 
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, ValidationError
 
 from aas_middleware.model.core import Identifiable
 
 from aas_middleware.model.reference_finder import ReferenceFinder, ReferenceInfo, patch_references
-from aas_middleware.model.schema_util import get_attribute_dict_of_schema
 from aas_middleware.model.util import (
     convert_under_score_to_camel_case_str,
     convert_camel_case_to_underscrore_str,
@@ -51,7 +50,7 @@ class DataModel(BaseModel):
         _reference_info_dict_for_referenced (Dict[str, Dict[str, ReferenceInfo]]): The dictionary of reference infos with keys from the referenced model to the referencing model.
     """
 
-    _models_key_id: Dict[str, Identifiable] = {}
+    _key_ids_models: Dict[str, Identifiable] = {}
     _top_level_models: Dict[str, List[str]] = {}
     _models_key_type: Dict[str, List[str]] = {}
     _reference_infos: Set[ReferenceInfo] = set()
@@ -119,7 +118,7 @@ class DataModel(BaseModel):
         Returns:
             Set[str]: The set of ids.
         """
-        return set(str(key) for key in self._models_key_id.keys())
+        return set(str(key) for key in self._key_ids_models.keys())
 
     def get_contained_ids(self) -> Set[str]:
         """
@@ -159,7 +158,7 @@ class DataModel(BaseModel):
         Args:
             model (Identifiable): The model to load.
         """
-        Identifiable.model_validate(model)
+        # Identifiable.model_validate(model)
         model_id = get_id_with_patch(model)
         if model_id in self.model_ids:
             raise ValueError(f"Model with id {model_id} already loaded.")
@@ -290,7 +289,7 @@ class DataModel(BaseModel):
         model_id = get_id_with_patch(model)
         if model_id in self.model_ids:
             raise ValueError(f"Model with id {model_id} already loaded.")
-        self._models_key_id[model_id] = model
+        self._key_ids_models[model_id] = model
         type_name = model.__class__.__name__.split(".")[-1]
         if not type_name in self._models_key_type:
             self._models_key_type[type_name] = []
@@ -431,7 +430,7 @@ class DataModel(BaseModel):
         Returns:
             List[Identifiable]: The list of models.
         """
-        return list(self._models_key_id.values())
+        return list(self._key_ids_models.values())
 
     def get_referencing_info(
         self, referenced_model: Identifiable
@@ -573,7 +572,7 @@ class DataModel(BaseModel):
         """
         if model_id not in self.model_ids:
             return None
-        return self._models_key_id[model_id]
+        return self._key_ids_models[model_id]
 
     def contains_model(self, model_id: str) -> bool:
         """

@@ -122,6 +122,7 @@ def is_valid_submodel_element(submodel_element: Any) -> bool:
         return True
     try:
         SubmodelElementCollection.model_validate(submodel_element)
+        return True
     except:
         return False
 
