@@ -1,5 +1,6 @@
 from __future__ import annotations
 import logging
+from typing import List
 
 from aas_middleware.connect.connectors.opc_ua_client_connector import OpcUaConnector
 from aas_middleware.model.formatting.aas import aas_model
@@ -103,7 +104,17 @@ async def read_rfid():
         logging.info(f"Updated position of resource with RFID {rfid_id} to {position}")
 
 
+
+# The values for example b are injected by the middleware every time the workflow is called. However, to call it, a value for a and 
+# example model has to be provided via the request body. 
+@middleware.workflow(b=[1, 2, 3])
+def example_workflow_with_arguments(a: str, b: List[int], example_model: ExampleAAS) -> ExampleSubmodel:
+    logging.info("Example workflow")
+    return example_model.example_submodel
+
 if __name__ == "__main__":
     import uvicorn
 
+
     uvicorn.run("example_middleware:middleware.app", reload=True)
+    # uvicorn.run(middleware.app)
