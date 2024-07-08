@@ -1,46 +1,109 @@
-# import pytest
+import asyncio
 
-# from fastapi.testclient import TestClient
-
-
-
-# from tests.conftest import ValidAAS, ExampleSubmodel
+from fastapi.testclient import TestClient
+from httpx import Response
 
 
 
-
-# @pytest.mark.order(200)
-# def test_connector_endpoint(client: TestClient, example_submodel: ExampleSubmodel):
-#     response = client.get(url=f"/connectors/test_connector/")
-#     assert response.status_code == 200
-#     assert response.json() == 1.0
-
-#     response = client.post(url=f"/connectors/test_connector/", content=2.0)
-#     assert response.status_code == 200
+from aas_middleware.connect.workflows.worfklow_description import WorkflowDescription
+from tests.conftest import ValidAAS, ExampleSubmodel
+from tests.test_aas_middleware.middleware.test_aas import get_all_aas, get_clear_aas_and_submodel_server, post_aas
 
 
-# def get_example_aas_from_server(client: TestClient, example_aas: ExampleSubmodel):
-#     class_name = example_aas.__class__.__name__
-#     example_aas_from_server_response = client.get(url=f"/{class_name}/{example_aas.id}/")
-#     example_aas_from_server = ValidAAS.model_validate(example_aas_from_server_response.json())
-#     return example_aas_from_server
+
+def execute_workflow(client: TestClient, workflow_name: str) -> Response:
+    response = client.post(url=f"/workflows/{workflow_name}/execute/")
+    return response
 
 
-# @pytest.mark.order(200)
-# def test_connected_connector_endpoint(client: TestClient, example_aas: ExampleSubmodel):
-#     response = client.get(url=f"/connectors/test_connected_connector/")
-#     assert response.status_code == 200
-#     example_aas_from_server = get_example_aas_from_server(client, example_aas)
-#     assert response.json() == example_aas_from_server.example_submodel.float_attribute
+def execute_workflow_background(client: TestClient, workflow_name: str) -> Response:
+    response = client.post(url=f"/workflows/{workflow_name}/execute_background/")
+    return response
 
-#     response = client.post(url=f"/connectors/test_connected_connector/", content=2.0)
-#     assert response.status_code == 200
 
-#     example_aas_from_server = get_example_aas_from_server(client, example_aas)
-#     assert example_aas_from_server.example_submodel.float_attribute == 2.0
+def get_workflow_description(client: TestClient, workflow_name: str) -> Response:
+    response = client.get(url=f"/workflows/{workflow_name}/description/")
+    return response
 
-#     response = client.get(url=f"/connectors/test_connected_connector/")
-#     assert response.status_code == 200
-#     example_aas_from_server = get_example_aas_from_server(client, example_aas)
-#     assert response.json() == example_aas_from_server.example_submodel.float_attribute
-#     assert response.json() == 1.0
+
+def test_example_workflow(client: TestClient):
+    response = execute_workflow(client, "example_workflow")
+    assert response.status_code == 200
+    assert response.json() == True
+
+    response = get_workflow_description(client, "example_workflow")
+    assert response.status_code == 200
+
+    assert response.text == WorkflowDescription(
+        name="example_workflow",
+        running=False,
+        on_startup=False,
+        on_shutdown=False,
+        interval=None,
+        providers=[],
+        consumers=[],
+
+    ).model_dump_json()
+
+    response = execute_workflow_background(client, "example_workflow")
+    assert response.status_code == 200
+    assert response.json() == {"message": f"Started exeuction of workflow example_workflow"}
+
+    response = get_workflow_description(client, "example_workflow")
+    assert response.status_code == 200
+
+    assert response.text == WorkflowDescription(
+        name="example_workflow",
+        running=False,
+        on_startup=False,
+        on_shutdown=False,
+        interval=None,
+        providers=[],
+        consumers=[],
+
+    ).model_dump_json()
+
+
+
+def test_example_workflow_interval(client: TestClient):
+    response = execute_workflow(client, "example_workflow_interval")
+    assert response.status_code == 200
+    assert response.json() == True
+
+    response = get_workflow_description(client, "example_workflow_interval")
+    assert response.status_code == 200
+
+    assert response.text == WorkflowDescription(
+        name="example_workflow_interval",
+        running=True,
+        on_startup=False,
+        on_shutdown=False,
+        interval=1.0,
+        providers=[],
+        consumers=[],
+
+    ).model_dump_json()
+
+    ## TODO: 
+    # 1. test executing running twice -> failure
+    # 2. test interruption
+    # 3. test running in background and interrupting
+    
+
+    # response = execute_workflow_background(client, "example_workflow_interval")
+    # assert response.status_code == 200
+    # assert response.json() == {"message": f"Started exeuction of workflow example_workflow_interval"}
+
+    # response = get_workflow_description(client, "example_workflow_interval")
+    # assert response.status_code == 200
+
+    # assert response.text == WorkflowDescription(
+    #     name="example_workflow_interval",
+    #     running=False,
+    #     on_startup=False,
+    #     on_shutdown=False,
+    #     interval=1.0,
+    #     providers=[],
+    #     consumers=[],
+
+    # ).model_dump_json()

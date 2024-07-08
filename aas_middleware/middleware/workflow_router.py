@@ -72,7 +72,6 @@ def generate_workflow_endpoint(workflow: Workflow) -> List[APIRouter]:
         responses={404: {"description": "Not found"}},
     )
 
-    # TODO: make input and output type hints attributes of workflow!
     if isinstance(workflow.workflow_function, functools.partial):
         type_hints = get_partial_type_hints(workflow.workflow_function)
     else:
@@ -82,7 +81,6 @@ def generate_workflow_endpoint(workflow: Workflow) -> List[APIRouter]:
     if len(type_hints) == 0:
         input_type_hints = None
     elif len(type_hints) == 1:
-        # TODO: validate if this also works for kwargs...
         input_type_hints = list(type_hints.values())[0]
     else:
         input_type_hints = get_base_model_from_type_hints(workflow.get_name(), type_hints)

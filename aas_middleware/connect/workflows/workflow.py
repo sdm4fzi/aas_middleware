@@ -33,7 +33,7 @@ class Workflow:
             raise ValueError(
                 "No workflow function defined. Use the 'define' method to define a workflow function."
             )
-        return self.workflow_function.func.__qualname__
+        return self.workflow_function.func.__qualname__.split(".")[-1]
 
     def get_description(self) -> WorkflowDescription:
         return WorkflowDescription(

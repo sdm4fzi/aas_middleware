@@ -1,18 +1,27 @@
 import asyncio
-import pytest
 
 from fastapi.testclient import TestClient
 
 
 
+from aas_middleware.middleware.connector_router import ConnectorDescription
+from aas_middleware.middleware.registries import ConnectionInfo
 from tests.conftest import ValidAAS, ExampleSubmodel
 from tests.test_aas_middleware.middleware.test_aas import get_all_aas, get_clear_aas_and_submodel_server, post_aas
 
 
 
 
-@pytest.mark.order(200)
 def test_connector_endpoint(client: TestClient, example_submodel: ExampleSubmodel):
+    response = client.get(url=f"/connectors/test_connector/description/")
+    assert response.status_code == 200
+    assert response.text == ConnectorDescription(
+        connector_id="test_connector",
+        connector_type="TrivialFloatConnector",
+        persistence_connection=None,
+        model_type="float",
+    ).model_dump_json()
+
     response = client.get(url=f"/connectors/test_connector/value/")
     assert response.status_code == 200
     assert response.json() == 1.0
@@ -28,8 +37,21 @@ def get_example_aas_from_server(client: TestClient, example_aas: ExampleSubmodel
     return example_aas_from_server
 
 
-@pytest.mark.order(200)
 def test_connected_connector_endpoint(client: TestClient, example_aas: ExampleSubmodel):
+    response = client.get(url="/workflows/example_workflow/description/")
+    assert response.status_code == 200
+    assert response.text == ConnectorDescription(
+        connector_id="test_connected_connector",
+        connector_type="TrivialFloatConnector",
+        persistence_connection=ConnectionInfo(
+            data_model_name="test",
+            model_id="example_aas_id",
+            contained_model_id="example_submodel_id",
+            field_id="float_attribute",
+        ),
+        model_type="float",
+    ).model_dump_json()
+
     asyncio.run(get_clear_aas_and_submodel_server())
     all_ids = get_all_aas(client, example_aas)
     assert all_ids == set()
