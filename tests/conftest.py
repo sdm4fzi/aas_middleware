@@ -432,11 +432,66 @@ SUBMODEL_SERVER_ADDRESS = "localhost"
 SUBMODEL_SERVER_PORT = 8081
 
 @pytest.fixture(scope="function")
-def example_middleware(example_aas: ValidAAS) -> Middleware:
+def example_middleware(example_aas: ValidAAS, example_submodel: ExampleSubmodel) -> Middleware:
     data_model = DataModel.from_models(example_aas)
 
     middleware  = AasMiddleware()
     middleware.load_aas_persistent_data_model("test", data_model, AAS_SERVER_ADDRESS, AAS_SERVER_PORT, SUBMODEL_SERVER_ADDRESS, SUBMODEL_SERVER_PORT)
+
+    trivial_float_connector = TrivialFloatConnector()
+    middleware.add_connector("test_connector", trivial_float_connector, model_type=float)
+    
+    trivial_float_connector_2 = TrivialFloatConnector()
+    middleware.add_connector(
+        "test_connected_connector",
+        trivial_float_connector_2,
+        model_type=float,
+        data_model_name="test",
+        model_id="valid_aas_id",
+        contained_model_id="example_submodel_id",
+        field_id="float_attribute",
+    )
+    middleware.generate_connector_endpoints()
+
+
+    @middleware.workflow()
+    async def example_workflow() -> bool:
+        return True
+    
+    @middleware.workflow(interval=1)
+    async def example_workflow_interval() -> bool:
+        return True
+    
+    @middleware.workflow(on_startup=True)
+    async def example_workflow_startup() -> bool:
+        return True
+    
+    @middleware.workflow()
+    async def example_workflow_with_primitive_argument(arg1: int) -> int:
+        return arg1
+    
+    @middleware.workflow()
+    async def example_workflow_with_complex_argument(arg1: ExampleSubmodel) -> ExampleSubmodel:
+        return arg1
+    
+    @middleware.workflow()
+    async def example_workflow_with_multiple_arguments(arg1: ExampleSubmodel, arg2: int) -> ExampleSubmodel:
+        arg1.integer_attribute = arg2
+        return arg1
+    
+    @middleware.workflow(arg2=3)
+    async def example_workflow_with_default_argument(arg1: ExampleSubmodel, arg2: int) -> ExampleSubmodel:
+        arg1.integer_attribute = arg2
+        return arg1
+    
+    @middleware.workflow(arg1=example_submodel)
+    async def example_workflow_with_default_argument_complex(arg1: ExampleSubmodel, arg2: int) -> ExampleSubmodel:
+        arg1.integer_attribute = arg2
+        return arg1
+    
+
+    print(middleware.app.routes)
+
     return middleware
 
 
