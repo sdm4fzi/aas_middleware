@@ -11,7 +11,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from basyx.aas import model
 
 import aas_middleware
-# from aas_middleware.connect import persistence
 from aas_middleware.connect.connectors.connector import Connector
 from aas_middleware.connect.connectors.model_connector import ModelConnector
 from aas_middleware.middleware import persistence_factory
@@ -409,3 +408,6 @@ class Middleware:
             model_type = self.connection_registry.connection_types[connector_id]
             router = generate_connector_endpoint(connector_id, connector, model_type)
             self.app.include_router(router)
+
+
+    # TODO: handle also async connectors!!
