@@ -1,8 +1,11 @@
 from __future__ import annotations
+import asyncio
 import os
+import stat
 import sys
 
 from fastapi import middleware
+from pydantic import BaseModel
 import uvicorn
 
 from aas_middleware.connect.connectors.mqtt_client_connector import MqttClientConnector
@@ -18,11 +21,26 @@ mqtt_connector = MqttClientConnector("172.22.192.101", "mes/health")
 
 mware = Middleware()
 
-mware.add_connector("mqtt_connector", mqtt_connector, model_type=str)
+class MesHealthMessage(BaseModel):
+    status: str
+    sentAt: str
 
-mware.generate_connector_endpoints()
+# mware.add_connector("mqtt_connector", mqtt_connector, model_type=MesHealthMessage)
+
+# mware.generate_connector_endpoints()
+
+
+async def run_connector():
+    await mqtt_connector.connect()
+
+    for _ in range(50):
+        mes_health = await mqtt_connector.provide()
+        print(mes_health)
+        await asyncio.sleep(1)
 
 
 if __name__ == "__main__":
-    uvicorn.run("middleware_mqtt_test:mware.app", reload=True)
-    # uvicorn.run(mware.app)
+    # uvicorn.run("middleware_mqtt_test:mware.app", reload=True)
+    # # uvicorn.run(mware.app)
+
+    asyncio.run(run_connector())
