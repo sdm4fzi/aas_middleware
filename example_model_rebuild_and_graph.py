@@ -1,16 +1,10 @@
 from __future__ import annotations
-from typing import List, Optional
 
-from pydantic import BaseModel, create_model
+from pydantic import BaseModel
 
-from aas_middleware.model.data_model import DataModel
-from aas_middleware.model.data_model_rebuilder import DataModelRebuilder, get_patched_aas_object
+
+import aas_middleware
 from aas_middleware.model.data_model_visualizer import get_instance_graph, get_type_graph, visualize_graph
-from aas_middleware.model.formatting.aas import aas_model
-from aas_middleware.model.formatting.aas.basyx_formatter import BasyxFormatter
-from aas_middleware.model.reference_finder import ReferenceType
-
-# TODO: use something like this to create tests for this...
 
 class Child(BaseModel):
     Id: str
@@ -35,15 +29,15 @@ other_parent = Parent(Id="Martha", name=name_info_other_parent, child=example_ch
 other_name_info_child = NameInfo(first_name="alex", last_name="pupu")
 other_child = Child(Id="alex", age=10, name_info=other_name_info_child)
 
-data_model = DataModel.from_models(example_parent, other_parent, other_child)
+data_model = aas_middleware.DataModel.from_models(example_parent, other_parent, other_child)
 print("unpatched:", [(reference_info.identifiable_id, reference_info.reference_id) for reference_info in data_model._reference_infos])
 print("schemas:", [(schema.identifiable_id, schema.reference_id) for schema in data_model._schema_reference_infos])
 
-patched_data_model = DataModelRebuilder(data_model).rebuild_data_model_for_AAS_structure()
+patched_data_model = aas_middleware.DataModelRebuilder(data_model).rebuild_data_model_for_AAS_structure()
 print("patched:", [(reference_info.identifiable_id, reference_info.reference_id) for reference_info in data_model._reference_infos])
 
 
-dict_store = BasyxFormatter().serialize(patched_data_model)
+dict_store = aas_middleware.formatting.BasyxFormatter().serialize(patched_data_model)
 
 instance_graph = get_instance_graph(patched_data_model)
 print(instance_graph)

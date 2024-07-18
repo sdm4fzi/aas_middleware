@@ -1,8 +1,11 @@
 import queue
 
 from matplotlib import pyplot as plt
-from aas_middleware.model.data_model import DataModel
+
+import aas_middleware
 from aas_middleware.model.data_model_visualizer import calculate_graph_metrics, get_type_graph, visualize_graph
+
+
 from data_models.sdm_reference_model.product import Product
 from data_models.sdm_reference_model.resources import Resource
 from data_models.sdm_reference_model.procedure import Procedure
@@ -11,7 +14,7 @@ from data_models.sdm_reference_model.order import Order
 from data_models.sdm_reference_model.performance import Performance
 from data_models.sdm_reference_model.change_scenario import ChangeScenario
 
-data_model = DataModel.from_model_types(Product, Resource, Procedure, Process, Order, Performance, ChangeScenario)
+data_model = aas_middleware.DataModel.from_model_types(Product, Resource, Procedure, Process, Order, Performance, ChangeScenario)
 # instance_graph = get_instance_graph(patched_data_model)
 type_graph = get_type_graph(data_model, "SDM Reference Model")
 print(calculate_graph_metrics(type_graph).model_dump_json())
@@ -44,7 +47,7 @@ from data_models.morpheus.morpheus_model import (
 from data_models.flexisv1.flexisv1 import FLEXIS_TYPES_LIST
 
 
-flexis_data_model = DataModel.from_model_types(*FLEXIS_TYPES_LIST)
+flexis_data_model = aas_middleware.DataModel.from_model_types(*FLEXIS_TYPES_LIST)
 # instance_graph = get_instance_graph(patched_data_model)
 flexis_type_graph = get_type_graph(flexis_data_model, "Flexis")
 print(calculate_graph_metrics(flexis_type_graph).model_dump_json())

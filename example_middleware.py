@@ -2,21 +2,18 @@ from __future__ import annotations
 import logging
 from typing import List
 
-from aas_middleware.connect.connectors.opc_ua_client_connector import OpcUaConnector
-from aas_middleware.model.formatting.aas import aas_model
+
 from tests.conftest import TrivialFloatConnector
 
-from aas_middleware.model.data_model import DataModel
-from aas_middleware.middleware.aas_persistence_middleware import AasMiddleware
+import aas_middleware
 
-
-class ExampleSubmodel(aas_model.Submodel):
+class ExampleSubmodel(aas_middleware.Submodel):
     float_attribute: float = 0.0
     rfid_tag_id: str
     position: tuple[int, int]
 
 
-class ExampleAAS(aas_model.AAS):
+class ExampleAAS(aas_middleware.AAS):
     example_submodel: ExampleSubmodel
 
 
@@ -34,9 +31,9 @@ example_aas = ExampleAAS(
     ),
 )
 
-data_model = DataModel.from_models(example_aas)
+data_model = aas_middleware.DataModel.from_models(example_aas)
 
-middleware = AasMiddleware()
+middleware = aas_middleware.AasMiddleware()
 middleware.load_aas_persistent_data_model(
     "test", data_model, "localhost", 8081, "localhost", 8081, initial_loading=True
 )
@@ -58,7 +55,7 @@ middleware.add_connector(
 
 url = "opc.tcp://localhost:4840/freeopcua/server/"
 namespace = "http://examples.freeopcua.github.io"
-opc_ua_connector = OpcUaConnector(url, namespace, "MyObject", "MyVariable")
+opc_ua_connector = aas_middleware.connectors.OpcUaConnector(url, namespace, "MyObject", "MyVariable")
 
 middleware.add_connector(
     "opc_ua_connector",
