@@ -1,4 +1,20 @@
-# TODO: fill with content
+![aas middleware logo](https://raw.githubusercontent.com/sdm4fzi/aas_middleware/main/resources/logos/aas_middleware_logo_light_letters.svg)
+
+*Framework for industrial data integration and automation*
+
+![Build-sucess](https://img.shields.io/badge/build-success-green)
+![PyPI](https://img.shields.io/pypi/v/aas_middleware)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/aas_middleware)
+![Docu](https://img.shields.io/badge/docu-full-green)
+<!-- TODO: add DOI -->
+<!-- [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10995273.svg)](https://doi.org/10.5281/zenodo.10995273) -->
+
+## Installation
+
+To install the package, run the following command in the terminal: -->
+
+## Getting Started
+
 
 ## Conventions and Requirements for AAS to Object Mapping
 
