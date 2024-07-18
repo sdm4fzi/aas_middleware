@@ -451,7 +451,6 @@ def example_middleware(example_aas: ValidAAS, example_submodel: ExampleSubmodel)
         contained_model_id="example_submodel_id",
         field_id="float_attribute",
     )
-    middleware.generate_connector_endpoints()
 
 
     @middleware.workflow()
@@ -489,9 +488,6 @@ def example_middleware(example_aas: ValidAAS, example_submodel: ExampleSubmodel)
         arg1.integer_attribute = arg2
         return arg1
     
-
-    print(middleware.app.routes)
-
     return middleware
 
 

@@ -21,6 +21,8 @@ importlib-metadata = "^8.0.0"
 
 aiomqtt = { version = "^2.1.0", optional = true }
 asyncua = { version = "^1.1.0", optional = true }
+mkdocstrings = {extras = ["python-legacy"], version = "^0.25.1"}
+starlette-graphene3 = "^0.6.0"
 
 [tool.poetry.extras]
 industrial = ["aiomqtt", "asyncua"]
@@ -29,6 +31,8 @@ industrial = ["aiomqtt", "asyncua"]
 pytest = "^8.2.0"
 black = "^24.4.2"
 pytest-order = "^1.2.1"
+mkdocs-material = "^9.5.29"
+mkdocs-include-dir-to-nav = "^1.2.0"
 
 [tool.poetry.group.sdm.dependencies]
 pandas = "^2.2.2"

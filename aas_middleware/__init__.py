@@ -20,3 +20,9 @@ def get_version() -> str:
 VERSION = get_version()
 
 from aas_middleware.middleware.middleware import Middleware
+from aas_middleware.middleware.aas_persistence_middleware import AasMiddleware
+from aas_middleware.model.data_model import DataModel
+from aas_middleware.model.core import Reference, Identifier
+
+# TODO: add conveniant imports for middleware and connectors
+from aas_middleware.connect import connectors

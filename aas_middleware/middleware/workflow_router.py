@@ -87,15 +87,16 @@ def generate_workflow_endpoint(workflow: Workflow) -> List[APIRouter]:
 
 
     if input_type_hints is None:
-        @router.post("/execute", response_model=return_type)
-        async def execute():
-            if workflow.running:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Workflow {workflow.get_name()} is already running. Wait for it to finish or interrupt it first.",
-                )
-            return await workflow.execute()
-        
+        if workflow.get_description().interval is None:
+            @router.post("/execute", response_model=return_type)
+            async def execute():
+                if workflow.running:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Workflow {workflow.get_name()} is already running. Wait for it to finish or interrupt it first.",
+                    )
+                return await workflow.execute()
+
         @router.post("/execute_background", response_model=Dict[str, str])
         async def execute_background(background_tasks: BackgroundTasks):
             if workflow.running:
@@ -106,9 +107,22 @@ def generate_workflow_endpoint(workflow: Workflow) -> List[APIRouter]:
             background_tasks.add_task(workflow.execute)
             return {"message": f"Started exeuction of workflow {workflow.get_name()}"}
     else:
+        if workflow.get_description().interval is None:
+            @router.post("/execute", response_model=return_type)
+            async def execute(arg: input_type_hints): # type: ignore
+                if workflow.running:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Workflow {workflow.get_name()} is already running. Wait for it to finish or interrupt it first.",
+                    )
+                if isinstance(arg, BaseModel) and len(type_hints) > 1:
+                    input_value = dict(arg)
+                    return await workflow.execute(**input_value)
+                else:
+                    return await workflow.execute(arg)
 
-        @router.post("/execute", response_model=return_type)
-        async def execute(arg: input_type_hints):
+        @router.post("/execute_background", response_model=Dict[str, str])
+        async def execute_background(background_tasks: BackgroundTasks, arg: input_type_hints): # type: ignore
             if workflow.running:
                 raise HTTPException(
                     status_code=400,
@@ -116,22 +130,10 @@ def generate_workflow_endpoint(workflow: Workflow) -> List[APIRouter]:
                 )
             if isinstance(arg, BaseModel) and len(type_hints) > 1:
                 input_value = dict(arg)
-                return await workflow.execute(**input_value)
+                background_tasks.add_task(workflow.execute, **input_value)
             else:
-                return await workflow.execute(arg)
-
-
-
-        @router.post("/execute_background", response_model=Dict[str, str])
-        async def execute_background(background_tasks: BackgroundTasks, body: input_type_hints):
-            if workflow.running:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Workflow {workflow.get_name()} is already running. Wait for it to finish or interrupt it first.",
-                )
-            background_tasks.add_task(workflow.execute, body.model_dump())
+                background_tasks.add_task(workflow.execute, arg.model_dump())
             return {"message": f"Started exeuction of workflow {workflow.get_name()}"}
-        return_type = type_hints.pop("return") if "return" in type_hints else None
         
 
     @router.get("/description", response_model=WorkflowDescription)

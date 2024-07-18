@@ -8,13 +8,17 @@ from fastapi import middleware
 from pydantic import BaseModel
 import uvicorn
 
+import aas_middleware.connect
 from aas_middleware.connect.connectors.mqtt_client_connector import MqttClientConnector
 
+import aas_middleware.connect.workflows
 from aas_middleware.middleware.middleware import Middleware
 
 if sys.platform.lower() == "win32" or os.name.lower() == "nt":
     from asyncio import set_event_loop_policy, WindowsSelectorEventLoopPolicy
     set_event_loop_policy(WindowsSelectorEventLoopPolicy())
+
+import aas_middleware
 
 
 mqtt_connector = MqttClientConnector("172.22.192.101", "mes/health")

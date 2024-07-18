@@ -313,6 +313,35 @@ class Middleware:
         self.connection_registry.add_connector(connector_id, connector, model_type)
         if data_model_name:
             self.connect_connector_to_persistence(connector_id, data_model_name, model_id, contained_model_id, field_id)
+            self.generate_rest_endpoint_for_connector(connector_id, ConnectionInfo(data_model_name=data_model_name, model_id=model_id, contained_model_id=contained_model_id, field_id=field_id))	
+        else:
+            self.generate_rest_endpoint_for_connector(connector_id)
+
+
+    def generate_rest_endpoint_for_connector(self, connector_id: str, connection_info: typing.Optional[ConnectionInfo]=None):
+        """
+        Function to generate a REST endpoint for a connector.
+
+        Args:
+            connector_id (str): _description_
+            connection_info (typing.Optional[ConnectionInfo], optional): _description_. Defaults to None.
+
+        Raises:
+            ValueError: _description_
+        """
+        if not connector_id in self.connection_registry.connectors:
+            raise ValueError(f"Connector {connector_id} not found.")
+        connector = self.connection_registry.get_connector(connector_id)
+        model_type = self.connection_registry.connection_types[connector_id]
+        if not connection_info:
+            router = generate_connector_endpoint(connector_id, connector, model_type)
+        else:
+            router = generate_persistence_connector_endpoint(connector_id, connector, connection_info, model_type)
+        self.app.include_router(router)
+
+
+    # TODO: handle also async connectors!!
+        
 
     def connect_connector_to_persistence(self, connector_id: str, data_model_name: str, model_id: typing.Optional[str]=None, contained_model_id: typing.Optional[str]=None, field_id: typing.Optional[str]=None):
         """
@@ -388,26 +417,3 @@ class Middleware:
     #     graphql_app = generate_graphql_endpoint(self.models)
     #     self.app.mount("/graphql", graphql_app)
 
-    def generate_connector_endpoints(self):
-        """
-        Generates endpoints for all connectors that are connected to the middleware.
-        """
-        persistence_connector_ids = set()
-        # TODO: maybe adjust storage of connection_infos in the connection registry by the connector_id -> one endpoint for one connector with 
-        # possibly multiple connection_infos to persistence
-        for connection_info, connector_ids in self.connection_registry.connections.items():
-            for connector_id in connector_ids:
-                connector = self.connection_registry.get_connector(connector_id)
-                model_type = self.connection_registry.connection_types[connector_id]
-                persistence_connector_ids.add(connector_id)
-                router = generate_persistence_connector_endpoint(connector_id, connector, connection_info, model_type)
-                self.app.include_router(router)
-        no_persistence_connectors = set(self.connection_registry.connectors.keys()) - persistence_connector_ids
-        for connector_id in no_persistence_connectors:
-            connector = self.connection_registry.get_connector(connector_id)
-            model_type = self.connection_registry.connection_types[connector_id]
-            router = generate_connector_endpoint(connector_id, connector, model_type)
-            self.app.include_router(router)
-
-
-    # TODO: handle also async connectors!!

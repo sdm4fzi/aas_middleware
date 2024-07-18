@@ -38,14 +38,14 @@ def get_example_aas_from_server(client: TestClient, example_aas: ExampleSubmodel
 
 
 def test_connected_connector_endpoint(client: TestClient, example_aas: ExampleSubmodel):
-    response = client.get(url="/workflows/example_workflow/description/")
+    response = client.get(url="/connectors/test_connected_connector/description/")
     assert response.status_code == 200
     assert response.text == ConnectorDescription(
         connector_id="test_connected_connector",
         connector_type="TrivialFloatConnector",
         persistence_connection=ConnectionInfo(
             data_model_name="test",
-            model_id="example_aas_id",
+            model_id="valid_aas_id",
             contained_model_id="example_submodel_id",
             field_id="float_attribute",
         ),

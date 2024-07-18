@@ -43,9 +43,11 @@ middleware.load_aas_persistent_data_model(
 
 trivial_float_connector = TrivialFloatConnector()
 middleware.add_connector("test_connector", trivial_float_connector, model_type=float)
+
+trivial_float_connector2 = TrivialFloatConnector()
 middleware.add_connector(
     "test_persistence",
-    trivial_float_connector,
+    trivial_float_connector2,
     model_type=float,
     data_model_name="test",
     model_id="example_aas_id",
@@ -67,9 +69,6 @@ middleware.add_connector(
     contained_model_id="example_submodel_id",
     field_id="float_attribute",
 )
-
-middleware.generate_connector_endpoints()
-
 
 class ExampleSensorConnector:
     # This class is a placeholder for a real connector to a sensor with opc ua, mqtt or so...

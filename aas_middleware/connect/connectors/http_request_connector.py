@@ -4,7 +4,6 @@ import aiohttp
 class HttpRequestConnector:
     def __init__(self, url: str):
         self.url = url
-        # TODO: allow to use parameters to the send and receive functions
 
     async def connect(self):
         pass
