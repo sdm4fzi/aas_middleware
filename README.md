@@ -5,9 +5,9 @@
 ![Build-sucess](https://img.shields.io/badge/build-success-green)
 ![PyPI](https://img.shields.io/pypi/v/aas_middleware)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/aas_middleware)
-![Docu](https://img.shields.io/badge/docu-full-green)
-<!-- TODO: add DOI -->
-<!-- [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10995273.svg)](https://doi.org/10.5281/zenodo.10995273) -->
+![Docu](https://img.shields.io/badge/docu-WIP-yellow)
+[![DOI](https://zenodo.org/badge/830680867.svg)](https://zenodo.org/doi/10.5281/zenodo.12786362)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 aas-middleware has the goal to make information flow and orchestration in industrial environments easier and more automated. To do so, it is build upon three concepts: well defined data models and interfaces, connectors and workflows. The data models are used to define the structure of the data that is exchanged between different systems. The connectors are used to connect the data models to technologically different data sources and sinks. Workflows are used to define the orchestration of the data flow between different systems. 
 
