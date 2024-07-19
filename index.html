@@ -197,17 +197,8 @@
       <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
       
       
+        
       
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  <span class="md-ellipsis">
-    Home
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
       
       <a href="." class="md-nav__link md-nav__link--active">
         
@@ -218,83 +209,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#installation" class="md-nav__link">
-    <span class="md-ellipsis">
-      Installation
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#getting-started" class="md-nav__link">
-    <span class="md-ellipsis">
-      Getting Started
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#conventions-and-requirements-for-aas-to-object-mapping" class="md-nav__link">
-    <span class="md-ellipsis">
-      Conventions and Requirements for AAS to Object Mapping
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Conventions and Requirements for AAS to Object Mapping">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#aas-to-object-mapping" class="md-nav__link">
-    <span class="md-ellipsis">
-      AAS to Object Mapping
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#object-mapping-to-aas" class="md-nav__link">
-    <span class="md-ellipsis">
-      Object Mapping to AAS
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#datamodel" class="md-nav__link">
-    <span class="md-ellipsis">
-      DataModel
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
       
     </li>
   
@@ -590,74 +504,8 @@
   
   
   
+    
   
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#installation" class="md-nav__link">
-    <span class="md-ellipsis">
-      Installation
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#getting-started" class="md-nav__link">
-    <span class="md-ellipsis">
-      Getting Started
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#conventions-and-requirements-for-aas-to-object-mapping" class="md-nav__link">
-    <span class="md-ellipsis">
-      Conventions and Requirements for AAS to Object Mapping
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Conventions and Requirements for AAS to Object Mapping">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#aas-to-object-mapping" class="md-nav__link">
-    <span class="md-ellipsis">
-      AAS to Object Mapping
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#object-mapping-to-aas" class="md-nav__link">
-    <span class="md-ellipsis">
-      Object Mapping to AAS
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#datamodel" class="md-nav__link">
-    <span class="md-ellipsis">
-      DataModel
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
   
 </nav>
                   </div>
@@ -672,9 +520,7 @@
                   
 
 
-  <h1>Home</h1>
-
-<p><img alt="aas middleware logo" src="https://raw.githubusercontent.com/sdm4fzi/aas_middleware/main/resources/logos/aas_middleware_logo_dark_letters.svg" /></p>
+<p><img alt="aas middleware logo" src="https://raw.githubusercontent.com/sdm4fzi/aas_middleware/main/resources/logos/aas_middleware_logo_light_letters.svg" /></p>
 <p><em>Framework for industrial data integration and automation</em></p>
 <p><img alt="Build-sucess" src="https://img.shields.io/badge/build-success-green" />
 <img alt="PyPI" src="https://img.shields.io/pypi/v/aas_middleware" />
@@ -683,27 +529,197 @@
 <!-- TODO: add DOI -->
 <!-- [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10995273.svg)](https://doi.org/10.5281/zenodo.10995273) -->
 
-<h2 id="installation">Installation</h2>
-<p>To install the package, run the following command in the terminal: --&gt;</p>
-<h2 id="getting-started">Getting Started</h2>
-<h2 id="conventions-and-requirements-for-aas-to-object-mapping">Conventions and Requirements for AAS to Object Mapping</h2>
-<h3 id="aas-to-object-mapping">AAS to Object Mapping</h3>
-<p>To be able to create an object, which can be used in the middleware, from an AAS, some meta information is required. In AAS terms, concept descriptions by Data Specifications are required to define how attribute or class names should be named in the objects. This can be inferred to some extent, but relying on the identifiers to name the classes won't be handy in every way... These requirements differ for AAS, Submodels and Submodelcollections but follow the same structure, since AAS, Submodel and SubmodelCollection can be regarded as Objects of a class with attributes that have an attribute name.</p>
-<p>The following requirements exist for specifying the mapping of AAS to Objects:
-- Specifying the class name of the object (AAS, Submodel, SubmodelCollection)
-- Specifying the attribute names of all contained objects (Submodels, SubmodelCollections)</p>
-<h3 id="object-mapping-to-aas">Object Mapping to AAS</h3>
-<p>The only requirement that exists for an arbitrary object to be mapped to an AAS is that the top level object, which should be an AAS, is only allowed to contain other objects as attributes. AAS cannot have SubmodelElements and therefore primitive attributes are not possible. Otherwise, Submodels will be inferred. </p>
-<h2 id="datamodel">DataModel</h2>
-<p>The DataModel is the most basic building block of the middleware and allows to create complex data structures that can be used in the middleware. The DataModel can be used for:
-- creating CRUD APIs of the DataModel and persistence in the AAS server
-- allowing to define data mappings to other data models
-- connecting fields of the data model to data sources and sinks with connectors. </p>
-<p>A DataModel inherits from pydantic BaseModel and can therefore be used like a pydantic BaseModel. However, some extra functionalities are provided to make handling of complex data models easier. Internally, a DataModel has a graph structure that represents the data structure of the graph. The graph structure works as follows:
-- Each node in the graph represents an object contained in the DataModel
-- Each edge in the graph represents a relation between two objects in the DataModel</p>
-<p>An edge can thereby be a direct relation between two objects (composition) or an indirect relation (by referencing the id of another object). The graph structure allows to easily access objects and their relating objects. </p>
-<p>The DataModel allows to retrieve objects either with original relations (direct and indirect), or with resolved relations (purely direct or puerly indirect). Resolving relations means that the objects that are referenced by an id are retrieved and added to the object (or vice versa). This allows to easily access all related objects of an object.</p>
+<p>aas-middleware has the goal to make information flow and orchestration in industrial environments easier and more automated. To do so, it is build upon three concepts: well defined data models and interfaces, connectors and workflows. The data models are used to define the structure of the data that is exchanged between different systems. The connectors are used to connect the data models to technologically different data sources and sinks. Workflows are used to define the orchestration of the data flow between different systems. </p>
+<p>Standard api technologies (Rest or GraphQL) of the middleware make it easy to access the integrated data models or exchange data with low-level sensors and actuators. The middleware can be used to integrate different systems in the industrial environment, such as MES, ERP, SCADA, PLC, sensors and actuators. By the modular and extensible design of aas-middleware, it can be used from small use cases, such as streaming sensor values, to large integrations and workflows for automated production planning and control. </p>
+<p>For more information to use the middleware, read the getting started below or refer to the <img alt="documentation" src="https://sdm4fzi.github.io/aas_middleware/" /> of the package.</p>
+<h1 id="installation">Installation</h1>
+<p>To install the package, run the following command in the terminal: </p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pip<span class="w"> </span>install<span class="w"> </span>aas-middleware
+</span></code></pre></div>
+<p>To install the package with extras for industrial data integration (opc ua and mqtt), run the following command in the terminal:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>pip<span class="w"> </span>install<span class="w"> </span>aas-middleware<span class="o">[</span>industrial<span class="o">]</span>
+</span></code></pre></div>
+<p>Alternatively, you can install the package with <a href="https://python-poetry.org/">poetry</a> for development:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>poetry<span class="w"> </span>shell
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>poetry<span class="w"> </span>install
+</span></code></pre></div>
+<p>Please note that the package is only compatible with Python 3.10 or higher.</p>
+<h1 id="getting-started">Getting Started</h1>
+<p>In the following, we will consider a minimal example to demonstrate the usage of the package. The example is also available in the <a href="examples/">examples</a> and consists of defining a simple aas-based data model to describe a product, serializing this data model to asset administration shells, making the data model available with rest API and defining examplary connectors and workflows.</p>
+<p>For further examples, like connecting the data model to a data source, or creating workflows, refer to the tutorials in the <a href="https://sdm4fzi.github.io/aas_middleware/">documentation</a>.</p>
+<h3 id="defining-a-simple-data-model-and-formatting">Defining a simple data model and formatting</h3>
+<p>At first, we create a simple data model with the basic building blocks (AAS and Submodel) of aas2openapi:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">import</span> <span class="nn">typing</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="kn">import</span> <span class="nn">aas_middleware</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="k">class</span> <span class="nc">BillOfMaterialInfo</span><span class="p">(</span><span class="n">aas_middleware</span><span class="o">.</span><span class="n">SubmodelElementCollection</span><span class="p">):</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="n">manufacterer</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="n">product_type</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="k">class</span> <span class="nc">BillOfMaterial</span><span class="p">(</span><span class="n">aas_middleware</span><span class="o">.</span><span class="n">Submodel</span><span class="p">):</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>    <span class="n">components</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>    <span class="n">bill_of_material_info</span><span class="p">:</span> <span class="n">BillOfMaterialInfo</span>
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>
+</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="k">class</span> <span class="nc">ProcessModel</span><span class="p">(</span><span class="n">aas_middleware</span><span class="o">.</span><span class="n">Submodel</span><span class="p">):</span>
+</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>    <span class="n">processes</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>
+</span><span id="__span-3-16"><a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a>
+</span><span id="__span-3-17"><a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a><span class="k">class</span> <span class="nc">Product</span><span class="p">(</span><span class="n">aas_middleware</span><span class="o">.</span><span class="n">AAS</span><span class="p">):</span>
+</span><span id="__span-3-18"><a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a>    <span class="n">bill_of_material</span><span class="p">:</span> <span class="n">BillOfMaterial</span>
+</span><span id="__span-3-19"><a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a>    <span class="n">process_model</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="n">ProcessModel</span><span class="p">]</span>
+</span></code></pre></div>
+<p>The data model consists of a product that has a process model and a bill of material. The process model and the bill of material are contain a list of processes and components, respectively. To be able to instantiate an data model, we create an instance of this data model:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">example_product</span> <span class="o">=</span> <span class="n">Product</span><span class="p">(</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="nb">id</span><span class="o">=</span><span class="s2">&quot;example_product_id&quot;</span><span class="p">,</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>    <span class="n">id_short</span><span class="o">=</span><span class="s2">&quot;example_product_id&quot;</span><span class="p">,</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Example Product&quot;</span><span class="p">,</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>    <span class="n">bill_of_material</span><span class="o">=</span><span class="n">BillOfMaterial</span><span class="p">(</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>        <span class="nb">id</span><span class="o">=</span><span class="s2">&quot;example_bom_id&quot;</span><span class="p">,</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>        <span class="n">id_short</span><span class="o">=</span><span class="s2">&quot;example_bom_id&quot;</span><span class="p">,</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Example Bill of Material&quot;</span><span class="p">,</span>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>        <span class="n">components</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;component_1&quot;</span><span class="p">,</span> <span class="s2">&quot;component_2&quot;</span><span class="p">],</span>
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>        <span class="n">bill_of_material_info</span><span class="o">=</span><span class="n">BillOfMaterialInfo</span><span class="p">(</span>
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>            <span class="nb">id</span><span class="o">=</span><span class="s2">&quot;example_bom_info_id&quot;</span><span class="p">,</span>
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>            <span class="n">id_short</span><span class="o">=</span><span class="s2">&quot;example_bom_info_id&quot;</span><span class="p">,</span>
+</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Example Bill of Material Info&quot;</span><span class="p">,</span>
+</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>            <span class="n">manufacterer</span><span class="o">=</span><span class="s2">&quot;Example Manufacterer&quot;</span><span class="p">,</span>
+</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>            <span class="n">product_type</span><span class="o">=</span><span class="s2">&quot;Example Product Type&quot;</span><span class="p">,</span>
+</span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a>        <span class="p">),</span>
+</span><span id="__span-4-17"><a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>    <span class="p">),</span>
+</span><span id="__span-4-18"><a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a>    <span class="n">process_model</span><span class="o">=</span><span class="n">ProcessModel</span><span class="p">(</span>
+</span><span id="__span-4-19"><a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a>        <span class="nb">id</span><span class="o">=</span><span class="s2">&quot;example_process_model_id&quot;</span><span class="p">,</span>
+</span><span id="__span-4-20"><a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a>        <span class="n">id_short</span><span class="o">=</span><span class="s2">&quot;example_process_model_id&quot;</span><span class="p">,</span>
+</span><span id="__span-4-21"><a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a>        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Example Process Model&quot;</span><span class="p">,</span>
+</span><span id="__span-4-22"><a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a>        <span class="n">processes</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;process_1&quot;</span><span class="p">,</span> <span class="s2">&quot;process_2&quot;</span><span class="p">],</span>
+</span><span id="__span-4-23"><a id="__codelineno-4-23" name="__codelineno-4-23" href="#__codelineno-4-23"></a>    <span class="p">),</span>
+</span><span id="__span-4-24"><a id="__codelineno-4-24" name="__codelineno-4-24" href="#__codelineno-4-24"></a><span class="p">)</span>
+</span></code></pre></div>
+<p>With this instance of the product data model, we can create a DataModel.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">data_model</span> <span class="o">=</span> <span class="n">aas_middleware</span><span class="o">.</span><span class="n">DataModel</span><span class="o">.</span><span class="n">from_model</span><span class="p">(</span><span class="n">example_product</span><span class="p">)</span>
+</span></code></pre></div>
+<p>The data model is a container for instances and types of data models. It makes access to individual objects easy and allows for formatting. E.g. we can easily transform the data model to either basyx aas components:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">basyx_object_store</span> <span class="o">=</span> <span class="n">aas_middleware</span><span class="o">.</span><span class="n">formatting</span><span class="o">.</span><span class="n">BasyxFormatter</span><span class="p">()</span><span class="o">.</span><span class="n">serialize</span><span class="p">(</span><span class="n">data_model</span><span class="p">)</span>
+</span></code></pre></div>
+<p>Or serialize it to a JSON-serialized asset administration shell according to DOT AAS 3.0:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">json_aas</span> <span class="o">=</span> <span class="n">aas_middleware</span><span class="o">.</span><span class="n">formatting</span><span class="o">.</span><span class="n">AasJsonFormatter</span><span class="p">()</span><span class="o">.</span><span class="n">serialize</span><span class="p">(</span><span class="n">data_model</span><span class="p">)</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="nb">print</span><span class="p">(</span><span class="n">json_aas</span><span class="p">)</span>
+</span></code></pre></div>
+<p>This formatting transformation can also be reversed, so JSON-serialized or Basyx aas can be used to create data models.</p>
+<h3 id="starting-the-middleware-with-aas-persistence">Starting the middleware with aas persistence</h3>
+<p>Running the middleware with storage of the data model in a basyx aas server can be done by running the following command: </p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">middleware</span> <span class="o">=</span> <span class="n">aas_middleware</span><span class="o">.</span><span class="n">AasMiddleware</span><span class="p">()</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="n">middleware</span><span class="o">.</span><span class="n">load_aas_persistent_data_model</span><span class="p">(</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>    <span class="s2">&quot;example&quot;</span><span class="p">,</span> <span class="n">data_model</span><span class="p">,</span> <span class="s2">&quot;localhost&quot;</span><span class="p">,</span> <span class="mi">8081</span><span class="p">,</span> <span class="s2">&quot;localhost&quot;</span><span class="p">,</span> <span class="mi">8081</span><span class="p">,</span> <span class="n">initial_loading</span><span class="o">=</span><span class="kc">True</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="p">)</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>    <span class="kn">import</span> <span class="nn">uvicorn</span>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>    <span class="n">uvicorn</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">middleware</span><span class="o">.</span><span class="n">app</span><span class="p">)</span>
+</span></code></pre></div>
+<p>Note, that on port 8081 a aas repository and submodel repository need to be running. The repository already comes with a docker-compose file that can be used to start the AAS and Submodel-server. To start the docker-compose file, run the following command in the terminal:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>docker-compose<span class="w"> </span>-f<span class="w"> </span>docker-compose-dev.yaml<span class="w"> </span>up
+</span></code></pre></div>
+<p>However, you can also start middlewares with internal memory, just by using <code>aas_middleware.Middleware()</code>.</p>
+<p>The middleware starts now and registers the example product instance in the aas server. You can access now the documentation of the REST API with swagger at <code>http://localhost:8000/docs</code> and the graphql endpoint at  <code>http://localhost:8000/graphql</code>. We can get the data again in the format of the middleware by sending the following query:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>curl<span class="w"> </span>-X<span class="w"> </span><span class="s1">&#39;GET&#39;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span><span class="s1">&#39;http://127.0.0.1:8000/Product/&#39;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">  </span>-H<span class="w"> </span><span class="s1">&#39;accept: application/json&#39;</span>
+</span></code></pre></div>
+<p>We can also instantiate new product data models with post requests:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>curl<span class="w"> </span>-X<span class="w"> </span><span class="s1">&#39;POST&#39;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">  </span><span class="s1">&#39;http://127.0.0.1:8000/Product/&#39;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">  </span>-H<span class="w"> </span><span class="s1">&#39;accept: application/json&#39;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">  </span>-H<span class="w"> </span><span class="s1">&#39;Content-Type: application/json&#39;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{</span>
+</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="s1">  &quot;id_short&quot;: &quot;product2&quot;,</span>
+</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="s1">  &quot;description&quot;: &quot;&quot;,</span>
+</span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="s1">  &quot;id&quot;: &quot;product2&quot;,</span>
+</span><span id="__span-11-9"><a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="s1">  &quot;bill_of_material&quot;: {</span>
+</span><span id="__span-11-10"><a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="s1">    &quot;id_short&quot;: &quot;product2_bom&quot;,</span>
+</span><span id="__span-11-11"><a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a><span class="s1">    &quot;description&quot;: &quot;&quot;,</span>
+</span><span id="__span-11-12"><a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a><span class="s1">    &quot;id&quot;: &quot;product2_bom&quot;,</span>
+</span><span id="__span-11-13"><a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a><span class="s1">    &quot;semantic_id&quot;: &quot;&quot;,</span>
+</span><span id="__span-11-14"><a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a><span class="s1">    &quot;components&quot;: [</span>
+</span><span id="__span-11-15"><a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a><span class="s1">      &quot;bearing&quot;, &quot;screw&quot;</span>
+</span><span id="__span-11-16"><a id="__codelineno-11-16" name="__codelineno-11-16" href="#__codelineno-11-16"></a><span class="s1">    ],</span>
+</span><span id="__span-11-17"><a id="__codelineno-11-17" name="__codelineno-11-17" href="#__codelineno-11-17"></a><span class="s1">    &quot;bill_of_material_info&quot;: {</span>
+</span><span id="__span-11-18"><a id="__codelineno-11-18" name="__codelineno-11-18" href="#__codelineno-11-18"></a><span class="s1">      &quot;id_short&quot;: &quot;product2_bom_info&quot;,</span>
+</span><span id="__span-11-19"><a id="__codelineno-11-19" name="__codelineno-11-19" href="#__codelineno-11-19"></a><span class="s1">      &quot;description&quot;: &quot;&quot;,</span>
+</span><span id="__span-11-20"><a id="__codelineno-11-20" name="__codelineno-11-20" href="#__codelineno-11-20"></a><span class="s1">      &quot;semantic_id&quot;: &quot;&quot;,</span>
+</span><span id="__span-11-21"><a id="__codelineno-11-21" name="__codelineno-11-21" href="#__codelineno-11-21"></a><span class="s1">      &quot;manufacterer&quot;: &quot;other manufacturer&quot;,</span>
+</span><span id="__span-11-22"><a id="__codelineno-11-22" name="__codelineno-11-22" href="#__codelineno-11-22"></a><span class="s1">      &quot;product_type&quot;: &quot;wheel&quot;</span>
+</span><span id="__span-11-23"><a id="__codelineno-11-23" name="__codelineno-11-23" href="#__codelineno-11-23"></a><span class="s1">    }</span>
+</span><span id="__span-11-24"><a id="__codelineno-11-24" name="__codelineno-11-24" href="#__codelineno-11-24"></a><span class="s1">  },</span>
+</span><span id="__span-11-25"><a id="__codelineno-11-25" name="__codelineno-11-25" href="#__codelineno-11-25"></a><span class="s1">  &quot;process_model&quot;: {</span>
+</span><span id="__span-11-26"><a id="__codelineno-11-26" name="__codelineno-11-26" href="#__codelineno-11-26"></a><span class="s1">    &quot;id_short&quot;: &quot;product2_process_model&quot;,</span>
+</span><span id="__span-11-27"><a id="__codelineno-11-27" name="__codelineno-11-27" href="#__codelineno-11-27"></a><span class="s1">    &quot;description&quot;: &quot;&quot;,</span>
+</span><span id="__span-11-28"><a id="__codelineno-11-28" name="__codelineno-11-28" href="#__codelineno-11-28"></a><span class="s1">    &quot;id&quot;: &quot;product2_process_model&quot;,</span>
+</span><span id="__span-11-29"><a id="__codelineno-11-29" name="__codelineno-11-29" href="#__codelineno-11-29"></a><span class="s1">    &quot;semantic_id&quot;: &quot;&quot;,</span>
+</span><span id="__span-11-30"><a id="__codelineno-11-30" name="__codelineno-11-30" href="#__codelineno-11-30"></a><span class="s1">    &quot;processes&quot;: [</span>
+</span><span id="__span-11-31"><a id="__codelineno-11-31" name="__codelineno-11-31" href="#__codelineno-11-31"></a><span class="s1">      &quot;assembly&quot;</span>
+</span><span id="__span-11-32"><a id="__codelineno-11-32" name="__codelineno-11-32" href="#__codelineno-11-32"></a><span class="s1">    ]</span>
+</span><span id="__span-11-33"><a id="__codelineno-11-33" name="__codelineno-11-33" href="#__codelineno-11-33"></a><span class="s1">  }</span>
+</span><span id="__span-11-34"><a id="__codelineno-11-34" name="__codelineno-11-34" href="#__codelineno-11-34"></a><span class="s1">}&#39;</span>
+</span></code></pre></div>
+<h3 id="creating-an-examplary-connector-and-workflow">Creating an examplary connector and workflow</h3>
+<p>A connector in the aas middleware is a component that makes a connector to a data source (provider) or a data sink (consumer). The aas middleware comes with a lot of default connectors (opc ua, mqtt, http, websocket, webhook), but you can add custom ones. A connector only needs to specify a certain interface, that consists of a connect, disconnect, consume and provide function. We define an examplary connector like this and add it to the middleware:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="k">class</span> <span class="nc">TrivialConnector</span><span class="p">:</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>        <span class="k">pass</span>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>    <span class="k">async</span> <span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>        <span class="k">pass</span>
+</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>
+</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>    <span class="k">async</span> <span class="k">def</span> <span class="nf">disconnect</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>        <span class="k">pass</span>
+</span><span id="__span-12-10"><a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a>
+</span><span id="__span-12-11"><a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a>    <span class="k">async</span> <span class="k">def</span> <span class="nf">consume</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">body</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-12-12"><a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a>        <span class="nb">print</span><span class="p">(</span><span class="n">body</span><span class="p">)</span>
+</span><span id="__span-12-13"><a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a>        <span class="k">pass</span>
+</span><span id="__span-12-14"><a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a>
+</span><span id="__span-12-15"><a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a>    <span class="k">async</span> <span class="k">def</span> <span class="nf">provide</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">:</span>
+</span><span id="__span-12-16"><a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a>        <span class="k">return</span> <span class="s2">&quot;trivial connector example value&quot;</span>
+</span><span id="__span-12-17"><a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a>
+</span><span id="__span-12-18"><a id="__codelineno-12-18" name="__codelineno-12-18" href="#__codelineno-12-18"></a><span class="n">example_connector</span> <span class="o">=</span> <span class="n">TrivialConnector</span><span class="p">()</span>
+</span><span id="__span-12-19"><a id="__codelineno-12-19" name="__codelineno-12-19" href="#__codelineno-12-19"></a><span class="n">middleware</span><span class="o">.</span><span class="n">add_connector</span><span class="p">(</span><span class="s2">&quot;test_connector&quot;</span><span class="p">,</span> <span class="n">example_connector</span><span class="p">,</span> <span class="n">model_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+</span></code></pre></div>
+<p>We can execute this connector either for reading values with the folling get request:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>curl<span class="w"> </span>-X<span class="w"> </span><span class="s1">&#39;GET&#39;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">  </span><span class="s1">&#39;http://127.0.0.1:8000/connectors/test_connector/value&#39;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">  </span>-H<span class="w"> </span><span class="s1">&#39;accept: application/json&#39;</span>
+</span></code></pre></div>
+<p>Or send data with the connector to the data sink:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>curl<span class="w"> </span>-X<span class="w"> </span><span class="s1">&#39;POST&#39;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span><span class="s1">&#39;http://127.0.0.1:8000/connectors/test_connector/value?value=connector_example_input_value&#39;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">  </span>-H<span class="w"> </span><span class="s1">&#39;accept: application/json&#39;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;&#39;</span>
+</span></code></pre></div>
+<p>Lastly, we can define workflows for more complex automation tasks. A workflow is a functino that can be executed in the middleware:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="nd">@middleware</span><span class="o">.</span><span class="n">workflow</span><span class="p">()</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="k">def</span> <span class="nf">example_workflow</span><span class="p">(</span><span class="n">a</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>    <span class="nb">print</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>    <span class="k">return</span> <span class="n">a</span>
+</span></code></pre></div>
+<p>To run the workflow, execute the followingrequest:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>curl<span class="w"> </span>-X<span class="w"> </span><span class="s1">&#39;POST&#39;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">  </span><span class="s1">&#39;http://127.0.0.1:8000/workflows/example_workflow/execute?arg=work_flow_input_value&#39;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">  </span>-H<span class="w"> </span><span class="s1">&#39;accept: application/json&#39;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;&#39;</span>
+</span></code></pre></div>
+<p>We can also interrupt the workflow, when it is running:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>curl<span class="w"> </span>-X<span class="w"> </span><span class="s1">&#39;GET&#39;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">  </span><span class="s1">&#39;http://127.0.0.1:8000/workflows/example_workflow/interrupt&#39;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">  </span>-H<span class="w"> </span><span class="s1">&#39;accept: application/json&#39;</span>
+</span></code></pre></div>
+<h2 id="contributing">Contributing</h2>
+<p><code>aas-middleware</code> is a new project and has therefore much room for improvement. Therefore, it would be a pleasure to get feedback or support! If you want to contribute to the package, either create issues on <a href="https://github.com/sdm4fzi/aas-middleware">aas_middlweware github page</a> for discussing new features or contact me directly via <a href="https://github.com/SebBehrendt">github</a> or <a href="mailto:sebastian.behrendt@kit.edu">email</a>.</p>
+<h2 id="license">License</h2>
+<p>The package is licensed under the <a href="LICENSE">MIT license</a>.</p>
+<h2 id="acknowledgements">Acknowledgements</h2>
+<p>We extend our sincere thanks to the German Federal Ministry for Economic Affairs and Climate Action
+(BMWK) for supporting this research project 13IK001ZF “Software-Defined Manufacturing for the
+automotive and supplying industry <a href="https://www.sdm4fzi.de/">https://www.sdm4fzi.de/</a>.</p>
 
 
 
