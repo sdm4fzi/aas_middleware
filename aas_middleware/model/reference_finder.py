@@ -39,6 +39,9 @@ class ReferenceInfo(BaseModel):
     Object reference to a model in the data model.
 
     Args:
+        identifiable_id (str): The id of the identifiable.
+        reference_id (str): The id of the referenced identifiable.
+        reference_type (ReferenceType): The type of the reference.
     """
 
     identifiable_id: str
