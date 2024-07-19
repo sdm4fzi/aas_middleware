@@ -190,6 +190,20 @@ curl -X 'POST' \
   }
 }'
 ```
+ Besides a rest API, aas-middleware also provides a GraphQL API. To make a data model available via the GraphQL API, use the `generate_graphql_api_for_data_model` function. 
+ 
+```python
+middleware.generate_graphql_api_for_data_model("example")
+``` 
+ 
+ The GraphQL API can be accessed under `http://localhost:8000/graphql`, where also find the GraphiQL Playground for testing. Some fields of the instances of the product data model can be accessed via the API with the following curl command:
+
+``` bash
+curl 'http://127.0.0.1:8000/graphql/?' \
+  -H 'Accept: application/json' \
+  -H 'Content-Type: application/json' \
+  --data-raw '{"query":"{\n  Product {\n    idShort\n    billOfMaterial {\n      components\n    }\n  }\n}"}'
+```
 
 You probably saw during the startup of the middleware a warning log message like:
 
@@ -204,7 +218,7 @@ Running the middleware with persistent storage of the data model in a basyx aas 
 ```python
 middleware = aas_middleware.AasMiddleware()
 middleware.load_aas_persistent_data_model(
-    "example", data_model, "localhost", 8081, "localhost", 8081, initial_loading=True
+    "example", data_model, "localhost", 8081, "localhost", 8081, persist_instances=True
 )
 middleware.generate_rest_api_for_data_model("example")
 

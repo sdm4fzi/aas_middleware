@@ -248,15 +248,13 @@ class RestRouter:
         return routers
     
 
-    def generate_endpoints(self) -> List[APIRouter]:
+    def generate_endpoints(self):
         """
-        Generates CRUD endpoints for a pydantic model representing an aas and its submodels.
-
-        Returns:
-            List[APIRouter]: List of FastAPI routers with CRUD endpoints for the given pydantic model and its submodels that perform Middleware syxnchronization.
+        Generates CRUD endpoints for a pydantic model representing an aas and its submodels and adds them to the middleware app.
         """
         routers = []
 
         for top_level_model_type in self.aas_data_model.get_top_level_types():
             routers += self.generate_endpoints_from_model(top_level_model_type)
-        return routers
+        for router in routers:
+                self.middleware.app.include_router(router)

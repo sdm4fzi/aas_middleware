@@ -1,32 +1,24 @@
 import typing
 
-from fastapi import APIRouter
-from igraph import Graph
-from pydantic import BaseModel, create_model
-from pydantic.fields import FieldInfo
+from pydantic import BaseModel
 
-from graphene_pydantic import PydanticObjectType, PydanticInputObjectType
+from graphene_pydantic import PydanticObjectType
 from graphene_pydantic.registry import get_global_registry
 
 import graphene
-# TODO: add starlette_graphene3 as depndency
-import aas_middleware
 from aas_middleware.connect.connectors.connector import Connector
-from aas_middleware.middleware.middleware import Middleware
+
+if typing.TYPE_CHECKING:
+    from aas_middleware.middleware.middleware import Middleware
 from aas_middleware.middleware.registries import ConnectionInfo
 from aas_middleware.model.data_model import DataModel
-from aas_middleware.model.util import get_value_attributes
 from starlette_graphene3 import (
     GraphQLApp,
     make_graphiql_handler,
-    make_playground_handler,
 )
 
 from aas_middleware.model.formatting.aas.aas_middleware_util import get_all_submodel_elements_from_submodel, get_contained_models_attribute_info, union_type_check
 from aas_middleware.model.formatting.aas.aas_model import AAS, Submodel, SubmodelElementCollection
-
-
-# TODO: update graphql router similar to rest router.
 
 def get_base_query_and_mutation_classes() -> (
     typing.Tuple[graphene.ObjectType, graphene.ObjectType]
@@ -58,48 +50,96 @@ class GraphQLRouter:
         return self.middleware.persistence_registry.get_connection(ConnectionInfo(data_model_name=self.data_model_name, model_id=item_id))
     
 
-    def generate_graphql_app(self) -> GraphQLApp:
+    def generate_graphql_endpoint(self):
         """
-        Generates a GraphQL endpoint for the given data model.
-
-        Returns:
-            GraphQLApp: FastAPI router with GraphQL endpoint for the given data model.
+        Generates a GraphQL endpoint for the given data model and adds it to the middleware.
         """
-        # TODO: implement this function for data models.
         for top_level_model_type in self.data_model.get_top_level_types():
             self.create_query_for_model(top_level_model_type)
             # TODO: also make mutation possible
             # self.create_mutation_for_model(top_level_model_type)
         schema = graphene.Schema(query=self.query)
-        return GraphQLApp(schema=schema, on_get=make_graphiql_handler())
-
+        graphql_app = GraphQLApp(schema=schema, on_get=make_graphiql_handler())
+        self.middleware.app.mount("/graphql", graphql_app)
 
     def create_query_for_model(self, model_type: type):
         model_name = model_type.__name__
 
         submodels = get_contained_models_attribute_info(model_type)
         graphene_submodels = []
-        for submodel in submodels:
+        for attribute_name, submodel in submodels:
             graphene_submodels.append(
                 create_graphe_pydantic_output_type_for_submodel_elements(submodel)
             )
 
-        for submodel, graphene_submodel in zip(submodels, graphene_submodels):
+        for (attribute_name, submodel), graphene_submodel in zip(submodels, graphene_submodels):
+            # FIXME: resolve problems with optional submodels!
             submodel_name = submodel.__name__
             class_dict = {
                 f"{submodel_name}": graphene.List(graphene_submodel),
-                f"resolve_{submodel_name}": get_submodel_resolve_function(submodel),
+                f"resolve_{submodel_name}": self.get_submodel_resolve_function(submodel),
             }
-            query = type("Query", (query,), class_dict)
+            self.query = type("Query", (self.query,), class_dict)
 
 
         graphene_model = create_graphe_pydantic_output_type_for_model(model_type)
 
         class_dict = {
             f"{model_name}": graphene.List(graphene_model),
-            f"resolve_{model_name}": get_aas_resolve_function(model),
+            f"resolve_{model_name}": self.get_aas_resolve_function(model_type),
         }
-        query = type("Query", (query,), class_dict)
+        self.query = type("Query", (self.query,), class_dict)
+
+    def get_aas_resolve_function(self, model: typing.Type[BaseModel]) -> typing.Callable:
+        """
+        Returns the resolve function for the given pydantic model.
+
+        Args:
+            model (Type[BaseModel]): Pydantic model for which the resolve function should be created.
+
+        Returns:
+            typing.Callable: Resolve function for the given pydantic model.
+        """
+        middleware_instance = self.middleware
+        async def resolve_models(self, info):
+            aas_list = []
+            connection_infos = middleware_instance.persistence_registry.get_type_connection_info(model.__name__)
+            for connection_info in connection_infos:
+                connector = middleware_instance.persistence_registry.get_connection(connection_info)
+                retrieved_aas: AAS = await connector.provide()
+                aas = model.model_validate(retrieved_aas.model_dump())
+                aas_list.append(aas)
+            return aas_list
+
+        resolve_models.__name__ = f"resolve_{model.__name__}"
+        return resolve_models
+
+
+    def get_submodel_resolve_function(self, model: typing.Type[BaseModel]) -> typing.Callable:
+        """
+        Returns the resolve function for the given pydantic model.
+
+        Args:
+            model (Type[BaseModel]): Pydantic model for which the resolve function should be created.
+
+        Returns:
+            typing.Callable: Resolve function for the given pydantic model.
+        """
+        middleware_instance = self.middleware
+
+        async def resolve_models(self, info):
+            submodel_list = []
+            # TODO: get the correct connectors here... no submodel connectors are available
+            connection_infos = middleware_instance.persistence_registry.get_type_connection_info(model.__name__)
+            for connection_info in connection_infos:
+                connector = middleware_instance.persistence_registry.get_connection(connection_info)
+                retrieved_submodel: Submodel = await connector.provide()
+                submodel = model.model_validate(retrieved_submodel.model_dump())
+                submodel_list.append(submodel)
+            return submodel_list
+
+        resolve_models.__name__ = f"resolve_{model.__name__}"
+        return resolve_models
 
 
 def add_class_method(model: typing.Type):
@@ -152,23 +192,20 @@ def is_typing_list_or_tuple(input_type: typing.Any) -> bool:
     Returns:
         bool: True if the given type is a typing.List or typing.Tuple, False otherwise.
     """
-    return hasattr(input_type, "__origin__") and (
-        input_type.__origin__ == list or input_type.__origin__ == tuple
-    )
+    return typing.get_origin(input_type) == list or typing.get_origin(input_type) == tuple
 
 
 def list_contains_any_submodel_element_collections(
     input_type: typing.Union[typing.List, typing.Tuple]
 ) -> bool:
     return any(
-        issubclass(input_type.__origin__, aas_middleware.SubmodelElementCollection)
-        for nested_types in input_type.__args__
+        issubclass(nested_type, SubmodelElementCollection)
+        for nested_type in typing.get_args(input_type)
     )
 
 
 def rework_default_list_to_default_factory(model: BaseModel):
-    # TODO: rework this function for pydantic v2 to use model_fields
-    for names, field in model.__fields__.items():
+    for names, field in model.model_fields.items():
         if field.default:
             pass
         if (
@@ -177,18 +214,13 @@ def rework_default_list_to_default_factory(model: BaseModel):
             or isinstance(field.default, set)
         ):
             if field.default:
-                field.type_ = type(field.default[0])
-                field.outer_type_ = typing.List[type(field.default[0])]
+                field.annotation = type(field.default[0])
             else:
-                field.type_ = str
-                field.outer_type_ = typing.List[str]
+                # TODO: potentially remove this...
+                field.annotation = typing.List[str]
             field.default = None
-            field.field_info = FieldInfo(extra={})
-            field.required = True
         if isinstance(field.default, BaseModel):
             field.default = None
-            field.field_info = FieldInfo(extra={})
-            field.required = True
 
 
 def create_graphe_pydantic_output_type_for_submodel_elements(
@@ -200,7 +232,6 @@ def create_graphe_pydantic_output_type_for_submodel_elements(
     Args:
         model (typing.Union[base.Submodel, base.SubmodelElementCollectiontuple, list, set, ]): Submodel element for which the graphene pydantic output types should be created.
     """
-    # TODO: use here model_fields and rework function to work with pydantic v2
     for attribute_name, attribute_value in get_all_submodel_elements_from_submodel(
         model
     ).items():
@@ -210,65 +241,22 @@ def create_graphe_pydantic_output_type_for_submodel_elements(
                 create_graphe_pydantic_output_type_for_submodel_elements(
                     subtype, union_type=True
                 )
-        elif hasattr(attribute_value, "__fields__") and issubclass(
+        elif hasattr(attribute_value, "model_fields") and issubclass(
             attribute_value, SubmodelElementCollection
         ):
             create_graphe_pydantic_output_type_for_submodel_elements(attribute_value)
         elif is_typing_list_or_tuple(attribute_value):
-            if list_contains_any_submodel_element_collections(attribute_value):
-                for nested_type in attribute_value.__args__:
-                    if union_type_check(nested_type):
-                        subtypes = typing.get_args(nested_type)
-                        for subtype in subtypes:
-                            create_graphe_pydantic_output_type_for_submodel_elements(
-                                subtype, union_type=True
-                            )
-                    elif issubclass(nested_type, SubmodelElementCollection):
+            if not list_contains_any_submodel_element_collections(attribute_value):
+                continue
+            for nested_type in typing.get_args(attribute_value):
+                if union_type_check(nested_type):
+                    subtypes = typing.get_args(nested_type)
+                    for subtype in subtypes:
                         create_graphe_pydantic_output_type_for_submodel_elements(
-                            nested_type
+                            subtype, union_type=True
                         )
+                elif issubclass(nested_type, SubmodelElementCollection):
+                    create_graphe_pydantic_output_type_for_submodel_elements(
+                        nested_type
+                    )
     return create_graphe_pydantic_output_type_for_model(model, union_type)
-
-
-
-def get_aas_resolve_function(model: typing.Type[BaseModel]) -> typing.Callable:
-    """
-    Returns the resolve function for the given pydantic model.
-
-    Args:
-        model (Type[BaseModel]): Pydantic model for which the resolve function should be created.
-
-    Returns:
-        typing.Callable: Resolve function for the given pydantic model.
-    """
-    async def resolve_models(self, info):
-        # TODO: use here connectors
-        # await check_aas_and_sm_server_online()
-        # data_retrieved = await get_all_aas_from_server(model)
-        # return data_retrieved
-        return None
-
-    resolve_models.__name__ = f"resolve_{model.__name__}"
-    return resolve_models
-
-
-def get_submodel_resolve_function(model: typing.Type[BaseModel]) -> typing.Callable:
-    """
-    Returns the resolve function for the given pydantic model.
-
-    Args:
-        model (Type[BaseModel]): Pydantic model for which the resolve function should be created.
-
-    Returns:
-        typing.Callable: Resolve function for the given pydantic model.
-    """
-
-    async def resolve_models(self, info):
-        # TODO: use here connectors
-        # await check_aas_and_sm_server_online()
-        # data_retrieved = await get_all_submodels_of_type(model)
-        # return data_retrieved
-        return None
-
-    resolve_models.__name__ = f"resolve_{model.__name__}"
-    return resolve_models

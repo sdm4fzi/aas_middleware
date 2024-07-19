@@ -15,6 +15,7 @@ from aas_middleware.connect.connectors.connector import Connector
 from aas_middleware.connect.connectors.model_connector import ModelConnector
 from aas_middleware.middleware import persistence_factory
 from aas_middleware.middleware.connector_router import generate_connector_endpoint, generate_persistence_connector_endpoint
+from aas_middleware.middleware.graphql_routers import GraphQLRouter
 from aas_middleware.middleware.registries import ConnectionInfo, ConnectionRegistry, PersistenceConnectionRegistry, WorkflowRegistry
 from aas_middleware.middleware.model_registry_api import generate_model_api
 from aas_middleware.middleware.persistence_factory import PersistenceFactory
@@ -400,6 +401,7 @@ class Middleware:
         """
         Adds a REST API so that new models can be registered and unregistered from the Middleware.
         """
+        # TODO: validate if this works and add it to the admin api...
         router = generate_model_api(middleware_instance=self)
         self.app.include_router(router)
         NUM_REGISTRY_ROUTES = len(router.routes)
@@ -416,14 +418,15 @@ class Middleware:
         """
         data_model = self.data_models[data_model_name]
         rest_router = RestRouter(data_model, data_model_name, self)
-        routers = rest_router.generate_endpoints()
-        for router in routers:
-            self.app.include_router(router)
+        rest_router.generate_endpoints()
+        
+    def generate_graphql_api_for_data_model(self, data_model_name: str):
+        """
+        Generates a GraphQL API with query operations for aas' and submodels from the loaded models.
+        """
+        data_model = self.data_models[data_model_name]
+        graphql_router = GraphQLRouter(data_model, data_model_name, self)
+        graphql_router.generate_graphql_endpoint()
 
-    # def generate_graphql_api(self):
-    #     """
-    #     Generates a GraphQL API with query operations for aas' and submodels from the loaded models.
-    #     """
-    #     graphql_app = generate_graphql_endpoint(self.models)
-    #     self.app.mount("/graphql", graphql_app)
+
 

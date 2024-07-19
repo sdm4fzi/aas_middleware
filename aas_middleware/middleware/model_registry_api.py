@@ -79,7 +79,7 @@ def register_model_from_middleware(
         middleware_instance.app.include_router(router)
     update_openapi(middleware_instance.app)
     remove_graphql_api(middleware_instance.app)
-    middleware_instance.generate_graphql_api()
+    middleware_instance.generate_graphql_api_for_data_model()
 
 
 def delete_model_from_middleware(model_name: str, middleware_instance: Middleware):
@@ -92,7 +92,7 @@ def delete_model_from_middleware(model_name: str, middleware_instance: Middlewar
 
     remove_model_routes_from_app(middleware_instance.app, model_name)
     remove_graphql_api(middleware_instance.app)
-    middleware_instance.generate_graphql_api()
+    middleware_instance.generate_graphql_api_for_data_model()
 
 
 def recursive_model_example_string_reformatter(model: dict):

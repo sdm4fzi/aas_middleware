@@ -82,7 +82,7 @@ def get_all_submodel_elements_from_submodel(
             and field_name != "semantic_id"
             and field_name != "id"
         ):
-            submodel_elements[field_info.alias] = field_info.annotation
+            submodel_elements[field_name] = field_info.annotation
     return submodel_elements
 
 
