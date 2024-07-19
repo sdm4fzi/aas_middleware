@@ -15,7 +15,7 @@ class AasMiddleware(Middleware):
     def __init__(self):
         super().__init__()
 
-    def load_aas_persistent_data_model(self, name: str, data_model: DataModel, aas_host: str, aas_port: int, submodel_host: str, submodel_port: int, initial_loading: bool = False):
+    def load_aas_persistent_data_model(self, name: str, data_model: DataModel, aas_host: str, aas_port: int, submodel_host: str, submodel_port: int, persist_instances: bool = False):
         """
         Function to load a data model into the middleware to be used for synchronization.
 
@@ -26,27 +26,17 @@ class AasMiddleware(Middleware):
             aas_port (int): The port of the AAS server.
             submodel_host (str): The host of the submodel server.
             submodel_port (int): The port of the submodel server.
+            persist_instances (bool, optional): Whether to persist instances of the data model. Defaults to False.
         """
         # aas_data_model = DataModelRebuilder(data_model).rebuild_data_model_for_AAS_structure()
         aas_data_model = data_model
-        self.load_data_model(name, aas_data_model)
+        self.load_data_model(name, aas_data_model, persist_instances)
         
         aas_persistence_factory = PersistenceFactory(BasyxAASConnector, host=aas_host, port=aas_port, submodel_host=submodel_host, submodel_port=submodel_port)
         submodel_persistence_factory = PersistenceFactory(BasyxSubmodelConnector, host=submodel_host, port=submodel_port)
         self.add_default_persistence(aas_persistence_factory, name, None, AAS)
         self.add_default_persistence(submodel_persistence_factory, name, None, Submodel)
-
-        if initial_loading:
-            for models_of_type in aas_data_model.get_top_level_models().values():
-                if not models_of_type:
-                    continue
-                model = models_of_type[0]
-
-                for model in models_of_type:
-                    self.add_callback("on_start_up", self.persist, name, model)
         
-        self.generate_rest_api_for_data_model(name)
-
     def scan_aas_server(self):
         """
         Function to scan the AAS server for all available AAS and Submodels.

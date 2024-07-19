@@ -167,15 +167,25 @@ class Middleware:
 
         return self._app
     
-    def load_data_model(self, name: str, data_model: DataModel):
+    def load_data_model(self, name: str, data_model: DataModel, persist_instances: bool = False):
         """
         Function to load a data model into the middleware to be used for synchronization.
 
         Args:
             name (str): The name of the data model.
             data_model (DataModel): Data model containing the types and values.
+            persist_instances (bool): If the instances of the data model should be persisted.
         """
         self.data_models[name] = data_model
+
+        if persist_instances:
+            for models_of_type in data_model.get_top_level_models().values():
+                if not models_of_type:
+                    continue
+                model = models_of_type[0]
+
+                for model in models_of_type:
+                    self.add_callback("on_start_up", self.persist, name, model)
 
     def load_json_models(
         self,
