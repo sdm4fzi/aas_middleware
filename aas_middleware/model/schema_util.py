@@ -70,10 +70,10 @@ def get_all_contained_schemas(schema: Type[Identifiable]) -> List[Type[Identifia
     Method to iterate over an Identifiable model and get all contained Identifiables.
 
     Args:
-        schema(Type(Identifiable)): The referable data model.
+        schema (Type[Identifiable]): The referable data model.
 
     Returns:
-        List[Referable]: The list of referables.
+        List[Type[Referable]]: The list of referables.
     """
     contained_schemas = []
     identifiable_schema_attributes = get_identifiable_attributes(schema)
