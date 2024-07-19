@@ -35,7 +35,7 @@ data_model = aas_middleware.DataModel.from_models(example_aas)
 
 middleware = aas_middleware.AasMiddleware()
 middleware.load_aas_persistent_data_model(
-    "test", data_model, "localhost", 8081, "localhost", 8081, initial_loading=True
+    "test", data_model, "localhost", 8081, "localhost", 8081, persist_instances=True
 )
 
 trivial_float_connector = TrivialFloatConnector()
