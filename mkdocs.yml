@@ -1,6 +1,8 @@
 site_name: aas-middleware Documentation
 theme:
   name: material
+  logo: logos/aas_middleware_logo_light.svg
+  favicon: logos/aas_middleware_logo_light.svg
   features:
     - content.code.copy
   palette: 

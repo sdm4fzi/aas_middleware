@@ -1,4 +1,4 @@
-![aas-middleware logo](https://raw.githubusercontent.com/sdm4fzi/aas_middleware/main/resources/logos/aas_middleware_logo_light_letters.svg)
+![aas-middleware logo](https://raw.githubusercontent.com/sdm4fzi/aas_middleware/main/docs/logos/aas_middleware_logo_light_letters.svg)
 
 *Framework for industrial data integration and automation.*
 
