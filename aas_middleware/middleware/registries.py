@@ -2,6 +2,8 @@ import typing
 
 import logging
 
+from aas_middleware.model.mapping.mapper import Mapper
+
 logger = logging.getLogger(__name__)
 
 from pydantic import BaseModel, ConfigDict
@@ -348,31 +350,31 @@ class WorkflowRegistry:
         """
         self.workflows[workflow.get_name()] = workflow
 
-    # def add_provider_to_workflow(self, workflow_name: str, connection_info: ConnectionInfo, provider: Provider):
-    #     """
-    #     Function to add a provider to a workflow.
+    def add_provider_to_workflow(self, workflow_name: str, connection_info: ConnectionInfo, provider: Provider):
+        """
+        Function to add a provider to a workflow.
 
-    #     Args:
-    #         workflow_name (str): The name of the workflow.
-    #         connection_info (ConnectionInfo): The connection info of the provider.
-    #         provider (Provider): The provider to be added.
-    #     """
-    #     if not workflow_name in self.workflow_providers:
-    #         self.workflow_providers[workflow_name] = []
-    #     self.workflow_providers[workflow_name].append((connection_info, provider))
+        Args:
+            workflow_name (str): The name of the workflow.
+            connection_info (ConnectionInfo): The connection info of the provider.
+            provider (Provider): The provider to be added.
+        """
+        if not workflow_name in self.workflow_providers:
+            self.workflow_providers[workflow_name] = []
+        self.workflow_providers[workflow_name].append((connection_info, provider))
 
-    # def add_consumer_to_workflow(self, workflow_name: str, connection_info: ConnectionInfo, connector: Connector):
-    #     """
-    #     Function to add a consumer to a workflow.
+    def add_consumer_to_workflow(self, workflow_name: str, connection_info: ConnectionInfo, connector: Connector):
+        """
+        Function to add a consumer to a workflow.
 
-    #     Args:
-    #         workflow_name (str): The name of the workflow.
-    #         connection_info (ConnectionInfo): The connection info of the consumer.
-    #         connector (Connector): The connector to be added.
-    #     """
-    #     if not workflow_name in self.workflow_consumers:
-    #         self.workflow_consumers[workflow_name] = []
-    #     self.workflow_consumers[workflow_name].append((connection_info, connector))
+        Args:
+            workflow_name (str): The name of the workflow.
+            connection_info (ConnectionInfo): The connection info of the consumer.
+            connector (Connector): The connector to be added.
+        """
+        if not workflow_name in self.workflow_consumers:
+            self.workflow_consumers[workflow_name] = []
+        self.workflow_consumers[workflow_name].append((connection_info, connector))
 
     def get_workflows(self) -> typing.List[Workflow]:
         """
@@ -398,29 +400,42 @@ class WorkflowRegistry:
         """
         return self.workflows[workflow_name]
     
-    # def get_providers(self, workflow_name: str) -> typing.List[typing.Tuple[ConnectionInfo, Provider]]:
-    #     """
-    #     Function to get the providers of a workflow.
+    def get_connections_of_workflow(self, workflow_name: str) -> typing.Tuple[typing.List[typing.Tuple[ConnectionInfo, Provider]], typing.List[typing.Tuple[ConnectionInfo, Consumer]]]:
+        """
+        Function to get the connections of a workflow.
 
-    #     Args:
-    #         workflow_name (str): The name of the workflow.
+        Args:
+            workflow_name (str): The name of the workflow.
 
-    #     Returns:
-    #         typing.List[typing.Tuple[ConnectionInfo, Provider]]: The providers of the workflow.
-    #     """
-    #     return self.workflow_providers[workflow_name]
+        Returns:
+            typing.Tuple[typing.List[ConnectionInfo, Provider], typing.List[ConnectionInfo, Consumer]]: The connections of the workflow.
+        """
+        return self.workflow_providers[workflow_name], self.workflow_consumers[workflow_name]
+
     
-    # def get_consumers(self, workflow_name: str) -> typing.List[typing.Tuple[ConnectionInfo, Connector]]:
-    #     """
-    #     Function to get the consumers of a workflow.
+    def get_providers(self, workflow_name: str) -> typing.List[typing.Tuple[ConnectionInfo, Provider]]:
+        """
+        Function to get the providers of a workflow.
 
-    #     Args:
-    #         workflow_name (str): The name of the workflow.
+        Args:
+            workflow_name (str): The name of the workflow.
 
-    #     Returns:
-    #         typing.List[typing.Tuple[ConnectionInfo, Connector]]: The consumers of the workflow.
-    #     """
-    #     return self.workflow_consumers[workflow_name]
+        Returns:
+            typing.List[typing.Tuple[ConnectionInfo, Provider]]: The providers of the workflow.
+        """
+        return self.workflow_providers[workflow_name]
+    
+    def get_consumers(self, workflow_name: str) -> typing.List[typing.Tuple[ConnectionInfo, Consumer]]:
+        """
+        Function to get the consumers of a workflow.
+
+        Args:
+            workflow_name (str): The name of the workflow.
+
+        Returns:
+            typing.List[typing.Tuple[ConnectionInfo, Consumer]]: The consumers of the workflow.
+        """
+        return self.workflow_consumers[workflow_name]
     
     def get_workflow_names(self) -> typing.List[str]:
         """
@@ -440,3 +455,127 @@ class WorkflowRegistry:
         """
         return [workflow.get_description() for workflow in self.workflows.values()]
     
+
+
+
+class MapperRegistry:
+    """
+    Class that manages the mappers of the middleware.
+    """
+
+    def __init__(self):
+        self.mappers: typing.Dict[str, Mapper] = {}
+        self.mapper_input_types: typing.Dict[str, typing.Type] = {}
+        self.mapper_output_types: typing.Dict[str, typing.Type] = {}
+
+        self.connections: typing.Dict[typing.Tuple[ConnectionInfo, ConnectionInfo], str] = {}
+
+    def add_mapper(self, mapper_id: str, mapper: Mapper, input_connection: typing.Optional[ConnectionInfo] = None, output_connection: typing.Optional[ConnectionInfo] = None):
+        """
+        Function to add a mapper to the registry.
+
+        Args:
+            mapper_id (str): The name of the mapper.
+            mapper (Mapper): The mapper to be added.
+            input_connection (typing.Optional[ConnectionInfo]): The input connection of the mapper.
+            output_connection (typing.Optional[ConnectionInfo]): The output connection of the mapper.
+        """
+        self.mappers[mapper_id] = mapper
+        self.mapper_input_types[mapper_id] = typing.get_type_hints(mapper.map)["data"]
+        self.mapper_output_types[mapper_id] = typing.get_type_hints(mapper.map)["return"]
+        if input_connection and output_connection:
+            self.connections[(input_connection, output_connection)] = mapper_id
+        elif input_connection or output_connection:
+            raise ValueError("Either None or both input and output connection must be provided.")
+                
+
+    def get_mappers(self) -> typing.List[Mapper]:
+        """
+        Function to get the mappers in the registry.
+
+        Returns:
+            typing.List[Mapper]: The mappers in the registry
+        """
+        return list(self.mappers.values())
+
+    def get_mapper(self, mapper_id: str) -> Mapper:
+        """
+        Function to get a mapper from the registry.
+
+        Args:
+            mapper_id (str): The id of the mapper.
+
+        Returns:
+            Mapper: The mapper from the registry.
+
+        Raises:
+            KeyError: If the mapper is not in the registry.
+        """
+        return self.mappers[mapper_id]
+    
+    def get_mapper_ids(self) -> typing.List[str]:
+        """
+        Function to get the names of the mappers in the registry.
+
+        Returns:
+            typing.List[str]: The names of the mappers in the registry.
+        """
+        return list(self.mappers.keys())
+    
+    def get_mapper_connections(self) -> typing.List[typing.Tuple[ConnectionInfo, ConnectionInfo]]:
+        """
+        Function to get the connections of the mappers in the registry.
+
+        Returns:
+            typing.List[typing.Tuple[ConnectionInfo, ConnectionInfo]]: The connections of the mappers in the registry.
+        """
+        return list(self.connections.keys())
+    
+
+    def get_mapper_by_input_connection(self, input_connection: ConnectionInfo) -> typing.Optional[Mapper]:
+        """
+        Function to get a mapper by the input connection.
+
+        Args:
+            input_connection (ConnectionInfo): The input connection of the mapper.
+
+        Returns:
+            Mapper: The mapper of the input connection.
+        """
+        for connection, mapper_id in self.connections.items():
+            if connection[0] == input_connection:
+                return self.mappers[mapper_id]
+    
+    def get_mapper_by_output_connection(self, output_connection: ConnectionInfo) -> typing.Optional[Mapper]:
+        """
+        Function to get a mapper by the output connection.
+
+        Args:
+            output_connection (ConnectionInfo): The output connection of the mapper.
+
+        Returns:
+            Mapper: The mapper of the output connection.
+        """
+        for connection, mapper_id in self.connections.items():
+            if connection[1] == output_connection:
+                return self.mappers[mapper_id]
+            
+    def get_connection_of_mapper(self, mapper_id: str) -> typing.List[typing.Tuple[ConnectionInfo, ConnectionInfo]]:
+        """
+        Function to get the connections of a mapper.
+
+        Args:
+            mapper_id (str): The id of the mapper.
+
+        Returns:
+            typing.List[typing.Tuple[ConnectionInfo, ConnectionInfo]]: The connections of the mapper.
+        """
+        connections = []
+        for connection, mapper_id2 in self.connections.items():
+            if mapper_id2 == self.mappers[mapper_id]:
+                connections.append(connection)
+        return connections
+            
+
+    
+            

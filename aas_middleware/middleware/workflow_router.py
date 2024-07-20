@@ -109,7 +109,8 @@ def generate_workflow_endpoint(workflow: Workflow) -> List[APIRouter]:
     else:
         if workflow.get_description().interval is None:
             @router.post("/execute", response_model=return_type)
-            async def execute(arg: input_type_hints): # type: ignore
+            # TODO: make the optional not here, but add a method that updates the POST endpoints after a connection is added, to have optional parameters...
+            async def execute(arg: typing.Optional[input_type_hints]=None): # type: ignore
                 if workflow.running:
                     raise HTTPException(
                         status_code=400,
@@ -122,7 +123,7 @@ def generate_workflow_endpoint(workflow: Workflow) -> List[APIRouter]:
                     return await workflow.execute(arg)
 
         @router.post("/execute_background", response_model=Dict[str, str])
-        async def execute_background(background_tasks: BackgroundTasks, arg: input_type_hints): # type: ignore
+        async def execute_background(background_tasks: BackgroundTasks, arg: typing.Optional[input_type_hints]=None): # type: ignore
             if workflow.running:
                 raise HTTPException(
                     status_code=400,

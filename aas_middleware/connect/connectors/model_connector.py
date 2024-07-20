@@ -19,6 +19,8 @@ class ModelConnector(Generic[T]):
     async def consume(self, body: Optional[T]) -> None:
         if not body:
             self.model = None
+        else:
+            self.model = body
 
     async def provide(self) -> Optional[T]:
         return self.model

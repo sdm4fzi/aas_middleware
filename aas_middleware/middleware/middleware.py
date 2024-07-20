@@ -4,7 +4,7 @@ import asyncio
 from contextlib import asynccontextmanager
 from functools import partial
 import typing
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -12,22 +12,20 @@ from basyx.aas import model
 
 import aas_middleware
 from aas_middleware.connect.connectors.connector import Connector
-from aas_middleware.connect.connectors.model_connector import ModelConnector
-from aas_middleware.middleware import persistence_factory
 from aas_middleware.middleware.connector_router import generate_connector_endpoint, generate_persistence_connector_endpoint
 from aas_middleware.middleware.graphql_routers import GraphQLRouter
-from aas_middleware.middleware.registries import ConnectionInfo, ConnectionRegistry, PersistenceConnectionRegistry, WorkflowRegistry
+from aas_middleware.middleware.registries import ConnectionInfo, ConnectionRegistry, MapperRegistry, PersistenceConnectionRegistry, WorkflowRegistry
 from aas_middleware.middleware.model_registry_api import generate_model_api
 from aas_middleware.middleware.persistence_factory import PersistenceFactory
 from aas_middleware.middleware.rest_routers import RestRouter
-from aas_middleware.middleware.synchronization import synchronize_connector_with_persistence
+from aas_middleware.middleware.synchronization import synchronize_connector_with_persistence, synchronize_workflow_with_persistence_consumer, synchronize_workflow_with_persistence_provider
 from aas_middleware.middleware.workflow_router import generate_workflow_endpoint
 from aas_middleware.connect.workflows.workflow import Workflow
 from aas_middleware.model.core import Identifiable
 from aas_middleware.model.data_model import DataModel
-from aas_middleware.model.formatting.aas.aas_middleware_util import get_pydantic_model_from_dict
 from aas_middleware.model.formatting.aas.basyx_formatter import BasyxFormatter
-from aas_middleware.model.formatting.aas.aas_model import AAS, Submodel
+from aas_middleware.model.formatting.formatter import Formatter
+from aas_middleware.model.mapping.mapper import Mapper
 
 
 
@@ -71,6 +69,8 @@ class Middleware:
         self.persistence_registry: PersistenceConnectionRegistry = PersistenceConnectionRegistry()
         self.connection_registry: ConnectionRegistry = ConnectionRegistry()
         self.workflow_registry: WorkflowRegistry = WorkflowRegistry()
+
+        self.mapper_registry: MapperRegistry = MapperRegistry()
 
     def set_meta_data(self, title: str, description: str, version: str, contact: typing.Dict[str, str]):
         """
@@ -354,7 +354,7 @@ class Middleware:
     # TODO: handle also async connectors!!
         
 
-    def connect_connector_to_persistence(self, connector_id: str, data_model_name: str, model_id: typing.Optional[str]=None, contained_model_id: typing.Optional[str]=None, field_id: typing.Optional[str]=None):
+    def connect_connector_to_persistence(self, connector_id: str, data_model_name: str, model_id: typing.Optional[str]=None, contained_model_id: typing.Optional[str]=None, field_id: typing.Optional[str]=None, persistence_mapper: typing.Optional[Mapper]=None, external_mapper: typing.Optional[Mapper]=None, formatter: typing.Optional[Formatter]=None):
         """
         Function to connect a connector to a data entity in the middleware.
 
@@ -365,13 +365,16 @@ class Middleware:
             model_id (typing.Optional[str], optional): The id of the model in the data model. Defaults to None.
             field_id (typing.Optional[str], optional): The id of the field in the model. Defaults to None.
             model_type (typing.Type[typing.Any], optional): The type of the model. Defaults to typing.Any.
+            persistence_mapper (typing.Optional[Mapper], optional): The mapper that should be used. Defaults to None.
+            external_mapper (typing.Optional[Mapper], optional): The mapper that should be used. Defaults to None.
+            formatter (typing.Optional[Formatter], optional): The formatter that should be used. Defaults to None.
         """
         connection_info = ConnectionInfo(data_model_name=data_model_name, model_id=model_id, contained_model_id=contained_model_id, field_id=field_id)
         connector = self.connection_registry.get_connector(connector_id)
         type_connection_info = self.connection_registry.connection_types[connector_id]
         self.connection_registry.add_connection(connector_id, connection_info, connector, type_connection_info)
 
-        synchronize_connector_with_persistence(connector, connection_info, self.persistence_registry)
+        synchronize_connector_with_persistence(connector, connection_info, self.persistence_registry, persistence_mapper, external_mapper, formatter)
 
     def workflow(
         self,
@@ -396,6 +399,42 @@ class Middleware:
             return func
 
         return decorator
+    
+    def connect_workflow_to_persistence_provider(self, workflow_id: str, arg_name: str, data_model_name: str, model_id: typing.Optional[str]=None, contained_model_id: typing.Optional[str]=None, field_id: typing.Optional[str]=None, persistence_mapper: typing.Optional[Mapper]=None, external_mapper: typing.Optional[Mapper]=None, formatter: typing.Optional[Formatter]=None):
+        """
+        Function to connect a workflow to a data entity in the middleware.
+
+        Args:
+            workflow_id (str): The name of the workflow.
+            data_model_name (str): The name of the data model used for identifying the data model in the middleware.
+            model_id (typing.Optional[str], optional): The id of the model in the data model. Defaults to None.
+            field_id (typing.Optional[str], optional): The id of the field in the model. Defaults to None.
+            mapper (typing.Optional[Mapper], optional): The mapper that should be used. Defaults to None.
+            formatter (typing.Optional[Formatter], optional): The formatter that should be used. Defaults to None.
+        """
+        connection_info = ConnectionInfo(data_model_name=data_model_name, model_id=model_id, contained_model_id=contained_model_id, field_id=field_id)
+        workflow = self.workflow_registry.get_workflow(workflow_id)
+        synchronize_workflow_with_persistence_provider(workflow, arg_name, connection_info, self.persistence_registry, persistence_mapper, external_mapper, formatter)
+        # TODO: update workflow endpoint to have optional arguments
+        # TODO: register mappers, formatters in middleware and add endpoint for them, also add connection to workflow registry
+
+    def connect_workflow_to_persistence_consumer(self, workflow_id: str, data_model_name: str, model_id: typing.Optional[str]=None, contained_model_id: typing.Optional[str]=None, field_id: typing.Optional[str]=None, external_mapper: typing.Optional[Mapper]=None, formatter: typing.Optional[Formatter]=None):
+        """
+        Function to connect a workflow to a data entity in the middleware.
+
+        Args:
+            workflow_id (str): The name of the workflow.
+            data_model_name (str): The name of the data model used for identifying the data model in the middleware.
+            model_id (typing.Optional[str], optional): The id of the model in the data model. Defaults to None.
+            field_id (typing.Optional[str], optional): The id of the field in the model. Defaults to None.
+            mapper (typing.Optional[Mapper], optional): The mapper that should be used. Defaults to None.
+            formatter (typing.Optional[Formatter], optional): The formatter that should be used. Defaults to None.
+        """
+        connection_info = ConnectionInfo(data_model_name=data_model_name, model_id=model_id, contained_model_id=contained_model_id, field_id=field_id)
+        workflow = self.workflow_registry.get_workflow(workflow_id)
+        synchronize_workflow_with_persistence_consumer(workflow, connection_info, self.persistence_registry, external_mapper, formatter)
+        # TODO: register mappers, formatters in middleware and add endpoint for them, also add connection to workflow registry
+
 
     def generate_model_registry_api(self):
         """
