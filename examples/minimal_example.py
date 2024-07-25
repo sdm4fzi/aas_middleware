@@ -54,13 +54,13 @@ json_aas = aas_middleware.formatting.AasJsonFormatter().serialize(data_model)
 print(json_aas)
 
 
-# middleware = aas_middleware.Middleware()
-# middleware.load_data_model("example", data_model, persist_instances=True)
+middleware = aas_middleware.Middleware()
+middleware.load_data_model("example", data_model, persist_instances=True)
 
-middleware = aas_middleware.AasMiddleware()
-middleware.load_aas_persistent_data_model(
-    "example", data_model, "localhost", 8081, "localhost", 8081, persist_instances=True
-)
+# middleware = aas_middleware.AasMiddleware()
+# middleware.load_aas_persistent_data_model(
+#     "example", data_model, "localhost", 8081, "localhost", 8081, persist_instances=True
+# )
 
 
 middleware.generate_rest_api_for_data_model("example")

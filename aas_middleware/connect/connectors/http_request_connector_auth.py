@@ -22,7 +22,7 @@ class HttpRequestConnectorAuth:
         # TODO: check, how often this is used or if a more flexible methodology is required....
         self.authentication_headers = {
             "Content-Type": "application/json; charset=utf-8",
-            "Authorization": f"Bearer {token["access_token"]}"
+            "Authorization": f"Bearer {token['access_token']}"
         }
 
     async def disconnect(self):
