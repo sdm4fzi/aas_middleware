@@ -51,48 +51,58 @@ data_model = aas_middleware.DataModel.from_models(example_product)
 basyx_object_store = aas_middleware.formatting.BasyxFormatter().serialize(data_model)
 
 json_aas = aas_middleware.formatting.AasJsonFormatter().serialize(data_model)
-print(json_aas)
+# print(json_aas)
+
+reformatted_data_model = aas_middleware.formatting.AasJsonFormatter().deserialize(json_aas)
+print(reformatted_data_model.get_model("example_product_id"))
 
 
-middleware = aas_middleware.Middleware()
-middleware.load_data_model("example", data_model, persist_instances=True)
 
-# middleware = aas_middleware.AasMiddleware()
-# middleware.load_aas_persistent_data_model(
-#     "example", data_model, "localhost", 8081, "localhost", 8081, persist_instances=True
-# )
+# middleware = aas_middleware.Middleware()
+# middleware.load_data_model("example", data_model, persist_instances=True)
 
+middleware = aas_middleware.AasMiddleware()
+middleware.load_aas_persistent_data_model(
+    "example", data_model, "localhost", 8081, "localhost", 8081, persist_instances=True
+)
 
 middleware.generate_rest_api_for_data_model("example")
 middleware.generate_graphql_api_for_data_model("example")
 
 
-class TrivialConnector:
-    def __init__(self):
-        pass
+# example_product_connector = middleware.persistence_registry.get_connector_by_data_model_and_model_id("example", "example_product_id")
+# print(example_product_connector.provide())
 
-    async def connect(self):
-        pass
 
-    async def disconnect(self):
-        pass
 
-    async def consume(self, body: str) -> None:
-        print(body)
-        pass
 
-    async def provide(self) -> typing.Any:
-        return "trivial connector example value"
+
+# class TrivialConnector:
+#     def __init__(self):
+#         pass
+
+#     async def connect(self):
+#         pass
+
+#     async def disconnect(self):
+#         pass
+
+#     async def consume(self, body: str) -> None:
+#         print(body)
+#         pass
+
+#     async def provide(self) -> typing.Any:
+#         return "trivial connector example value"
     
 
 
-example_connector = TrivialConnector()
-middleware.add_connector("test_connector", example_connector, model_type=str)
+# example_connector = TrivialConnector()
+# middleware.add_connector("test_connector", example_connector, model_type=str)
 
-@middleware.workflow()
-def example_workflow(a: str) -> str:
-    print(a)
-    return a
+# @middleware.workflow()
+# def example_workflow(a: str) -> str:
+#     print(a)
+#     return a
 
 if __name__ == "__main__":
     import uvicorn

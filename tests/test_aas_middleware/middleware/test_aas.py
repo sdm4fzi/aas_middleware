@@ -51,7 +51,7 @@ async def get_clear_aas_and_submodel_server():
                             break
         except:
             pass
-        if time.time() - start > 20:
+        if time.time() - start > 40:
             raise Exception("Timeout: Could not connect to the docker container.")
         await asyncio.sleep(1)
 

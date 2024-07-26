@@ -40,9 +40,14 @@ def get_str_description(langstring_set: model.LangStringSet) -> str:
     if not langstring_set:
         return ""
     dict_description = {}
-    for langstring in langstring_set:
-        dict_description[langstring] = langstring_set[langstring]
-    return str(dict_description)
+    if "en" in langstring_set:
+        return str(langstring_set.get("en"))
+    elif "ger" in langstring_set:
+        return str(langstring_set.get("ger"))
+    elif "de" in langstring_set:
+        return str(langstring_set.get("de"))
+    else:
+        return str(langstring_set.get(list(langstring_set.keys())[0]))
 
 
 def get_basyx_description_from_model(

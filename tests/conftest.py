@@ -237,6 +237,7 @@ def example_list_submodel_element_collection(simple_submodel_element_collection:
 def example_submodel(simple_submodel_element_collection: SubmodelElementCollection, example_submodel_element_collection: SubmodelElementCollection, example_submodel_element_collection_for_union: SubmodelElementCollection, example_list_submodel_element_collection: List[SubmodelElementCollection]) -> Submodel:
     return ExampleSubmodel(
         id_short="example_submodel_id",
+        description="Example Submodel",
         integer_attribute=1,
         string_attribute="string",
         float_attribute=1.1,
@@ -437,6 +438,7 @@ def example_middleware(example_aas: ValidAAS, example_submodel: ExampleSubmodel)
 
     middleware  = AasMiddleware()
     middleware.load_aas_persistent_data_model("test", data_model, AAS_SERVER_ADDRESS, AAS_SERVER_PORT, SUBMODEL_SERVER_ADDRESS, SUBMODEL_SERVER_PORT)
+    middleware.generate_rest_api_for_data_model("test")
 
     trivial_float_connector = TrivialFloatConnector()
     middleware.add_connector("test_connector", trivial_float_connector, model_type=float)

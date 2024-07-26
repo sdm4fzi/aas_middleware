@@ -107,16 +107,16 @@ def synchronize_connector_with_persistence(connector: Union[Consumer, Provider],
         original_consume = connector.consume
 
         @wraps(connector.consume)
-        async def wrapped_consume(consume_body: Any):
+        async def wrapped_consume(consumer_body: Any):
             persistence_connector = persistence_registry.get_connector_by_data_model_and_model_id(data_model_name=connection_info.data_model_name, model_id=connection_info.model_id)
-            if consume_body is None:
-                # TODO: data model connection info is not yet possible
+            if consumer_body is None:
+                # TODO: make data model connection possible here, not possible because of some conventions in the registries
                 persistence_body = await get_persistence_value(persistence_connector, connection_info)
                 consumer_body = adjust_body_for_external_schema(persistence_body, persistence_mapper, formatter)
             else:
-                persistence_body = adjust_body_for_persistence_schema(consume_body, external_mapper, formatter)
+                persistence_body = adjust_body_for_persistence_schema(consumer_body, external_mapper, formatter)
                 await update_persistence_with_value(persistence_connector, connection_info, persistence_body)
-            await original_consume(consume_body)
+            await original_consume(consumer_body)
 
         connector.consume = wrapped_consume
 
@@ -126,10 +126,13 @@ def synchronize_connector_with_persistence(connector: Union[Consumer, Provider],
         @wraps(connector.provide)
         async def wrapped_provide() -> Any:
             persistence_connector = persistence_registry.get_connector_by_data_model_and_model_id(data_model_name=connection_info.data_model_name, model_id=connection_info.model_id)
-            body = await original_provide()
+            provider_body = await original_provide()
             persistence_body = await get_persistence_value(persistence_connector, connection_info)
-            await update_persistence_with_value(persistence_connector, connection_info, persistence_body)
-            return body
+            provider_body_in_peristence_schema = adjust_body_for_persistence_schema(provider_body, external_mapper, formatter)
+            if provider_body_in_peristence_schema != persistence_body:
+                await update_persistence_with_value(persistence_connector, connection_info, provider_body_in_peristence_schema)
+                assert provider_body_in_peristence_schema == await get_persistence_value(persistence_connector, connection_info), f"Persistence value was not updated correctly. Expected {provider_body_in_peristence_schema}, got {await get_persistence_value(persistence_connector, connection_info)}"
+            return provider_body
 
         connector.provide = wrapped_provide
 

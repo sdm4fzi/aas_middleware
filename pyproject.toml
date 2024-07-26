@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "aas-middleware"
-version = "0.1.7"
+version = "0.1.8"
 description = ""
 authors = ["Sebastian Behrendt <sebastianbehrendt97@gmail.com>"]
 readme = "README.md"

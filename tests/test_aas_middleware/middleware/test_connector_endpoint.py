@@ -38,6 +38,8 @@ def get_example_aas_from_server(client: TestClient, example_aas: ExampleSubmodel
 
 
 def test_connected_connector_endpoint(client: TestClient, example_aas: ExampleSubmodel):
+    asyncio.run(get_clear_aas_and_submodel_server())
+
     response = client.get(url="/connectors/test_connected_connector/description/")
     assert response.status_code == 200
     assert response.text == ConnectorDescription(
@@ -51,8 +53,6 @@ def test_connected_connector_endpoint(client: TestClient, example_aas: ExampleSu
         ),
         model_type="float",
     ).model_dump_json()
-
-    asyncio.run(get_clear_aas_and_submodel_server())
     all_ids = get_all_aas(client, example_aas)
     assert all_ids == set()
     post_aas(client, example_aas)
