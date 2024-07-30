@@ -442,10 +442,16 @@ def get_attribute_name_encoded_references(model: Identifiable) -> List[str]:
             for suffix in REFERENCE_ATTRIBUTE_NAMES_SUFFIXES
         ):
             continue
+        if not attribute_value:
+            continue
         if isinstance(attribute_value, str | int | UUID):
             referenced_ids.append(str(attribute_value))
-        else:
+        elif isinstance(attribute_value, list | tuple | set):
             referenced_ids += [str(item) for item in attribute_value if item]
+        else:
+            raise ValueError(
+                f"Attribute {attribute_name} of model {model} is not a reference."
+            )
     return referenced_ids
 
 

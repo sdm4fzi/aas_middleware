@@ -220,7 +220,6 @@ class Middleware:
         data_model = DataModel.from_models(*instances)
         self.load_data_model(name, data_model)
 
-
     def load_pydantic_models(self, name: str, *models: typing.Tuple[typing.Type[BaseModel]]):
         """
         Functions that loads pydantic models into the middleware that can be used for synchronization.
@@ -228,8 +227,8 @@ class Middleware:
         Args:
             models (typing.List[typing.Type[BaseModel]]): List of pydantic models.
         """
-        data_model = DataModel.from_model_types(models)
-        self.load_data_model(data_model)
+        data_model = DataModel.from_model_types(*models)
+        self.load_data_model(name, data_model)
 
     def load_aas_objectstore(self, models: model.DictObjectStore):
         """

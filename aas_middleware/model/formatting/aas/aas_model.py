@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from types import NoneType
 from typing import Annotated, Any, Callable, List, Self, Union
 import typing
 
@@ -112,6 +113,8 @@ class AAS(Identifiable):
 
 
 def is_valid_submodel_element(submodel_element: Any) -> bool:
+    if isinstance(submodel_element, NoneType):
+        return True
     if isinstance(submodel_element, PrimitiveSubmodelElement):
         return True
     elif isinstance(submodel_element, SubmodelElementCollection):
