@@ -39,8 +39,11 @@ def infere_aas_structure(
     Returns:
         Tuple[List[aas_model.AAS], List[aas_model.Submodel]]: Tuple with AAS models and Submodel models
     """
-    if all(isinstance(model, aas_model.AAS) for model in data.get_top_level_models()):
-        return data.get_top_level_models(), []
+    if all(all(isinstance(model, aas_model.AAS) for model in model_items) for model_items in data.get_top_level_models().values()):
+        top_level_models_list = []
+        for models in data.get_top_level_models().values():
+            top_level_models_list += models
+        return top_level_models_list, []
     logger.warning(
         "The data model does not contain only AAS models. Trying to infer the AAS structure by rebuilding the data model."
     )
