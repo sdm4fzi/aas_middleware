@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from types import NoneType
-from typing import List, Optional, Set, Tuple, Type, Union
+from typing import Dict, List, Optional, Set, Tuple, Type, Union
 import typing
 from pydantic import BaseModel, ConfigDict
 from enum import Enum
@@ -51,7 +51,7 @@ class ReferenceInfo(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
-def get_reference_infos_of_model(model: Identifiable) -> Set[ReferenceInfo]:
+def get_reference_infos_of_model(model_id: str, model: Identifiable) -> Set[ReferenceInfo]:
     """
     Method to add information about referencing model ids of the input model.
 
@@ -67,7 +67,7 @@ def get_reference_infos_of_model(model: Identifiable) -> Set[ReferenceInfo]:
         if identifiable == model:
             continue
         reference_info = ReferenceInfo(
-            identifiable_id=get_id_with_patch(model),
+            identifiable_id=model_id,
             reference_id=get_id_with_patch(identifiable),
             reference_type=ReferenceType.ASSOCIATION,
         )
@@ -75,7 +75,7 @@ def get_reference_infos_of_model(model: Identifiable) -> Set[ReferenceInfo]:
     indirect_references = get_referenced_ids_of_model(model)
     for indirect_reference in indirect_references:
         reference_info = ReferenceInfo(
-            identifiable_id=get_id_with_patch(model),
+            identifiable_id=model_id,
             reference_id=indirect_reference,
             reference_type=ReferenceType.REFERENCE,
         )
@@ -84,7 +84,7 @@ def get_reference_infos_of_model(model: Identifiable) -> Set[ReferenceInfo]:
     unidentifiable_attributes = get_unidentifiable_attributes_of_model(model)
     for attribute_name, attribute_value in unidentifiable_attributes.items():
         reference_info = ReferenceInfo(
-            identifiable_id=get_id_with_patch(model),
+            identifiable_id=model_id,
             reference_id=f"{attribute_name}={attribute_value}",
             reference_type=ReferenceType.ATTRIBUTE,
         )
@@ -92,7 +92,7 @@ def get_reference_infos_of_model(model: Identifiable) -> Set[ReferenceInfo]:
     return reference_infos
 
 
-def get_reference_infos(identifiables: List[Identifiable]) -> Set[ReferenceInfo]:
+def get_reference_infos(identifiable_map: Dict[str, Identifiable]) -> Set[ReferenceInfo]:
     """
     Method to get all reference infos of a list of identifiables.
 
@@ -103,8 +103,8 @@ def get_reference_infos(identifiables: List[Identifiable]) -> Set[ReferenceInfo]
         Set[ReferenceInfo]: The list of reference infos.
     """
     reference_infos = set()
-    for identifiable in identifiables:
-        reference_infos = reference_infos | get_reference_infos_of_model(identifiable)
+    for model_id, identifiable in identifiable_map.items():
+        reference_infos = reference_infos | get_reference_infos_of_model(model_id, identifiable)
     return reference_infos
 
 
@@ -208,7 +208,7 @@ def get_schema_reference_infos(schemas: List[Type[Identifiable]]) -> Set[Referen
 
 class ReferenceFinder:
     model: Identifiable
-    contained_models: List[Identifiable] = []
+    contained_models: Dict[str, Identifiable] = []
     references: List[ReferenceInfo] = []
 
     contained_schemas: List[Type[Identifiable]] = []
@@ -217,7 +217,7 @@ class ReferenceFinder:
     @classmethod
     def find(
         cls, model: Identifiable
-    ) -> Tuple[List[Identifiable], Set[ReferenceInfo]]:
+    ) -> Tuple[Dict[str, Identifiable], Set[ReferenceInfo]]:
         """
         Method to find all contained models (inclusive the model itself) and references in a given model.
 

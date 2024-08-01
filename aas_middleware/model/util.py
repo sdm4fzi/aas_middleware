@@ -95,6 +95,7 @@ def get_id(model: Any) -> str | int | UUID:
     Raises:
         ValueError: if the model is not an object, BaseModel or dict or if no id attribute is available
     """
+    # TODO: make this function faster!!
     if not is_identifiable(model):
         raise ValueError("Model is a basic type and has no id attribute.")
 
@@ -272,52 +273,50 @@ def get_unidentifiable_attributes_of_model(
     return unidentifiable_values
 
 def add_non_redundant_identifiable(
-    model: Identifiable, identifiables: List[Identifiable]
-) -> List[Identifiable]:
+    model_id:str, model: Identifiable, identifiable_map: Dict[str, Identifiable]
+) -> Dict[str, Identifiable]:
     """
     Method to add an Identifiable to a list of Identifiables if it is not already in the list.
 
     Args:
+        model_id (str): The id of the Identifiable.
         model (Identifiable): The Identifiable to add.
-        identifiables (List[Identifiable]): The list of contained Identifiables.
+        identifiables (Dict[str, Identifiable]): The key map of contained Identifiables.
 
     Returns:
-        List[Identifiable]: The list of Identifiables with the added model.
+        Dict[str, Identifiable]: The key map of Identifiables with the added model.
     """
-    # TODO: maybe use directly a dict here to avoid iteration by using hashable ids
-    if not any(
-        get_id_with_patch(model) == get_id_with_patch(other_referable)
-        for other_referable in identifiables
-    ):
-        identifiables.append(model)
-    return identifiables
+    if not model_id in identifiable_map:
+        identifiable_map[model_id] = model
+    return identifiable_map
 
 
-def get_all_contained_identifiables(model: Identifiable) -> List[Identifiable]:
+def get_all_contained_identifiables(model: Identifiable) -> Dict[str, Identifiable]:
     """
     Method to iterate over an Identifiable model and get all contained Identifiables.
 
     Args:
-        model (REFERABLE_DATA_MODEL): The referable data model.
+        model (Identifiable): The Identifiable model.
 
     Returns:
-        List[Referable]: The list of referables.
+        Dict[str, Identifiable]: The list of identifiables with their id as key.
     """
-    contained_identifiables = []
+    contained_identifiables = {}
     identifiable_attributes = get_identifiable_attributes_of_model(model)
     for identifiable_attribute in identifiable_attributes:
         in_attribute_contained_identifiables = get_all_contained_identifiables(
             identifiable_attribute
         )
-        for identifiable in in_attribute_contained_identifiables:
-            add_non_redundant_identifiable(identifiable, contained_identifiables)
+        for model_id, identifiable in in_attribute_contained_identifiables.items():
+            add_non_redundant_identifiable(model_id, identifiable, contained_identifiables)
     if is_identifiable_container(model):
         for item in model:
             in_attribute_contained_identifiables = get_all_contained_identifiables(item)
-            for identifiable in in_attribute_contained_identifiables:
-                add_non_redundant_identifiable(identifiable, contained_identifiables)
+            for model_id, identifiable in in_attribute_contained_identifiables.items():
+                add_non_redundant_identifiable(model_id, identifiable, contained_identifiables)
     elif is_identifiable(model):
-        add_non_redundant_identifiable(model, contained_identifiables)
+        model_id = get_id_with_patch(model)
+        add_non_redundant_identifiable(model_id, model, contained_identifiables)
     return contained_identifiables
 
 

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "aas-middleware"
-version = "0.1.10"
+version = "0.1.11"
 description = ""
 authors = ["Sebastian Behrendt <sebastianbehrendt97@gmail.com>"]
 readme = "README.md"
@@ -33,6 +33,7 @@ black = "^24.4.2"
 pytest-order = "^1.2.1"
 mkdocs-material = "^9.5.29"
 mkdocs-include-dir-to-nav = "^1.2.0"
+snakeviz = "^2.2.0"
 
 [tool.poetry.group.sdm.dependencies]
 pandas = "^2.2.2"

@@ -163,30 +163,13 @@ class DataModel(BaseModel):
         if model_id in self.model_ids:
             raise ValueError(f"Model with id {model_id} already loaded.")
         self.add_schema(type(model))
-        all_identifiables, reference_infos = ReferenceFinder.find(model)
-        self._add_contained_models(model, all_identifiables)
+        contained_models_map, reference_infos = ReferenceFinder.find(model)
+        self._add_contained_models(model, contained_models_map)
         self._add_top_level_model(model)
         self._add_references_to_referencing_models_dict(reference_infos)
 
-    def check_different_model_with_same_id_contained(self, model: Identifiable) -> bool:
-        """
-        Method to check if a model is already contained in the data model.
-
-        Args:
-            model (Identifiable): The model to check.
-
-        Returns:
-            bool: True if the model is already contained, False otherwise.
-        """
-        model_id = get_id_with_patch(model)
-        if model_id in self.model_ids:
-            same_id_model = self.get_model(model_id)
-            if not same_id_model == model:
-                return True
-        return False
-
     def _add_contained_models(
-        self, top_level_model: Identifiable, contained_models: List[Identifiable]
+        self, top_level_model: Identifiable, contained_models_map: Dict[str, Identifiable]
     ) -> None:
         """
         Method to load all contained models of a model.
@@ -195,8 +178,7 @@ class DataModel(BaseModel):
             top_level_model (Identifiable): The top level model to load.
             contained_models (List[Identifiable]): The contained models to load.
         """
-        for contained_model in contained_models:
-            contained_model_id = get_id_with_patch(contained_model)
+        for contained_model_id, contained_model in contained_models_map.items():
             if contained_model_id in self.model_ids:
                 same_id_model = self.get_model(contained_model_id)
                 if not models_are_equal(same_id_model, contained_model):
