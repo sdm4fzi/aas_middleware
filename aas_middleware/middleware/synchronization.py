@@ -23,7 +23,7 @@ async def update_persistence_with_value(persistence_connector: Connector, connec
         persistence_contained_model = persistence_model_data_model.get_model(connection_info.contained_model_id)
         referencing_models = persistence_model_data_model.get_referencing_models(persistence_contained_model)
         for referencing_model in referencing_models:
-            for attribute_name, attribute_value in get_value_attributes(referencing_model):
+            for attribute_name, attribute_value in get_value_attributes(referencing_model).items():
                 if attribute_value == persistence_contained_model:
                     setattr(referencing_model, attribute_name, value)
         await persistence_connector.consume(persistence_model)
