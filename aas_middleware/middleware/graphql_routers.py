@@ -219,7 +219,7 @@ def is_optional_typing_list_or_tuple(input_type: typing.Any) -> bool:
     Returns:
         bool: True if the given type is an optional typing.List or typing.Tuple, False otherwise.
     """
-    if not is_optional_basemodel_type(input_type):
+    if not typing.get_origin(input_type) is typing.Union:
         return False
     non_optional_type = [t for t in typing.get_args(input_type) if t is not NoneType]
     return is_typing_list_or_tuple(non_optional_type[0])
