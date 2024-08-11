@@ -207,7 +207,7 @@ def is_optional_type(model: Type) -> bool:
     """
     if typing.get_origin(model) == typing.Union:
         args = typing.get_args(model)
-        if any(arg == type(None) for arg in args):
+        if all(arg == type(None) or issubclass(arg, BaseModel) for arg in args):
             return True
         else:
             return False
