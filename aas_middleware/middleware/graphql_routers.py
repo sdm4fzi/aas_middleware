@@ -1,3 +1,4 @@
+from types import NoneType
 import typing
 
 from pydantic import BaseModel
@@ -17,7 +18,7 @@ from starlette_graphene3 import (
     make_graphiql_handler,
 )
 
-from aas_middleware.model.formatting.aas.aas_middleware_util import get_all_submodel_elements_from_submodel, get_contained_models_attribute_info, union_type_check
+from aas_middleware.model.formatting.aas.aas_middleware_util import get_all_submodel_elements_from_submodel, get_contained_models_attribute_info, is_basemodel_union_type, is_optional_type
 from aas_middleware.model.formatting.aas.aas_model import AAS, Submodel, SubmodelElementCollection
 
 def get_base_query_and_mutation_classes() -> (
@@ -62,18 +63,32 @@ class GraphQLRouter:
         graphql_app = GraphQLApp(schema=schema, on_get=make_graphiql_handler())
         self.middleware.app.mount("/graphql", graphql_app)
 
+
+    def resolve_optional_and_union_types(self, models: typing.List[typing.Tuple[str, typing.Type[Submodel]]]):
+        resolved_models = []
+        for _, model in models:
+            if not typing.get_origin(model) is typing.Union:
+                resolved_models.append(model)
+                continue
+            submodels = typing.get_args(model)
+            for submodel in submodels:
+                if not submodel is NoneType:
+                    resolved_models.append(submodel)
+
+        return resolved_models
+    
     def create_query_for_model(self, model_type: type):
         model_name = model_type.__name__
 
         submodels = get_contained_models_attribute_info(model_type)
+        submodel_type_list = self.resolve_optional_and_union_types(submodels)
         graphene_submodels = []
-        for attribute_name, submodel in submodels:
+        for submodel in submodel_type_list:
             graphene_submodels.append(
                 create_graphe_pydantic_output_type_for_submodel_elements(submodel)
             )
 
-        for (attribute_name, submodel), graphene_submodel in zip(submodels, graphene_submodels):
-            # FIXME: resolve problems with optional submodels!
+        for submodel, graphene_submodel in zip(submodel_type_list, graphene_submodels):
             submodel_name = submodel.__name__
             class_dict = {
                 f"{submodel_name}": graphene.List(graphene_submodel),
@@ -129,7 +144,6 @@ class GraphQLRouter:
 
         async def resolve_models(self, info):
             submodel_list = []
-            # TODO: get the correct connectors here... no submodel connectors are available
             connection_infos = middleware_instance.persistence_registry.get_type_connection_info(model.__name__)
             for connection_info in connection_infos:
                 connector = middleware_instance.persistence_registry.get_connection(connection_info)
@@ -232,12 +246,14 @@ def create_graphe_pydantic_output_type_for_submodel_elements(
     Args:
         model (typing.Union[base.Submodel, base.SubmodelElementCollectiontuple, list, set, ]): Submodel element for which the graphene pydantic output types should be created.
     """
-    for attribute_name, attribute_value in get_all_submodel_elements_from_submodel(
+    for attribute_value in get_all_submodel_elements_from_submodel(
         model
-    ).items():
-        if union_type_check(attribute_value):
+    ).values():
+        if is_basemodel_union_type(attribute_value) or is_optional_type(attribute_value):
             subtypes = typing.get_args(attribute_value)
             for subtype in subtypes:
+                if subtype is NoneType:
+                    continue
                 create_graphe_pydantic_output_type_for_submodel_elements(
                     subtype, union_type=True
                 )
@@ -249,9 +265,11 @@ def create_graphe_pydantic_output_type_for_submodel_elements(
             if not list_contains_any_submodel_element_collections(attribute_value):
                 continue
             for nested_type in typing.get_args(attribute_value):
-                if union_type_check(nested_type):
+                if is_basemodel_union_type(nested_type) or is_optional_type(nested_type):
                     subtypes = typing.get_args(nested_type)
                     for subtype in subtypes:
+                        if subtype is NoneType:
+                            continue
                         create_graphe_pydantic_output_type_for_submodel_elements(
                             subtype, union_type=True
                         )

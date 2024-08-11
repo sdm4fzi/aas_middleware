@@ -175,7 +175,7 @@ def core_model_check(fieldinfo: FieldInfo) -> bool:
             return True
 
 
-def union_type_check(model: Type) -> bool:
+def is_basemodel_union_type(model: Type) -> bool:
     """
     Checks if a type is a union type.
 
@@ -193,6 +193,26 @@ def union_type_check(model: Type) -> bool:
             False
     else:
         return False
+    
+
+def is_optional_type(model: Type) -> bool:
+    """
+    Checks if a type is an optional type.
+
+    Args:
+        model (Type): Type.
+
+    Returns:
+        bool: If the type is an optional type.
+    """
+    if typing.get_origin(model) == typing.Union:
+        args = typing.get_args(model)
+        if any(arg == type(None) for arg in args):
+            return True
+        else:
+            return False
+    else:
+        return False
 
 
 def union_type_field_check(fieldinfo: FieldInfo) -> bool:
@@ -205,7 +225,7 @@ def union_type_field_check(fieldinfo: FieldInfo) -> bool:
     Returns:
         bool: If the model field is a union type.
     """
-    return union_type_check(fieldinfo.annotation)
+    return is_basemodel_union_type(fieldinfo.annotation)
 
 
 def set_required_fields(
