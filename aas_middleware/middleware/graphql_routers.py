@@ -18,7 +18,7 @@ from starlette_graphene3 import (
     make_graphiql_handler,
 )
 
-from aas_middleware.model.formatting.aas.aas_middleware_util import get_all_submodel_elements_from_submodel, get_contained_models_attribute_info, is_basemodel_union_type, is_optional_type
+from aas_middleware.model.formatting.aas.aas_middleware_util import get_all_submodel_elements_from_submodel, get_contained_models_attribute_info, is_basemodel_union_type, is_optional_basemodel_type
 from aas_middleware.model.formatting.aas.aas_model import AAS, Submodel, SubmodelElementCollection
 
 def get_base_query_and_mutation_classes() -> (
@@ -209,13 +209,32 @@ def is_typing_list_or_tuple(input_type: typing.Any) -> bool:
     return typing.get_origin(input_type) == list or typing.get_origin(input_type) == tuple
 
 
+def is_optional_typing_list_or_tuple(input_type: typing.Any) -> bool:
+    """
+    Checks if the given type is an optional typing.List or typing.Tuple.
+
+    Args:
+        input_type (typing.Any): Type to check.
+
+    Returns:
+        bool: True if the given type is an optional typing.List or typing.Tuple, False otherwise.
+    """
+    if not is_optional_basemodel_type(input_type):
+        return False
+    non_optional_type = [t for t in typing.get_args(input_type) if t is not NoneType]
+    return is_typing_list_or_tuple(non_optional_type[0])
+
+
 def list_contains_any_submodel_element_collections(
     input_type: typing.Union[typing.List, typing.Tuple]
 ) -> bool:
-    return any(
-        issubclass(nested_type, SubmodelElementCollection)
-        for nested_type in typing.get_args(input_type)
-    )
+    try:
+        return any(
+            issubclass(nested_type, SubmodelElementCollection)
+            for nested_type in typing.get_args(input_type)
+        )
+    except TypeError:
+        return False
 
 
 def rework_default_list_to_default_factory(model: BaseModel):
@@ -249,7 +268,7 @@ def create_graphe_pydantic_output_type_for_submodel_elements(
     for attribute_value in get_all_submodel_elements_from_submodel(
         model
     ).values():
-        if is_basemodel_union_type(attribute_value) or is_optional_type(attribute_value):
+        if is_basemodel_union_type(attribute_value) or is_optional_basemodel_type(attribute_value):
             subtypes = typing.get_args(attribute_value)
             for subtype in subtypes:
                 if subtype is NoneType:
@@ -261,11 +280,14 @@ def create_graphe_pydantic_output_type_for_submodel_elements(
             attribute_value, SubmodelElementCollection
         ):
             create_graphe_pydantic_output_type_for_submodel_elements(attribute_value)
-        elif is_typing_list_or_tuple(attribute_value):
+        # FIXME: handle optional list here....
+        elif is_typing_list_or_tuple(attribute_value) or is_optional_typing_list_or_tuple(attribute_value):
+            if is_optional_typing_list_or_tuple(attribute_value):
+                attribute_value = [t for t in typing.get_args(attribute_value) if t is not NoneType][0]
             if not list_contains_any_submodel_element_collections(attribute_value):
                 continue
             for nested_type in typing.get_args(attribute_value):
-                if is_basemodel_union_type(nested_type) or is_optional_type(nested_type):
+                if is_basemodel_union_type(nested_type) or is_optional_basemodel_type(nested_type):
                     subtypes = typing.get_args(nested_type)
                     for subtype in subtypes:
                         if subtype is NoneType:

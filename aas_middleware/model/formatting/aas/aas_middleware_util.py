@@ -187,15 +187,18 @@ def is_basemodel_union_type(model: Type) -> bool:
     """
     if typing.get_origin(model) == typing.Union:
         args = typing.get_args(model)
-        if all(issubclass(arg, BaseModel) for arg in args):
-            return True
-        else:
-            False
+        try:
+            if all(arg == type(None) or issubclass(arg, BaseModel) for arg in args):
+                return True
+            else:
+                return False
+        except TypeError:
+            return False
     else:
         return False
     
 
-def is_optional_type(model: Type) -> bool:
+def is_optional_basemodel_type(model: Type) -> bool:
     """
     Checks if a type is an optional type.
 
@@ -207,9 +210,12 @@ def is_optional_type(model: Type) -> bool:
     """
     if typing.get_origin(model) == typing.Union:
         args = typing.get_args(model)
-        if all(arg == type(None) or issubclass(arg, BaseModel) for arg in args):
-            return True
-        else:
+        try:
+            if all(arg == type(None) or issubclass(arg, BaseModel) for arg in args):
+                return True
+            else:
+                return False
+        except TypeError:
             return False
     else:
         return False
