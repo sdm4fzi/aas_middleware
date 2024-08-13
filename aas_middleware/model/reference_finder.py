@@ -3,6 +3,7 @@ from __future__ import annotations
 from types import NoneType
 from typing import Dict, List, Optional, Set, Tuple, Type, Union
 import typing
+from weakref import ref
 from pydantic import BaseModel, ConfigDict
 from enum import Enum
 
@@ -104,7 +105,7 @@ def get_reference_infos(identifiable_map: Dict[str, Identifiable]) -> Set[Refere
     """
     reference_infos = set()
     for model_id, identifiable in identifiable_map.items():
-        reference_infos = reference_infos | get_reference_infos_of_model(model_id, identifiable)
+        reference_infos.update(get_reference_infos_of_model(model_id, identifiable))
     return reference_infos
 
 
@@ -201,7 +202,7 @@ def get_schema_reference_infos(schemas: List[Type[Identifiable]]) -> Set[Referen
     """
     reference_infos = set()
     for schema in schemas:
-        reference_infos = reference_infos | get_reference_infos_of_schema(schema)
+        reference_infos.update(get_reference_infos_of_schema(schema))
     return reference_infos
 
 

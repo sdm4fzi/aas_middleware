@@ -118,7 +118,7 @@ class DataModel(BaseModel):
         Returns:
             Set[str]: The set of ids.
         """
-        return set(str(key) for key in self._key_ids_models.keys())
+        return set(self._key_ids_models.keys())
 
     def get_contained_ids(self) -> Set[str]:
         """
