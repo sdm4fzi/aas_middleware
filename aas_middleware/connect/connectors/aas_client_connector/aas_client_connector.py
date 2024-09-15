@@ -49,7 +49,8 @@ class BasyxAASConnector(Generic[T]):
         pass
 
     async def consume(self, body: Optional[T]) -> None:
-        # TODO: add here logic that aas_id is changed if the body has a different id
+        if body and body.id != self.aas_id:
+            self.aas_id = body.id
         try:
             if not body:
                 await delete_aas_from_server(self.aas_id, self.aas_client)

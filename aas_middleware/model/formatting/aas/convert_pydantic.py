@@ -284,6 +284,8 @@ def create_submodel_element_list(
         value_type_list_element = str
         type_value_list_element = model.Property
 
+    # FIXME: resolve problem with SubmodelElementList that cannot take Enum values...
+    # context=tuple([KPILevelEnum(context.value) for context in kpi.context]),
     sml = model.SubmodelElementList(
         id_short=name,
         type_value_list_element=type_value_list_element,

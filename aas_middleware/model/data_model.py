@@ -316,6 +316,10 @@ class DataModel(BaseModel):
                     break
             else:
                 raise ValueError(f"Type {class_name} not supported.")
+            if not isinstance(attribute_value, list) and not isinstance(attribute_value, dict):
+                raise ValueError(f"Attribute value {attribute_value} not supported.")
+            if not isinstance(attribute_value, list):
+                attribute_value = [attribute_value]
             for model_dict in attribute_value:
                 model = type_for_attribute_values(**model_dict)
                 self.add(model)
