@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict
 from pydantic.fields import FieldInfo
 
 from aas_middleware.model.formatting.aas import aas_model
+from aas_middleware.model.util import convert_camel_case_to_underscrore_str, convert_under_score_to_camel_case_str
 
 
 class AttributeInfo(BaseModel):
@@ -140,7 +141,7 @@ def get_class_name_from_basyx_template(
         str: Class name of the basyx model
     """
     if not item.embedded_data_specifications:
-        return item.id_short
+        return convert_under_score_to_camel_case_str(item.id_short)
     return get_class_name_from_basyx_model(item)
 
 
@@ -183,9 +184,9 @@ def get_attribute_name_from_basyx_model(
 
 def get_attribute_name_from_basyx_template(
         item: typing.Union[
-            model.Submodel, model.SubmodelElementCollection
+            model.AssetAdministrationShell, model.Submodel, model.SubmodelElementCollection
         ],
-        referenced_item_id: str,
+        referenced_item_id_short: str,
 ) -> str:
     """
     Returns the attribute name of the referenced element of the item.
@@ -201,8 +202,8 @@ def get_attribute_name_from_basyx_template(
         str: The attribute name of the referenced item
     """
     if not item.embedded_data_specifications:
-        return item.get_referable(referenced_item_id).id_short
-    return get_attribute_name_from_basyx_model(item, referenced_item_id)
+        return convert_camel_case_to_underscrore_str(referenced_item_id_short)
+    return get_attribute_name_from_basyx_model(item, referenced_item_id_short)
     
 
 

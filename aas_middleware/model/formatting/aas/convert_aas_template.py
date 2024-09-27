@@ -28,16 +28,18 @@ def convert_object_store_to_pydantic_types(
         typing.List[aas_model.AAS]: List of pydantic models
     """
     pydantic_submodel_types: typing.List[aas_model.Submodel] = []
+    submodels_pydantic_type_mapping = {}
     for identifiable in obj_store:
         if isinstance(identifiable, model.Submodel):
             pydantic_submodel = convert_submodel_template_to_pydatic_type(identifiable)
             pydantic_submodel_types.append(pydantic_submodel)
+            submodels_pydantic_type_mapping[identifiable.id] = (pydantic_submodel, identifiable)
 
     pydantic_aas_list: typing.List[type[aas_model.AAS]] = []
     for identifiable in obj_store:
         if isinstance(identifiable, model.AssetAdministrationShell):
             pydantic_aas = convert_aas_to_pydantic_type(
-                identifiable, pydantic_submodel_types
+                identifiable, submodels_pydantic_type_mapping
             )
             pydantic_aas_list.append(pydantic_aas)
 
@@ -46,7 +48,7 @@ def convert_object_store_to_pydantic_types(
 
 def convert_aas_to_pydantic_type(
     aas: model.AssetAdministrationShell,
-    pydantic_submodel_types: typing.List[aas_model.Submodel],
+    pydantic_submodel_types: typing.Dict[str, typing.Tuple[type[aas_model.Submodel], model.Submodel]],
 ) -> type[aas_model.AAS]:
     """
     Converts an AAS to a Pydantic model.
@@ -61,17 +63,15 @@ def convert_aas_to_pydantic_type(
     dict_dynamic_model_creation = get_initial_dict_for_dynamic_model_creation(aas)
     aas_submodel_ids = [sm.get_identifier() for sm in aas.submodel]
 
-    for sm in pydantic_submodel_types:
-        # if not sm.id in aas_submodel_ids:
-        #     continue
-        # FIXME: combine here the pydantic types from submodel templates with instance information
+    for submodel_id in aas_submodel_ids:
+        pydantic_submodel_type, basyx_submodel = pydantic_submodel_types[submodel_id]
         attribute_name_of_submodel = convert_util.get_attribute_name_from_basyx_template(
-            aas, sm.id
+            aas, basyx_submodel.id_short
         )
         dict_dynamic_model_creation.update(
             {
                 attribute_name_of_submodel: typing.Annotated[
-                    type(sm), Field(examples=[sm])
+                    pydantic_submodel_type, Field(examples=[])
                 ]
             }
         )
