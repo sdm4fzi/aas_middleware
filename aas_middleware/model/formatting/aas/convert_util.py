@@ -1,15 +1,26 @@
 import json
-from typing import Dict, Union
+from typing import Any, Dict, List, Union
 from basyx.aas import model
 
 import typing
 
+from pydantic import BaseModel, ConfigDict
+from pydantic.fields import FieldInfo
+
 from aas_middleware.model.formatting.aas import aas_model
 
 
-def get_attribute_dict(
+class AttributeInfo(BaseModel):
+    name: str
+    field_info: FieldInfo
+    value: Any
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+
+def get_attribute_infos(
     obj: Union[aas_model.AAS, aas_model.Submodel, aas_model.SubmodelElementCollection]
-) -> Dict[str, Union[aas_model.Submodel, aas_model.SubmodelElement]]:
+) -> List[AttributeInfo]:
     """
     Returns a dictionary of all attributes of an object that are not None, do not start with an underscore and are not standard attributes of the aas object.
 
@@ -17,16 +28,19 @@ def get_attribute_dict(
         obj (Union[aas_model.AAS, aas_model.Submodel, aas_model.SubmodelElementCollection]): Object to get the attributes from
 
     Returns:
-        Dict[str, Union[aas_model.Submodel, aas_model.SubmodelElement]]: Dictionary of all attributes of the object and their respective values
+        List[AttributeInfo]: List of attributes of the object
     """
-    vars_dict = vars(obj)
-    vars_dict = {key: value for key, value in vars_dict.items() if key[0] != "_"}
-    vars_dict = {key: value for key, value in vars_dict.items() if value is not None}
-    vars_dict = {key: value for key, value in vars_dict.items() if key != "id"}
-    vars_dict = {key: value for key, value in vars_dict.items() if key != "description"}
-    vars_dict = {key: value for key, value in vars_dict.items() if key != "id_short"}
-    vars_dict = {key: value for key, value in vars_dict.items() if key != "semantic_id"}
-    return vars_dict
+    attribute_infos = []
+    for attribute_name, field_info in obj.model_fields.items():
+        if attribute_name in ["id", "description", "id_short", "semantic_id"]:
+            continue
+        if attribute_name.startswith("_"):
+            continue
+        attribute_value = getattr(obj, attribute_name)
+        attribute_infos.append(
+            AttributeInfo(name=attribute_name, field_info=field_info, value=attribute_value)
+        )
+    return attribute_infos
 
 
 def get_str_description(langstring_set: model.LangStringSet) -> str:
@@ -39,7 +53,6 @@ def get_str_description(langstring_set: model.LangStringSet) -> str:
     """
     if not langstring_set:
         return ""
-    dict_description = {}
     if "en" in langstring_set:
         return str(langstring_set.get("en"))
     elif "ger" in langstring_set:
@@ -109,6 +122,27 @@ def get_class_name_from_basyx_model(
         f"No class name found in item with id {item.id_short} and type {type(item)}"
     )
 
+def get_class_name_from_basyx_template(
+    item: typing.Union[
+        model.Submodel, model.SubmodelElementCollection
+    ]
+) -> str:
+    """
+    Returns the class name of an basyx model from the data specifications.
+
+    Args:
+        item (model.HasDataSpecification): Basyx model to get the class name from
+
+    Raises:
+        ValueError: If no data specifications are found in the item or if no class name is found
+
+    Returns:
+        str: Class name of the basyx model
+    """
+    if not item.embedded_data_specifications:
+        return item.id_short
+    return get_class_name_from_basyx_model(item)
+
 
 def get_attribute_name_from_basyx_model(
     item: typing.Union[
@@ -145,6 +179,31 @@ def get_attribute_name_from_basyx_model(
     raise ValueError(
         f"Attribute reference to {referenced_item_id} could not be found in {item.id_short} of type {type(item)}"
     )
+
+
+def get_attribute_name_from_basyx_template(
+        item: typing.Union[
+            model.Submodel, model.SubmodelElementCollection
+        ],
+        referenced_item_id: str,
+) -> str:
+    """
+    Returns the attribute name of the referenced element of the item.
+
+    Args:
+        item (typing.Union[model.AssetAdministrationShell, model.Submodel, model.SubmodelElementCollection]): The container of the refernced item
+        referenced_item_id (str): The id of the referenced item
+
+    Raises:
+        ValueError: If not data specifications are found in the item or if no attribute name is found
+
+    Returns:
+        str: The attribute name of the referenced item
+    """
+    if not item.embedded_data_specifications:
+        return item.get_referable(referenced_item_id).id_short
+    return get_attribute_name_from_basyx_model(item, referenced_item_id)
+    
 
 
 def is_attribute_from_basyx_model_immutable(
@@ -213,43 +272,65 @@ def get_data_specification_for_model(
 
 
 def get_data_specification_for_attribute(
-    attribute_name: str, attribute_id: str, attribute_value: typing.Any
+    attribute_info: AttributeInfo, basyx_attribute: Any
 ) -> typing.List[model.EmbeddedDataSpecification]:
-    if isinstance(attribute_value, tuple):
+    if isinstance(attribute_info.value, tuple):
         immutable = "true"
     else:
         immutable = "false"
+    if typing.get_origin(attribute_info.field_info.annotation) is Union and type(None) in typing.get_args(
+        attribute_info.field_info.annotation
+    ):
+        optional = "true"
+    else:
+        optional = "false"
+    if basyx_attribute is None:
+        model_keys = (
+            model.Key(
+                type_=model.KeyTypes.GLOBAL_REFERENCE,
+                value="null",
+            ),
+        )
+    else:
+        if hasattr(basyx_attribute, "id"):
+            attribute_id = basyx_attribute.id	
+        else:
+            attribute_id = basyx_attribute.id_short
+        model_keys = (
+            model.Key(
+                type_=model.KeyTypes.GLOBAL_REFERENCE,
+                value=attribute_id,
+            ),
+        )
+
+    
     return [model.EmbeddedDataSpecification(
         data_specification=model.ExternalReference(
-            key=(
-                model.Key(
-                    type_=model.KeyTypes.GLOBAL_REFERENCE,
-                    value=attribute_id,
-                ),
-            ),
+            key=model_keys,
         ),
         data_specification_content=model.DataSpecificationIEC61360(
             preferred_name=model.LangStringSet({"en": "attribute"}),
-            value=attribute_name,
+            value=attribute_info.name,
         ),
     ),
     model.EmbeddedDataSpecification(
         data_specification=model.ExternalReference(
-            key=(
-                model.Key(
-                    type_=model.KeyTypes.GLOBAL_REFERENCE,
-                    value=attribute_id,
-                ),
-            ),
+            key=model_keys,
         ),
         data_specification_content=model.DataSpecificationIEC61360(
             preferred_name=model.LangStringSet({"en": "immutable"}),
             value=immutable,
         ),
+    ),
+    model.EmbeddedDataSpecification(
+        data_specification=model.ExternalReference(
+            key=model_keys,
+        ),
+        data_specification_content=model.DataSpecificationIEC61360(
+            preferred_name=model.LangStringSet({"en": "optional"}),
+            value=optional,
+        ),
     )
-    
-    
-    
     ]
 
 

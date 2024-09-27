@@ -5,7 +5,7 @@ from typing import Annotated, Any, Callable, List, Self, Union
 import typing
 
 from basyx.aas.model import AssetAdministrationShell, DictObjectStore, Submodel
-from pydantic import BaseModel, BeforeValidator, ValidationError, model_validator
+from pydantic import BaseModel, BeforeValidator, ConfigDict, ValidationError, model_validator
 
 
 BasyxModels = AssetAdministrationShell | Submodel | DictObjectStore
@@ -31,7 +31,6 @@ class Referable(BaseModel):
 
     id_short: AasIdString
     description: str = ""
-
 
 class Identifiable(Referable):
     """

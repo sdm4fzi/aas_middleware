@@ -1,3 +1,4 @@
+import json
 import typing
 import aas_middleware
 
@@ -17,8 +18,9 @@ class ProcessModel(aas_middleware.Submodel):
 
 class Product(aas_middleware.AAS):
     bill_of_material: BillOfMaterial
-    process_model: ProcessModel
+    process_model: typing.Optional[ProcessModel]
 
+# FIXME: save json schema in data specifications.... not with the class name attribute name hack -> is not working for optional types or unions....
 
 example_product = Product(
     id="example_product_id",
@@ -37,12 +39,12 @@ example_product = Product(
             product_type="Example Product Type",
         ),
     ),
-    process_model=ProcessModel(
-        id="example_process_model_id",
-        id_short="example_process_model_id",
-        description="Example Process Model",
-        processes=["process_1", "process_2"],
-    ),
+    # process_model=ProcessModel(
+    #     id="example_process_model_id",
+    #     id_short="example_process_model_id",
+    #     description="Example Process Model",
+    #     processes=["process_1", "process_2"],
+    # ),
 )
 
 data_model = aas_middleware.DataModel.from_models(example_product)
@@ -51,8 +53,8 @@ data_model = aas_middleware.DataModel.from_models(example_product)
 basyx_object_store = aas_middleware.formatting.BasyxFormatter().serialize(data_model)
 
 json_aas = aas_middleware.formatting.AasJsonFormatter().serialize(data_model)
-# print(json_aas)
-
+with open("example_aas.json", "w") as f:
+    f.write(json.dumps(json_aas, indent=4))
 reformatted_data_model = aas_middleware.formatting.AasJsonFormatter().deserialize(json_aas)
 print(reformatted_data_model.get_model("example_product_id"))
 
@@ -108,5 +110,5 @@ if __name__ == "__main__":
     import uvicorn
 
 
-    uvicorn.run("minimal_example:middleware.app", reload=True)
-    # uvicorn.run(middleware.app)
+    # uvicorn.run("minimal_example:middleware.app", reload=True)
+    uvicorn.run(middleware.app)
