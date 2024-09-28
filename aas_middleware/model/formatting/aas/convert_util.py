@@ -1,9 +1,11 @@
+import datetime
 import json
 from typing import Any, Dict, List, Union
 from basyx.aas import model
 
 import typing
 
+from basyx.aas.model import datatypes
 from pydantic import BaseModel, ConfigDict
 from pydantic.fields import FieldInfo
 
@@ -448,3 +450,78 @@ def get_semantic_id_value_of_model(
     if not basyx_model.semantic_id:
         return ""
     return basyx_model.semantic_id.key[0].value
+
+
+def convert_xsdtype_to_primitive_type(xsd_data_type: model.DataTypeDefXsd) -> aas_model.PrimitiveSubmodelElement:
+    if xsd_data_type == datatypes.Duration:
+        return str
+    elif xsd_data_type == datatypes.DateTime:
+        return datetime.datetime
+    elif xsd_data_type == datatypes.Date:
+        return datetime.datetime
+    elif xsd_data_type == datatypes.Time:
+        return datetime.time
+    # TODO: implement GyearMonth, GYer, GMonthDay, GDay, GMonth
+    elif xsd_data_type == datatypes.Boolean:
+        return bool
+    elif xsd_data_type == datatypes.Base64Binary:
+        return bytes
+    elif xsd_data_type == datatypes.HexBinary:
+        return bytes
+    elif xsd_data_type == datatypes.Float:
+        return float
+    elif xsd_data_type == datatypes.Double:
+        return float
+    elif xsd_data_type == datatypes.Decimal:
+        return float
+    elif xsd_data_type == datatypes.Integer:
+        return int
+    elif xsd_data_type == datatypes.Long:
+        return int
+    elif xsd_data_type == datatypes.Int:
+        return int
+    elif xsd_data_type == datatypes.Short:
+        return int
+    elif xsd_data_type == datatypes.Byte:
+        return int
+    elif xsd_data_type == datatypes.NonPositiveInteger:
+        return int
+    elif xsd_data_type == datatypes.NegativeInteger:
+        return int
+    elif xsd_data_type == datatypes.NonNegativeInteger:
+        return int
+    elif xsd_data_type == datatypes.PositiveInteger:
+        return  int
+    elif xsd_data_type == datatypes.UnsignedLong:
+        return int
+    elif xsd_data_type == datatypes.UnsignedInt:
+        return int
+    elif xsd_data_type == datatypes.UnsignedShort:
+        return int
+    elif xsd_data_type == datatypes.UnsignedByte:
+        return int
+    elif xsd_data_type == datatypes.AnyURI:
+        return str
+    elif xsd_data_type == datatypes.String:
+        return str
+    elif xsd_data_type == datatypes.NormalizedString:
+        return str
+
+
+def convert_primitive_type_to_xsdtype(primitive_type: aas_model.PrimitiveSubmodelElement) -> model.DataTypeDefXsd:
+    if primitive_type == str:
+        return datatypes.String
+    elif primitive_type == datetime.datetime:
+        return datatypes.DateTime
+    elif primitive_type == datetime.time:
+        return datatypes.Time
+    elif primitive_type == bool:
+        return datatypes.Boolean
+    elif primitive_type == bytes:
+        return datatypes.Base64Binary
+    elif primitive_type == float:
+        return datatypes.Double
+    elif primitive_type == int:
+        return datatypes.Integer
+    else:
+        raise NotImplementedError("Type not implemented:", primitive_type)

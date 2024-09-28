@@ -17,11 +17,9 @@ from aas_middleware.model.data_model_rebuilder import DataModelRebuilder
 from aas_middleware.model.formatting.aas import convert_util, aas_model
 
 from aas_middleware.model.formatting.aas.convert_util import (
+    convert_primitive_type_to_xsdtype,
     get_attribute_field_infos,
-    get_id_short,
-    get_semantic_id,
     get_template_id,
-    get_value_type_of_attribute,
 )
 
 import basyx.aas.adapter.json.json_serialization
@@ -165,8 +163,7 @@ def create_submodel_element_template(
     """
     if not attribute_type:
         return
-    # FIXME: check how Union or Optional types can be handled...
-    print(attribute_type)
+    # FIXME: check how Union or Optional types can be handled... make it similar to the logic of submodel templates from idta
     if typing.get_origin(attribute_type) == Optional:
         raise NotImplementedError(
             "Optional types are not supported for SubmodelElement creation"
@@ -215,7 +212,7 @@ def create_property(
 
     property = model.Property(
         id_short=attribute_name,
-        value_type=attribute_type,
+        value_type=convert_primitive_type_to_xsdtype(attribute_type),
         value=None,
     )
     return property
@@ -262,7 +259,7 @@ def patch_id_short_with_temp_attribute(
     """
     temp_id_short_property = model.Property(
         id_short="temp_id_short_attribute_" + uuid.uuid4().hex,
-        value_type=get_value_type_of_attribute(str),
+        value_type=convert_primitive_type_to_xsdtype(str),
         value=submodel_element_collection.id_short,
     )
     submodel_element_collection.value.add(temp_id_short_property)
@@ -300,7 +297,7 @@ def create_submodel_element_list(
         value_type_list_element = None
         type_value_list_element = type(submodel_elements[0])
     else:
-        value_type_list_element = str
+        value_type_list_element = convert_primitive_type_to_xsdtype(str)
         type_value_list_element = model.Property
 
     # FIXME: resolve problem with SubmodelElementList that cannot take Enum values...

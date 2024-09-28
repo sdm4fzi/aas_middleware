@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import datetime
+import logging
 import typing
 from pydantic import BaseModel, Field, create_model
 
@@ -11,6 +11,7 @@ from basyx.aas import model
 
 from aas_middleware.model.formatting.aas import convert_util
 from aas_middleware.model.formatting.aas.convert_util import (
+    convert_xsdtype_to_primitive_type,
     get_semantic_id_value_of_model,
 )
 
@@ -68,6 +69,11 @@ def convert_aas_to_pydantic_type(
         attribute_name_of_submodel = convert_util.get_attribute_name_from_basyx_template(
             aas, basyx_submodel.id_short
         )
+        if pydantic_submodel_type is None:
+            logging.warning(
+                f"Could not convert submodel {submodel_id} to Pydantic model. Skipping."
+            )
+            continue
         dict_dynamic_model_creation.update(
             {
                 attribute_name_of_submodel: typing.Annotated[
@@ -105,8 +111,10 @@ def get_submodel_element_type(
     elif isinstance(sm_element, model.MultiLanguageProperty):
         return convert_multi_language_property_to_pydantic_model(sm_element)
     elif isinstance(sm_element, model.File):
+        # TODO: handle files in the future
         print(f"file with id {sm_element.id_short} and value: {sm_element.value}")
     elif isinstance(sm_element, model.Blob):
+        # TODO: handle blobs in the future
         print(f"blob with id {sm_element.id_short} and value: {sm_element.value}")
     else:
         raise NotImplementedError("Type not implemented:", type(sm_element))
@@ -205,6 +213,11 @@ def convert_submodel_template_to_pydatic_type(sm: model.Submodel) -> type[aas_mo
             sm, sm_element.id_short
         )
         attribute_type = get_submodel_element_type(sm_element)
+        if attribute_type is None:
+            logging.warning(
+                f"Could not convert submodel element {attribute_name} to Pydantic model. Skipping."
+            )
+            continue
         sme_model_creation_dict = get_dynamic_model_creation_dict_from_submodel_element(
             attribute_name, attribute_type
         )
@@ -237,6 +250,11 @@ def convert_submodel_collection_to_pydantic_model(
             sm_element, sub_sm_element.id_short
         )
         attribute_type = get_submodel_element_type(sub_sm_element)
+        if attribute_type is None:
+            logging.warning(
+                f"Could not convert submodel element {attribute_name} to Pydantic model. Skipping."
+            )
+            continue
         dict_sme = get_dynamic_model_creation_dict_from_submodel_element(
             attribute_name, attribute_type
         )
@@ -333,7 +351,6 @@ def convert_reference_element_to_pydantic_model(
     """
     return Reference
 
-from basyx.aas.model import datatypes
 
 def convert_relationship_element_to_pydantic_model(
     sm_element: model.RelationshipElement,
@@ -342,64 +359,6 @@ def convert_relationship_element_to_pydantic_model(
     Converts a RelationshipElement to a Pydantic model.
     """
     return typing.Tuple[Reference, Reference]
-
-def convert_xsdtype_to_primitive_type(xsd_data_type: model.DataTypeDefXsd) -> aas_model.PrimitiveSubmodelElement:
-    if xsd_data_type == datatypes.Duration:
-        return str
-    elif xsd_data_type == datatypes.DateTime:
-        return datetime.datetime
-    elif xsd_data_type == datatypes.Date:
-        return datetime.datetime
-    elif xsd_data_type == datatypes.Time:
-        return datetime.time
-    # TODO: implement GyearMonth, GYer, GMonthDay, GDay, GMonth
-    elif xsd_data_type == datatypes.Boolean:
-        return bool
-    elif xsd_data_type == datatypes.Base64Binary:
-        return bytes
-    elif xsd_data_type == datatypes.HexBinary:
-        return bytes
-    elif xsd_data_type == datatypes.Float:
-        return float
-    elif xsd_data_type == datatypes.Double:
-        return float
-    elif xsd_data_type == datatypes.Decimal:
-        return float
-    elif xsd_data_type == datatypes.Integer:
-        return int
-    elif xsd_data_type == datatypes.Long:
-        return int
-    elif xsd_data_type == datatypes.Int:
-        return int
-    elif xsd_data_type == datatypes.Short:
-        return int
-    elif xsd_data_type == datatypes.Byte:
-        return int
-    elif xsd_data_type == datatypes.NonPositiveInteger:
-        return int
-    elif xsd_data_type == datatypes.NegativeInteger:
-        return int
-    elif xsd_data_type == datatypes.NonNegativeInteger:
-        return int
-    elif xsd_data_type == datatypes.PositiveInteger:
-        return  int
-    elif xsd_data_type == datatypes.UnsignedLong:
-        return int
-    elif xsd_data_type == datatypes.UnsignedInt:
-        return int
-    elif xsd_data_type == datatypes.UnsignedShort:
-        return int
-    elif xsd_data_type == datatypes.UnsignedByte:
-        return int
-    elif xsd_data_type == datatypes.AnyURI:
-        return str
-    elif xsd_data_type == datatypes.String:
-        return str
-    elif xsd_data_type == datatypes.NormalizedString:
-        return str
-    
-    
-
 
 def convert_property_to_pydantic_model(
     sm_element: model.Property,
