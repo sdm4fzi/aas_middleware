@@ -1,0 +1,164 @@
+{
+    "$defs": {
+        "AssetInterfacesMappingConfiguration": {
+            "properties": {
+                "id_short": {
+                    "examples": [
+                        "AssetInterfacesMappingConfiguration"
+                    ],
+                    "title": "Id Short",
+                    "type": "string"
+                },
+                "description": {
+                    "examples": [
+                        "Submodel with id AssetInterfacesMappingConfiguration that contains submodel elements"
+                    ],
+                    "title": "Description",
+                    "type": "string"
+                },
+                "id": {
+                    "examples": [
+                        "AssetInterfacesMappingConfiguration"
+                    ],
+                    "title": "Id",
+                    "type": "string"
+                },
+                "semantic_id": {
+                    "examples": [
+                        ""
+                    ],
+                    "title": "Semantic Id",
+                    "type": "string"
+                },
+                "mapping_configurations": {
+                    "examples": [],
+                    "items": {
+                        "$ref": "#/$defs/MappingConfigurations"
+                    },
+                    "title": "Mapping Configurations",
+                    "type": "array"
+                }
+            },
+            "required": [
+                "id_short",
+                "description",
+                "id",
+                "semantic_id",
+                "mapping_configurations"
+            ],
+            "title": "AssetInterfacesMappingConfiguration",
+            "type": "object"
+        },
+        "MappingConfigurations": {
+            "properties": {
+                "id_short": {
+                    "examples": [
+                        "MappingConfigurations"
+                    ],
+                    "title": "Id Short",
+                    "type": "string"
+                },
+                "description": {
+                    "examples": [
+                        ""
+                    ],
+                    "title": "Description",
+                    "type": "string"
+                },
+                "semantic_id": {
+                    "examples": [
+                        ""
+                    ],
+                    "title": "Semantic Id",
+                    "type": "string"
+                },
+                "interface_reference": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "integer"
+                        },
+                        {
+                            "format": "uuid",
+                            "type": "string"
+                        }
+                    ],
+                    "examples": [],
+                    "title": "Interface Reference"
+                },
+                "mapping_source_sink_relations": {
+                    "examples": [],
+                    "items": {
+                        "items": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "integer"
+                                },
+                                {
+                                    "format": "uuid",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "type": "array"
+                    },
+                    "title": "Mapping Source Sink Relations",
+                    "type": "array"
+                }
+            },
+            "required": [
+                "id_short",
+                "description",
+                "semantic_id",
+                "interface_reference",
+                "mapping_source_sink_relations"
+            ],
+            "title": "MappingConfigurations",
+            "type": "object"
+        }
+    },
+    "properties": {
+        "id_short": {
+            "examples": [
+                "AssetInterfaceMappingConfigurationAAS"
+            ],
+            "title": "Id Short",
+            "type": "string"
+        },
+        "description": {
+            "examples": [
+                "Type aas with id AssetInterfaceMappingConfigurationAAS that contains submodel templates"
+            ],
+            "title": "Description",
+            "type": "string"
+        },
+        "id": {
+            "examples": [
+                "AssetInterfaceMappingConfigurationAAS"
+            ],
+            "title": "Id",
+            "type": "string"
+        },
+        "asset_interfaces_mapping_configuration": {
+            "allOf": [
+                {
+                    "$ref": "#/$defs/AssetInterfacesMappingConfiguration"
+                }
+            ],
+            "examples": []
+        }
+    },
+    "required": [
+        "id_short",
+        "description",
+        "id",
+        "asset_interfaces_mapping_configuration"
+    ],
+    "title": "AssetInterfaceMappingConfigurationAAS",
+    "type": "object"
+}

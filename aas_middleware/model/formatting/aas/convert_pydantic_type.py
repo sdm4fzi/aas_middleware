@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import typing
 from urllib import parse
 from enum import Enum
 import uuid
@@ -8,16 +9,18 @@ import uuid
 
 from basyx.aas import model
 
-from typing import List, Optional, Tuple, Union
+from typing import Any, List, Optional, Set, Tuple, Union
 from pydantic import BaseModel, ConfigDict
+from aas_middleware.model.core import Reference
 from aas_middleware.model.data_model import DataModel
 from aas_middleware.model.data_model_rebuilder import DataModelRebuilder
 from aas_middleware.model.formatting.aas import convert_util, aas_model
 
 from aas_middleware.model.formatting.aas.convert_util import (
-    get_attribute_infos,
+    get_attribute_field_infos,
     get_id_short,
     get_semantic_id,
+    get_template_id,
     get_value_type_of_attribute,
 )
 
@@ -62,23 +65,23 @@ def infere_aas_structure(
     return aas_models, submodel_models
 
 
-def convert_model_to_aas(
-    model_aas: aas_model.AAS,
+def convert_model_to_aas_template(
+    model_type: type[aas_model.AAS],
 ) -> model.DictObjectStore[model.Identifiable]:
     """
     Convert a model aas to an Basyx AssetAdministrationShell and return it as a DictObjectStore with all Submodels
 
     Args:
-        model_aas (aas_model.AAS): model aas to convert
+        model_type (type[aas_model.AAS]): Type of the model
 
     Returns:
         model.DictObjectStore[model.Identifiable]: DictObjectStore with all Submodels
     """
-    aas_attribute_infos = get_attribute_infos(model_aas)
+    aas_attribute_infos = get_attribute_field_infos(model_type)
     aas_submodels = []
     aas_submodel_data_specifications = []
     for attribute_info in aas_attribute_infos:
-        submodel = convert_model_to_submodel(model_submodel=attribute_info.value)        
+        submodel = convert_model_to_submodel_template(model_type=attribute_info.field_info.annotation)        
         attribute_data_specifications = convert_util.get_data_specification_for_attribute(
                 attribute_info, submodel
         )
@@ -88,18 +91,20 @@ def convert_model_to_aas(
 
 
     asset_information = model.AssetInformation(
-        global_asset_id=model.Identifier(model_aas.id),
+        asset_kind=model.AssetKind.TYPE,
+        asset_type="Type",
+        global_asset_id=model.Identifier(get_template_id(model_type)),
     )
 
     basyx_aas = model.AssetAdministrationShell(
         asset_information=asset_information,
-        id_short=get_id_short(model_aas),
-        id_=model.Identifier(model_aas.id),
-        description=convert_util.get_basyx_description_from_model(model_aas),
+        id_short=get_template_id(model_type),
+        id_=model.Identifier(get_template_id(model_type)),
+        description={"en": f"Type aas with id {get_template_id(model_type)} that contains submodel templates"},
         submodel={
             model.ModelReference.from_referable(submodel) for submodel in aas_submodels
         },
-        embedded_data_specifications=convert_util.get_data_specification_for_model(model_aas) + aas_submodel_data_specifications,
+        embedded_data_specifications=convert_util.get_data_specification_for_model_template(model_type) + aas_submodel_data_specifications,
     )
     obj_store: model.DictObjectStore[model.Identifiable] = model.DictObjectStore()
     obj_store.add(basyx_aas)
@@ -108,18 +113,18 @@ def convert_model_to_aas(
     return obj_store
 
 
-def convert_model_to_submodel(
-    model_submodel: aas_model.Submodel,
+def convert_model_to_submodel_template(
+    model_type: type[aas_model.Submodel],
 ) -> Optional[model.Submodel]:
-    if not model_submodel:
+    if not model_type:
         return
-    submodel_attributes = get_attribute_infos(model_submodel)
+    submodel_attributes = get_attribute_field_infos(model_type)
     submodel_elements = []
     submodel_element_data_specifications = []
 
     for attribute_info in submodel_attributes:
-        submodel_element = create_submodel_element(
-            attribute_info.name, attribute_info.value
+        submodel_element = create_submodel_element_template(
+            attribute_info.name, attribute_info.field_info.annotation
         )
         attribute_data_specifications = convert_util.get_data_specification_for_attribute(
                 attribute_info, submodel_element
@@ -129,21 +134,22 @@ def convert_model_to_submodel(
             submodel_elements.append(submodel_element)
 
     basyx_submodel = model.Submodel(
-        id_short=get_id_short(model_submodel),
-        id_=model.Identifier(model_submodel.id),
-        description=convert_util.get_basyx_description_from_model(model_submodel),
-        embedded_data_specifications=convert_util.get_data_specification_for_model(model_submodel)
+        id_short=get_template_id(model_type),
+        id_=model.Identifier(get_template_id(model_type)),
+        # descriptionconvert_util.get_basyx_description_from_model(model_type)=convert_util.get_basyx_description_from_model(model_type),
+        description={"en": f"Submodel with id {get_template_id(model_type)} that contains submodel elements"},
+        embedded_data_specifications=convert_util.get_data_specification_for_model_template(model_type)
         + submodel_element_data_specifications,
-        semantic_id=get_semantic_id(model_submodel),
+        semantic_id="",
         submodel_element=submodel_elements,
     )
     return basyx_submodel
 
 
-def create_submodel_element(
+def create_submodel_element_template(
     attribute_name: str,
-    attribute_value: Union[
-        aas_model.SubmodelElementCollection, str, float, int, bool, tuple, list, set
+    attribute_type: Union[
+        type[aas_model.SubmodelElementCollection], type[str], type[float], type[int], type[bool], type[tuple], type[list], type[set]
     ],
 ) -> Optional[model.SubmodelElement]:
     """
@@ -151,40 +157,39 @@ def create_submodel_element(
 
     Args:
         attribute_name (str): Name of the attribute that is used for ID and id_short
-        attribute_value (Union[ aas_model.SubmodelElementCollection, str, float, int, bool, tuple, list, set ]): Value of the attribute
+        attribute_type (Union[type[aas_model.SubmodelElementCollection], type[str], type[float], type[int], type[bool], type[tuple], type[list], type[set]): Type of the attribute
 
 
     Returns:
         model.SubmodelElement: basyx SubmodelElement
     """
-    if not attribute_value:
+    if not attribute_type:
         return
-    if isinstance(attribute_value, aas_model.SubmodelElementCollection):
-        smc = create_submodel_element_collection(attribute_value)
-        return smc
-    elif isinstance(attribute_value, list):
-        sml = create_submodel_element_list(attribute_name, attribute_value)
+    # FIXME: check how Union or Optional types can be handled...
+    print(attribute_type)
+    if typing.get_origin(attribute_type) == Optional:
+        raise NotImplementedError(
+            "Optional types are not supported for SubmodelElement creation"
+        )
+    if typing.get_origin(attribute_type) == Union:
+        raise NotImplementedError(
+            "Union types are not supported for SubmodelElement creation"
+        )
+    if typing.get_origin(attribute_type) == list:
+        sml = create_submodel_element_list(attribute_name, attribute_type)
         return sml
-    elif isinstance(attribute_value, tuple):
-        attribute_value_as_list = list(attribute_value)
-        sml = create_submodel_element_list(attribute_name, attribute_value_as_list)
+    elif typing.get_origin(attribute_type) == tuple:
+        sml = create_submodel_element_list(attribute_name, attribute_type)
         return sml
-    elif isinstance(attribute_value, set):
-        attribute_value_as_list = list(attribute_value)	
+    elif typing.get_origin(attribute_type) == set:
         sml = create_submodel_element_list(
-            attribute_name, attribute_value_as_list, ordered=False
+            attribute_name, attribute_type, ordered=False
         )
         return sml
-    elif (isinstance(attribute_value, str)) and (
-        (
-            parse.urlparse(attribute_value).scheme
-            and parse.urlparse(attribute_value).netloc
-        )
-        or (attribute_value.split("_")[-1] in ["id", "ids"])
-    ):
+    elif attribute_type == Reference:
         key = model.Key(
             type_=model.KeyTypes.ASSET_ADMINISTRATION_SHELL,
-            value=attribute_value,
+            value=get_template_id(attribute_type),
         )
         reference = model.ModelReference(key=(key,), type_="")
         reference_element = model.ReferenceElement(
@@ -192,36 +197,39 @@ def create_submodel_element(
             value=reference,
         )
         return reference_element
+    elif issubclass(attribute_type, aas_model.SubmodelElementCollection):
+        smc = create_submodel_element_collection(attribute_type)
+        return smc
     else:
-        property = create_property(attribute_name, attribute_value)
+        property = create_property(attribute_name, attribute_type)
 
         return property
 
 
 def create_property(
     attribute_name: str,
-    attribute_value: Union[str, int, float, bool],
+    attribute_type: Union[type[str], type[float], type[int], type[bool]],
 ) -> model.Property:
-    if isinstance(attribute_value, Enum):
-        attribute_value = attribute_value.value
+    if issubclass(attribute_type, Enum):
+        attribute_type = str
 
     property = model.Property(
         id_short=attribute_name,
-        value_type=get_value_type_of_attribute(attribute_value),
-        value=attribute_value,
+        value_type=attribute_type,
+        value=None,
     )
     return property
 
 
 def create_submodel_element_collection(
-    model_sec: aas_model.SubmodelElementCollection,
+    model_sec: type[aas_model.SubmodelElementCollection],
 ) -> model.SubmodelElementCollection:
     value = []
-    smc_attributes = get_attribute_infos(model_sec)
+    smc_attributes = get_attribute_field_infos(model_sec)
     submodel_element_data_specifications = []
 
     for attribute_info in smc_attributes:
-        sme = create_submodel_element(attribute_info.name, attribute_info.value)
+        sme = create_submodel_element_template(attribute_info.name, attribute_info.field_info.annotation)
         attribute_data_specifications = (
             convert_util.get_data_specification_for_attribute(
                 attribute_info, sme
@@ -231,14 +239,15 @@ def create_submodel_element_collection(
         if sme:
             value.append(sme)
 
-    id_short = get_id_short(model_sec)
+    id_short = get_template_id(model_sec)
 
     smc = model.SubmodelElementCollection(
         id_short=id_short,
         value=value,
-        description=convert_util.get_basyx_description_from_model(model_sec),
-        embedded_data_specifications=convert_util.get_data_specification_for_model(model_sec) + submodel_element_data_specifications,
-        semantic_id=get_semantic_id(model_sec),
+        # description=convert_util.get_basyx_description_from_model(model_sec),
+        description={"en": f"Submodel element collection with id {id_short} that contains submodel elements"},
+        embedded_data_specifications=convert_util.get_data_specification_for_model_template(model_sec) + submodel_element_data_specifications,
+        semantic_id="",
     )
     return smc
 
@@ -262,12 +271,13 @@ def patch_id_short_with_temp_attribute(
 
     
 def create_submodel_element_list(
-    name: str, value: list | tuple | set, ordered=True
+    name: str, attribute_type: Union[type[tuple], type[list], type[set]],
+    ordered=True
 ) -> model.SubmodelElementList:
     submodel_elements = []
     submodel_element_ids = set()
-    for el in value:
-        submodel_element = create_submodel_element(name, el)
+    for el in typing.get_args(attribute_type):
+        submodel_element = create_submodel_element_template(name, el)
         if isinstance(submodel_element, model.SubmodelElementCollection):
             if submodel_element.id_short in submodel_element_ids:
                 raise ValueError(
@@ -279,10 +289,13 @@ def create_submodel_element_list(
         submodel_elements.append(submodel_element)
 
     if submodel_elements and isinstance(submodel_elements[0], model.Property):
-        value_type_list_element = type(value[0])
+        if len(typing.get_args(attribute_type)) > 1:
+            value_type_list_element = None
+        else:
+            value_type_list_element = submodel_elements[0].value_type
         type_value_list_element = type(submodel_elements[0])
     elif submodel_elements and isinstance(
-        submodel_elements[0], model.Reference | model.SubmodelElementCollection
+        submodel_elements[0], model.Reference | model.SubmodelElementCollection | model.ReferenceElement | model.SubmodelElementList
     ):
         value_type_list_element = None
         type_value_list_element = type(submodel_elements[0])
@@ -292,6 +305,7 @@ def create_submodel_element_list(
 
     # FIXME: resolve problem with SubmodelElementList that cannot take Enum values...
     # context=tuple([KPILevelEnum(context.value) for context in kpi.context]),
+    # Update: should be resolved, needs to be tested here...
     sml = model.SubmodelElementList(
         id_short=name,
         type_value_list_element=type_value_list_element,

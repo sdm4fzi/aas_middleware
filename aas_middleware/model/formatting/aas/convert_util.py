@@ -11,12 +11,42 @@ from aas_middleware.model.formatting.aas import aas_model
 from aas_middleware.model.util import convert_camel_case_to_underscrore_str, convert_under_score_to_camel_case_str
 
 
-class AttributeInfo(BaseModel):
+class AttributeFieldInfo(BaseModel):
     name: str
     field_info: FieldInfo
+    
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+
+
+
+
+
+class AttributeInfo(AttributeFieldInfo):
     value: Any
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+def get_attribute_field_infos(
+    obj: Union[type[aas_model.AAS], type[aas_model.Submodel], type[aas_model.SubmodelElementCollection]]
+) -> List[AttributeFieldInfo]:
+    """
+    Returns a dictionary of all attributes of an object that are not None, do not start with an underscore and are not standard attributes of the aas object.
+
+    Args:
+        obj (Union[aas_model.AAS, aas_model.Submodel, aas_model.SubmodelElementCollection]): Object to get the attributes from
+    Returns:
+        List[AttributeFieldInfo]: List of attributes of the object
+    """
+    attribute_infos = []
+    for attribute_name, field_info in obj.model_fields.items():
+        if attribute_name in ["id", "description", "id_short", "semantic_id"]:
+            continue
+        if attribute_name.startswith("_"):
+            continue
+        attribute_infos.append(
+            AttributeFieldInfo(name=attribute_name, field_info=field_info)
+        )
+    return attribute_infos
 
 
 def get_attribute_infos(
@@ -244,12 +274,34 @@ def is_attribute_from_basyx_model_immutable(
     )
 
 
+def get_data_specification_for_model_template(
+    model_type: typing.Union[
+        type[aas_model.AAS], type[aas_model.Submodel], type[aas_model.SubmodelElementCollection]
+    ],
+) -> typing.List[model.EmbeddedDataSpecification]:
+    return [model.EmbeddedDataSpecification(
+        data_specification=model.ExternalReference(
+            key=(
+                model.Key(
+                    type_=model.KeyTypes.GLOBAL_REFERENCE,
+                    value=(
+                        get_template_id(model_type)
+                    ),
+                ),
+            ),
+        ),
+        data_specification_content=model.DataSpecificationIEC61360(
+            preferred_name=model.LangStringSet({"en": "class"}),
+            value=get_template_id(model_type),
+        ),
+    )]
+
+
 def get_data_specification_for_model(
     item: typing.Union[
         aas_model.AAS, aas_model.Submodel, aas_model.SubmodelElementCollection
     ],
 ) -> typing.List[model.EmbeddedDataSpecification]:
-    # TODO: maybe hide here the information if an attribute is optional or not
     return [model.EmbeddedDataSpecification(
         data_specification=model.ExternalReference(
             key=(
@@ -273,14 +325,14 @@ def get_data_specification_for_model(
 
 
 def get_data_specification_for_attribute(
-    attribute_info: AttributeInfo, basyx_attribute: Any
+    attribute_field_info: AttributeFieldInfo, basyx_attribute: Any
 ) -> typing.List[model.EmbeddedDataSpecification]:
-    if isinstance(attribute_info.value, tuple):
+    if typing.get_origin(attribute_field_info.field_info.annotation) == tuple:
         immutable = "true"
     else:
         immutable = "false"
-    if typing.get_origin(attribute_info.field_info.annotation) is Union and type(None) in typing.get_args(
-        attribute_info.field_info.annotation
+    if typing.get_origin(attribute_field_info.field_info.annotation) is Union and type(None) in typing.get_args(
+        attribute_field_info.field_info.annotation
     ):
         optional = "true"
     else:
@@ -311,7 +363,7 @@ def get_data_specification_for_attribute(
         ),
         data_specification_content=model.DataSpecificationIEC61360(
             preferred_name=model.LangStringSet({"en": "attribute"}),
-            value=attribute_info.name,
+            value=attribute_field_info.name,
         ),
     ),
     model.EmbeddedDataSpecification(
@@ -333,6 +385,14 @@ def get_data_specification_for_attribute(
         ),
     )
     ]
+
+
+def get_template_id(
+    element: Union[
+        type[aas_model.AAS], type[aas_model.Submodel], type[aas_model.SubmodelElementCollection]
+    ]
+) -> str:
+    return element.__name__.split(".")[-1]
 
 
 def get_id_short(
