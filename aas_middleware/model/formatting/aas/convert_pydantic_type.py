@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import json
+from types import NoneType
 import typing
 from urllib import parse
 from enum import Enum
 import uuid
 
 
+import attr
 from basyx.aas import model
 
 from typing import Any, List, Optional, Set, Tuple, Union
@@ -79,13 +81,30 @@ def convert_model_to_aas_template(
     aas_submodels = []
     aas_submodel_data_specifications = []
     for attribute_info in aas_attribute_infos:
-        submodel = convert_model_to_submodel_template(model_type=attribute_info.field_info.annotation)        
-        attribute_data_specifications = convert_util.get_data_specification_for_attribute(
+        if typing.get_origin(attribute_info.field_info.annotation) == Union:
+            types_to_check = [type_annotation for type_annotation in typing.get_args(attribute_info.field_info.annotation) if type_annotation != NoneType]
+            optional_attribute_data_specification = convert_util.get_optional_data_specification_for_attribute(
+                attribute_info
+            )
+            if optional_attribute_data_specification:
+                aas_submodel_data_specifications.append(optional_attribute_data_specification)
+            union_attribute_data_specification = convert_util.get_union_data_specification_for_attribute(
+                attribute_info
+            )
+            if union_attribute_data_specification:
+                aas_submodel_data_specifications.append(union_attribute_data_specification)
+
+        else:
+            types_to_check = [attribute_info.field_info.annotation]
+
+        for type_annotation in types_to_check:
+            submodel = convert_model_to_submodel_template(model_type=type_annotation)
+            attribute_data_specifications = convert_util.get_data_specification_for_attribute(
                 attribute_info, submodel
-        )
-        aas_submodel_data_specifications += attribute_data_specifications
-        if submodel:
-            aas_submodels.append(submodel)
+            )
+            aas_submodel_data_specifications.append(attribute_data_specifications)
+            if submodel:
+                aas_submodels.append(submodel)
 
 
     asset_information = model.AssetInformation(
@@ -121,20 +140,39 @@ def convert_model_to_submodel_template(
     submodel_element_data_specifications = []
 
     for attribute_info in submodel_attributes:
-        submodel_element = create_submodel_element_template(
-            attribute_info.name, attribute_info.field_info.annotation
-        )
-        attribute_data_specifications = convert_util.get_data_specification_for_attribute(
+        if typing.get_origin(attribute_info.field_info.annotation) == Union:
+            types_to_check = [type_annotation for type_annotation in typing.get_args(attribute_info.field_info.annotation) if type_annotation != NoneType]
+            optional_attribute_data_specification = convert_util.get_optional_data_specification_for_attribute(
+                attribute_info
+            )
+            if optional_attribute_data_specification:
+                submodel_element_data_specifications.append(optional_attribute_data_specification)
+            union_attribute_data_specification = convert_util.get_union_data_specification_for_attribute(
+                attribute_info
+            )
+            if union_attribute_data_specification:
+                submodel_element_data_specifications.append(union_attribute_data_specification)
+
+        else:
+            types_to_check = [attribute_info.field_info.annotation]
+
+        for counter, type_annotation in enumerate(types_to_check):
+            if len(types_to_check) > 1:
+                attribute_name = f"{attribute_info.name}_{counter}"
+            else:
+                attribute_name = attribute_info.name
+            submodel_element = create_submodel_element_template(attribute_name=attribute_name, attribute_type=type_annotation)
+            attribute_data_specifications = convert_util.get_data_specification_for_attribute(
                 attribute_info, submodel_element
-        )
-        submodel_element_data_specifications += attribute_data_specifications
-        if submodel_element:
-            submodel_elements.append(submodel_element)
+            )
+            submodel_element_data_specifications.append(attribute_data_specifications)
+            if submodel_element:
+                submodel_elements.append(submodel_element)
 
     basyx_submodel = model.Submodel(
         id_short=get_template_id(model_type),
         id_=model.Identifier(get_template_id(model_type)),
-        # descriptionconvert_util.get_basyx_description_from_model(model_type)=convert_util.get_basyx_description_from_model(model_type),
+        # description=convert_util.get_basyx_description_from_model(model_type)=convert_util.get_basyx_description_from_model(model_type),
         description={"en": f"Submodel with id {get_template_id(model_type)} that contains submodel elements"},
         embedded_data_specifications=convert_util.get_data_specification_for_model_template(model_type)
         + submodel_element_data_specifications,
@@ -163,15 +201,6 @@ def create_submodel_element_template(
     """
     if not attribute_type:
         return
-    # FIXME: check how Union or Optional types can be handled... make it similar to the logic of submodel templates from idta
-    if typing.get_origin(attribute_type) == Optional:
-        raise NotImplementedError(
-            "Optional types are not supported for SubmodelElement creation"
-        )
-    if typing.get_origin(attribute_type) == Union:
-        raise NotImplementedError(
-            "Union types are not supported for SubmodelElement creation"
-        )
     if typing.get_origin(attribute_type) == list:
         sml = create_submodel_element_list(attribute_name, attribute_type)
         return sml
@@ -226,15 +255,37 @@ def create_submodel_element_collection(
     submodel_element_data_specifications = []
 
     for attribute_info in smc_attributes:
-        sme = create_submodel_element_template(attribute_info.name, attribute_info.field_info.annotation)
-        attribute_data_specifications = (
-            convert_util.get_data_specification_for_attribute(
-                attribute_info, sme
+        if typing.get_origin(attribute_info.field_info.annotation) == Union:
+            types_to_check = [type_annotation for type_annotation in typing.get_args(attribute_info.field_info.annotation) if type_annotation != NoneType]
+            optional_attribute_data_specification = convert_util.get_optional_data_specification_for_attribute(
+                attribute_info
             )
-        )
-        submodel_element_data_specifications += attribute_data_specifications
-        if sme:
-            value.append(sme)
+            if optional_attribute_data_specification:
+                submodel_element_data_specifications.append(optional_attribute_data_specification)
+            union_attribute_data_specification = convert_util.get_union_data_specification_for_attribute(
+                attribute_info
+            )
+            if union_attribute_data_specification:
+                submodel_element_data_specifications.append(union_attribute_data_specification)
+        elif attribute_info.field_info.annotation == NoneType:
+            continue
+        else:
+            types_to_check = [attribute_info.field_info.annotation]
+
+        for counter, type_annotation in enumerate(types_to_check):
+            print("checking", types_to_check)
+
+            if len(types_to_check) > 1:
+                attribute_name = f"{attribute_info.name}_{counter}"
+            else:
+                attribute_name = attribute_info.name
+            submodel = create_submodel_element_template(attribute_name=attribute_name, attribute_type=type_annotation)
+            attribute_data_specifications = convert_util.get_data_specification_for_attribute(
+                attribute_info, submodel
+            )
+            submodel_element_data_specifications.append(attribute_data_specifications)
+            if submodel:
+                value.append(submodel)
 
     id_short = get_template_id(model_sec)
 
@@ -274,6 +325,7 @@ def create_submodel_element_list(
     submodel_elements = []
     submodel_element_ids = set()
     for el in typing.get_args(attribute_type):
+        # TODO: potentially check here because of Unions and Optional types inside lists and sets...
         submodel_element = create_submodel_element_template(name, el)
         if isinstance(submodel_element, model.SubmodelElementCollection):
             if submodel_element.id_short in submodel_element_ids:
@@ -304,7 +356,7 @@ def create_submodel_element_list(
     # context=tuple([KPILevelEnum(context.value) for context in kpi.context]),
     # Update: should be resolved, needs to be tested here...
     sml = model.SubmodelElementList(
-        id_short=name,
+        id_short=get_template_id(attribute_type),
         type_value_list_element=type_value_list_element,
         value_type_list_element=value_type_list_element,
         value=submodel_elements,

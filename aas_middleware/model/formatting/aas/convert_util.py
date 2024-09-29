@@ -1,11 +1,13 @@
 import datetime
 import json
+from types import NoneType
 from typing import Any, Dict, List, Union
 from basyx.aas import model
 
 import typing
 
 from basyx.aas.model import datatypes
+from igraph import union
 from pydantic import BaseModel, ConfigDict
 from pydantic.fields import FieldInfo
 
@@ -139,7 +141,7 @@ def get_class_name_from_basyx_model(
         str: Class name of the basyx model
     """
     if not item.embedded_data_specifications:
-        raise ValueError("No data specifications found in item:", item)
+        return item.id_short
     for data_spec in item.embedded_data_specifications:
         content = data_spec.data_specification_content
         if not isinstance(content, model.DataSpecificationIEC61360):
@@ -197,7 +199,7 @@ def get_attribute_name_from_basyx_model(
         str: The attribute name of the referenced item
     """
     if not item.embedded_data_specifications:
-        raise ValueError("No data specifications found in item:", item)
+        return convert_camel_case_to_underscrore_str(referenced_item_id)
     for data_spec in item.embedded_data_specifications:
         content = data_spec.data_specification_content
         if not isinstance(content, model.DataSpecificationIEC61360):
@@ -325,41 +327,37 @@ def get_data_specification_for_model(
         ),
     )]
 
-
-def get_data_specification_for_attribute(
-    attribute_field_info: AttributeFieldInfo, basyx_attribute: Any
-) -> typing.List[model.EmbeddedDataSpecification]:
-    if typing.get_origin(attribute_field_info.field_info.annotation) == tuple:
-        immutable = "true"
-    else:
-        immutable = "false"
-    if typing.get_origin(attribute_field_info.field_info.annotation) is Union and type(None) in typing.get_args(
-        attribute_field_info.field_info.annotation
-    ):
-        optional = "true"
-    else:
-        optional = "false"
-    if basyx_attribute is None:
-        model_keys = (
+def get_model_keys_for_data_specification(
+    item: typing.Union[NoneType, 
+        aas_model.AAS, aas_model.Submodel, aas_model.SubmodelElementCollection
+    ] = None,
+) -> typing.Tuple[model.Key]:
+    if item is None:
+        return (
             model.Key(
                 type_=model.KeyTypes.GLOBAL_REFERENCE,
                 value="null",
             ),
         )
-    else:
-        if hasattr(basyx_attribute, "id"):
-            attribute_id = basyx_attribute.id	
-        else:
-            attribute_id = basyx_attribute.id_short
-        model_keys = (
-            model.Key(
-                type_=model.KeyTypes.GLOBAL_REFERENCE,
-                value=attribute_id,
+    return (
+        model.Key(
+            type_=model.KeyTypes.GLOBAL_REFERENCE,
+            value=(
+                item.id
+                if isinstance(
+                    item, typing.Union[aas_model.AAS, aas_model.Submodel]
+                )
+                else item.id_short
             ),
-        )
+        ),
+    )
 
-    
-    return [model.EmbeddedDataSpecification(
+
+def get_data_specification_for_attribute(
+    attribute_field_info: AttributeFieldInfo, basyx_attribute: Any
+) -> model.EmbeddedDataSpecification:
+    model_keys = get_model_keys_for_data_specification(basyx_attribute)
+    return model.EmbeddedDataSpecification(
         data_specification=model.ExternalReference(
             key=model_keys,
         ),
@@ -367,27 +365,115 @@ def get_data_specification_for_attribute(
             preferred_name=model.LangStringSet({"en": "attribute"}),
             value=attribute_field_info.name,
         ),
-    ),
-    model.EmbeddedDataSpecification(
-        data_specification=model.ExternalReference(
-            key=model_keys,
-        ),
-        data_specification_content=model.DataSpecificationIEC61360(
-            preferred_name=model.LangStringSet({"en": "immutable"}),
-            value=immutable,
-        ),
-    ),
-    model.EmbeddedDataSpecification(
+    )
+
+def get_optional_data_specification_for_attribute(
+    attribute_field_info: AttributeFieldInfo
+) -> typing.Optional[model.EmbeddedDataSpecification]:
+    if not (typing.get_origin(attribute_field_info.field_info.annotation) is Union and type(None) in typing.get_args(
+        attribute_field_info.field_info.annotation
+    )):
+        return
+    model_keys = get_model_keys_for_data_specification()
+    
+    return model.EmbeddedDataSpecification(
         data_specification=model.ExternalReference(
             key=model_keys,
         ),
         data_specification_content=model.DataSpecificationIEC61360(
             preferred_name=model.LangStringSet({"en": "optional"}),
-            value=optional,
+            value=attribute_field_info.name,
         ),
     )
-    ]
 
+
+def get_immutable_data_specification_for_attribute(
+    attribute_field_info: AttributeFieldInfo
+) -> typing.Optional[model.EmbeddedDataSpecification]:
+    if not typing.get_origin(attribute_field_info.field_info.annotation) == tuple:
+        return
+    model_keys = get_model_keys_for_data_specification()
+    return model.EmbeddedDataSpecification(
+        data_specification=model.ExternalReference(
+            key=model_keys,
+        ),
+        data_specification_content=model.DataSpecificationIEC61360(
+            preferred_name=model.LangStringSet({"en": "immutable"}),
+            value=attribute_field_info.name,
+        ),
+    )
+
+def get_union_data_specification_for_attribute(
+    attribute_field_info: AttributeFieldInfo
+) -> typing.Optional[model.EmbeddedDataSpecification]:
+    if not (typing.get_origin(attribute_field_info.field_info.annotation) == Union and len([arg for arg in typing.get_args(attribute_field_info.field_info.annotation) if arg != NoneType]) > 1):
+        return
+    model_keys = get_model_keys_for_data_specification()
+    
+    return model.EmbeddedDataSpecification(
+        data_specification=model.ExternalReference(
+            key=model_keys,
+        ),
+        data_specification_content=model.DataSpecificationIEC61360(
+            preferred_name=model.LangStringSet({"en": "union"}),
+            value=attribute_field_info.name,
+        ),
+    )
+
+
+def is_optional_attribute_type(
+        item: Union[
+            model.AssetAdministrationShell, model.Submodel, model.SubmodelElementCollection
+        ],
+        attribute_name: str
+) -> bool:
+    """
+    Returns if an attribute of an aas is optional.
+
+    Args:
+        item (Union[model.AssetAdministrationShell, model.Submodel, model.SubmodelElementCollection]): The item to check
+        attribute_name (str): The name of the attribute
+
+    Returns:
+        bool: If the attribute is optional
+    """
+    if not item.embedded_data_specifications:
+        return True
+    for data_spec in item.embedded_data_specifications:
+        content = data_spec.data_specification_content
+        if not isinstance(content, model.DataSpecificationIEC61360):
+            continue
+        if not (content.preferred_name.get("en") == "optional" and content.value == attribute_name):
+            continue
+        return True
+    return False
+
+def is_union_attribute_type(
+        item: Union[
+            model.AssetAdministrationShell, model.Submodel, model.SubmodelElementCollection
+        ],
+        attribute_name: str
+) -> bool:
+    """
+    Returns if an attribute of an aas is optional.
+
+    Args:
+        item (Union[model.AssetAdministrationShell, model.Submodel, model.SubmodelElementCollection]): Aas to get the attribute from
+        attribute_name (str): The name of the attribute
+
+    Returns:
+        bool: If the attribute is optional
+    """
+    if not item.embedded_data_specifications:
+        return False
+    for data_spec in item.embedded_data_specifications:
+        content = data_spec.data_specification_content
+        if not isinstance(content, model.DataSpecificationIEC61360):
+            continue
+        if not (content.preferred_name.get("en") == "union" and content.value == attribute_name):
+            continue
+        return True
+    return False
 
 def get_template_id(
     element: Union[
