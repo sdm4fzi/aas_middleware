@@ -15,6 +15,7 @@ from aas_middleware.model.data_model_rebuilder import DataModelRebuilder
 from aas_middleware.model.formatting.aas import convert_util, aas_model
 
 from aas_middleware.model.formatting.aas.convert_util import (
+    convert_primitive_type_to_xsdtype,
     get_attribute_infos,
     get_id_short,
     get_semantic_id,
@@ -79,16 +80,18 @@ def convert_model_to_aas(
     aas_submodel_data_specifications = []
     for attribute_info in aas_attribute_infos:
         submodel = convert_model_to_submodel(model_submodel=attribute_info.value)        
-        attribute_data_specifications = convert_util.get_data_specification_for_attribute(
+        attribute_data_specification = convert_util.get_data_specification_for_attribute(
                 attribute_info, submodel
         )
-        aas_submodel_data_specifications += attribute_data_specifications
+        aas_submodel_data_specifications.append(attribute_data_specification)
         if submodel:
             aas_submodels.append(submodel)
 
 
     asset_information = model.AssetInformation(
         global_asset_id=model.Identifier(model_aas.id),
+        asset_kind=model.AssetKind.INSTANCE,
+        asset_type=model.Identifier("Instance"),
     )
 
     basyx_aas = model.AssetAdministrationShell(
@@ -121,10 +124,10 @@ def convert_model_to_submodel(
         submodel_element = create_submodel_element(
             attribute_info.name, attribute_info.value
         )
-        attribute_data_specifications = convert_util.get_data_specification_for_attribute(
+        attribute_data_specification = convert_util.get_data_specification_for_attribute(
                 attribute_info, submodel_element
         )
-        submodel_element_data_specifications += attribute_data_specifications
+        submodel_element_data_specifications.append(attribute_data_specification)
         if submodel_element:
             submodel_elements.append(submodel_element)
 
@@ -204,10 +207,13 @@ def create_property(
 ) -> model.Property:
     if isinstance(attribute_value, Enum):
         attribute_value = attribute_value.value
+        attribute_type = str
+    else:
+        attribute_type = type(attribute_value)
 
     property = model.Property(
         id_short=attribute_name,
-        value_type=get_value_type_of_attribute(attribute_value),
+        value_type=convert_primitive_type_to_xsdtype(attribute_type),
         value=attribute_value,
     )
     return property
@@ -222,12 +228,12 @@ def create_submodel_element_collection(
 
     for attribute_info in smc_attributes:
         sme = create_submodel_element(attribute_info.name, attribute_info.value)
-        attribute_data_specifications = (
+        attribute_data_specification = (
             convert_util.get_data_specification_for_attribute(
                 attribute_info, sme
             )
         )
-        submodel_element_data_specifications += attribute_data_specifications
+        submodel_element_data_specifications.append(attribute_data_specification)
         if sme:
             value.append(sme)
 
@@ -262,12 +268,12 @@ def patch_id_short_with_temp_attribute(
 
     
 def create_submodel_element_list(
-    name: str, value: list | tuple | set, ordered=True
+    attribute_name: str, value: list | tuple | set, ordered=True
 ) -> model.SubmodelElementList:
     submodel_elements = []
     submodel_element_ids = set()
     for el in value:
-        submodel_element = create_submodel_element(name, el)
+        submodel_element = create_submodel_element(attribute_name, el)
         if isinstance(submodel_element, model.SubmodelElementCollection):
             if submodel_element.id_short in submodel_element_ids:
                 raise ValueError(
@@ -287,13 +293,13 @@ def create_submodel_element_list(
         value_type_list_element = None
         type_value_list_element = type(submodel_elements[0])
     else:
-        value_type_list_element = str
+        value_type_list_element = convert_primitive_type_to_xsdtype(str)
         type_value_list_element = model.Property
 
     # FIXME: resolve problem with SubmodelElementList that cannot take Enum values...
     # context=tuple([KPILevelEnum(context.value) for context in kpi.context]),
     sml = model.SubmodelElementList(
-        id_short=name,
+        id_short=attribute_name,
         type_value_list_element=type_value_list_element,
         value_type_list_element=value_type_list_element,
         value=submodel_elements,

@@ -66,29 +66,30 @@ def convert_aas_to_pydantic_type(
 
     for submodel_id in aas_submodel_ids:
         pydantic_submodel_type, basyx_submodel = pydantic_submodel_types[submodel_id]
-        attribute_name_of_submodel = convert_util.get_attribute_name_from_basyx_template(
+        attribute_names_of_submodel = convert_util.get_attribute_names_from_basyx_template(
             aas, basyx_submodel.id_short
         )
-        optional = convert_util.is_optional_attribute_type(aas, attribute_name_of_submodel)
-        union = convert_util.is_union_attribute_type(aas, attribute_name_of_submodel)
-        if optional:
-            pydantic_submodel_type = typing.Optional[pydantic_submodel_type]
-        if pydantic_submodel_type is None:
-            logging.warning(
-                f"Could not convert submodel {submodel_id} to Pydantic model. Skipping."
-            )
-            continue
-        if union and attribute_name_of_submodel in dict_dynamic_model_creation:
-            pydantic_submodel_type = typing.Union[
-                dict_dynamic_model_creation[attribute_name_of_submodel], pydantic_submodel_type
-            ]
-        dict_dynamic_model_creation.update(
-            {
-                attribute_name_of_submodel: typing.Annotated[
-                    pydantic_submodel_type, Field(examples=[])
+        for attribute_name in attribute_names_of_submodel:
+            optional = convert_util.is_optional_attribute_type(aas, attribute_name)
+            union = convert_util.is_union_attribute_type(aas, attribute_name)
+            if optional:
+                pydantic_submodel_type = typing.Optional[pydantic_submodel_type]
+            if pydantic_submodel_type is None:
+                logging.warning(
+                    f"Could not convert submodel {submodel_id} to Pydantic model. Skipping."
+                )
+                continue
+            if union and attribute_name in dict_dynamic_model_creation:
+                pydantic_submodel_type = typing.Union[
+                    dict_dynamic_model_creation[attribute_name], pydantic_submodel_type
                 ]
-            }
-        )
+            dict_dynamic_model_creation.update(
+                {
+                    attribute_name: typing.Annotated[
+                        pydantic_submodel_type, Field(examples=[])
+                    ]
+                }
+            )
     model_type = create_model(
         aas_class_name, **dict_dynamic_model_creation, __base__=aas_model.AAS
     )
@@ -217,27 +218,29 @@ def convert_submodel_template_to_pydatic_type(sm: model.Submodel) -> type[aas_mo
     dict_dynamic_model_creation = get_initial_dict_for_dynamic_model_creation(sm)
 
     for sm_element in sm.submodel_element:
-        attribute_name = convert_util.get_attribute_name_from_basyx_template(
+        # FIXME: resolve if the sm element type is used for multiple attributes -> iterate over attribute names and not submodels, if available...
+        attribute_names = convert_util.get_attribute_names_from_basyx_template(
             sm, sm_element.id_short
         )
-        attribute_type = get_submodel_element_type(sm_element)
-        optional = convert_util.is_optional_attribute_type(sm, attribute_name)
-        union = convert_util.is_union_attribute_type(sm, attribute_name)
-        if optional:
-            attribute_type = typing.Optional[attribute_type]
-        if attribute_type is None:
-            logging.warning(
-                f"Could not convert submodel element {attribute_name} to Pydantic model. Skipping."
+        for attribute_name in attribute_names:
+            attribute_type = get_submodel_element_type(sm_element)
+            optional = convert_util.is_optional_attribute_type(sm, attribute_name)
+            union = convert_util.is_union_attribute_type(sm, attribute_name)
+            if optional:
+                attribute_type = typing.Optional[attribute_type]
+            if attribute_type is None:
+                logging.warning(
+                    f"Could not convert submodel element {attribute_name} to Pydantic model. Skipping."
+                )
+                continue
+            if union and attribute_name in dict_dynamic_model_creation:
+                attribute_type  = typing.Union[
+                    dict_dynamic_model_creation[attribute_name], attribute_type
+                ]
+            sme_model_creation_dict = get_dynamic_model_creation_dict_from_submodel_element(
+                attribute_name, attribute_type
             )
-            continue
-        if union and attribute_name in dict_dynamic_model_creation:
-            attribute_type  = typing.Union[
-                dict_dynamic_model_creation[attribute_name], attribute_type
-            ]
-        sme_model_creation_dict = get_dynamic_model_creation_dict_from_submodel_element(
-            attribute_name, attribute_type
-        )
-        dict_dynamic_model_creation.update(sme_model_creation_dict)
+            dict_dynamic_model_creation.update(sme_model_creation_dict)
     model_type = create_model(
         class_name, **dict_dynamic_model_creation, __base__=aas_model.Submodel
     )
@@ -262,27 +265,28 @@ def convert_submodel_collection_to_pydantic_model(
     )
 
     for sub_sm_element in sm_element.value:
-        attribute_name = convert_util.get_attribute_name_from_basyx_template(
+        attribute_names = convert_util.get_attribute_names_from_basyx_template(
             sm_element, sub_sm_element.id_short
         )
-        attribute_type = get_submodel_element_type(sub_sm_element)
-        optional = convert_util.is_optional_attribute_type(sm_element, attribute_name)
-        union = convert_util.is_union_attribute_type(sm_element, attribute_name)
-        if optional:
-            attribute_type = typing.Optional[attribute_type]
-        if attribute_type is None:
-            logging.warning(
-                f"Could not convert submodel element {attribute_name} to Pydantic model. Skipping."
+        for attribute_name in attribute_names:
+            attribute_type = get_submodel_element_type(sub_sm_element)
+            optional = convert_util.is_optional_attribute_type(sm_element, attribute_name)
+            union = convert_util.is_union_attribute_type(sm_element, attribute_name)
+            if optional:
+                attribute_type = typing.Optional[attribute_type]
+            if attribute_type is None:
+                logging.warning(
+                    f"Could not convert submodel element {attribute_name} to Pydantic model. Skipping."
+                )
+                continue
+            if union and attribute_name in dict_dynamic_model_creation:
+                attribute_type  = typing.Union[
+                    dict_dynamic_model_creation[attribute_name], attribute_type
+                ] 
+            dict_sme = get_dynamic_model_creation_dict_from_submodel_element(
+                attribute_name, attribute_type
             )
-            continue
-        if union and attribute_name in dict_dynamic_model_creation:
-            attribute_type  = typing.Union[
-                dict_dynamic_model_creation[attribute_name], attribute_type
-            ] 
-        dict_sme = get_dynamic_model_creation_dict_from_submodel_element(
-            attribute_name, attribute_type
-        )
-        dict_dynamic_model_creation.update(dict_sme)
+            dict_dynamic_model_creation.update(dict_sme)
     model_type = create_model(
         class_name,
         **dict_dynamic_model_creation,

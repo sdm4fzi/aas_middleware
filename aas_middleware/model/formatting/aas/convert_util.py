@@ -184,7 +184,7 @@ def get_attribute_name_from_basyx_model(
         model.AssetAdministrationShell, model.Submodel, model.SubmodelElementCollection
     ],
     referenced_item_id: str,
-) -> str:
+) -> List[str]:
     """
     Returns the attribute name of the referenced element of the item.
 
@@ -200,6 +200,7 @@ def get_attribute_name_from_basyx_model(
     """
     if not item.embedded_data_specifications:
         return convert_camel_case_to_underscrore_str(referenced_item_id)
+    attribute_names = []
     for data_spec in item.embedded_data_specifications:
         content = data_spec.data_specification_content
         if not isinstance(content, model.DataSpecificationIEC61360):
@@ -210,18 +211,20 @@ def get_attribute_name_from_basyx_model(
             continue
         if not content.preferred_name.get("en") == "attribute":
             continue
-        return content.value
+        attribute_names.append(content.value)
+    if attribute_names:
+        return attribute_names
     raise ValueError(
         f"Attribute reference to {referenced_item_id} could not be found in {item.id_short} of type {type(item)}"
     )
 
 
-def get_attribute_name_from_basyx_template(
+def get_attribute_names_from_basyx_template(
         item: typing.Union[
             model.AssetAdministrationShell, model.Submodel, model.SubmodelElementCollection
         ],
         referenced_item_id_short: str,
-) -> str:
+) -> List[str]:
     """
     Returns the attribute name of the referenced element of the item.
 
@@ -236,7 +239,7 @@ def get_attribute_name_from_basyx_template(
         str: The attribute name of the referenced item
     """
     if not item.embedded_data_specifications:
-        return convert_camel_case_to_underscrore_str(referenced_item_id_short)
+        return [convert_camel_case_to_underscrore_str(referenced_item_id_short)]
     return get_attribute_name_from_basyx_model(item, referenced_item_id_short)
     
 
@@ -273,10 +276,7 @@ def is_attribute_from_basyx_model_immutable(
         if not content.preferred_name.get("en") == "immutable":
             continue
         return content.value == "true"
-    raise ValueError(
-        f"Attribute reference to {referenced_item_id} could not be found in {item.id_short} of type {type(item)}"
-    )
-
+    return False
 
 def get_data_specification_for_model_template(
     model_type: typing.Union[

@@ -109,7 +109,7 @@ def convert_model_to_aas_template(
 
     asset_information = model.AssetInformation(
         asset_kind=model.AssetKind.TYPE,
-        asset_type="Type",
+        asset_type=model.Identifier("Type"),
         global_asset_id=model.Identifier(get_template_id(model_type)),
     )
 
@@ -128,6 +128,12 @@ def convert_model_to_aas_template(
     for sm in aas_submodels:
         obj_store.add(sm)
     return obj_store
+
+
+def convert_model_instance_to_submodel_template(
+        model_instance: aas_model.Submodel,
+    ) -> Optional[model.Submodel]:
+    return convert_model_to_submodel_template(type(model_instance))
 
 
 def convert_model_to_submodel_template(
@@ -166,7 +172,12 @@ def convert_model_to_submodel_template(
                 attribute_info, submodel_element
             )
             submodel_element_data_specifications.append(attribute_data_specifications)
-            if submodel_element:
+            immutable_attribute_data_specification = convert_util.get_immutable_data_specification_for_attribute(
+                attribute_info
+            )
+            if immutable_attribute_data_specification:
+                submodel_element_data_specifications.append(immutable_attribute_data_specification)
+            if submodel_element and not any(stored_submodel_element.id_short == submodel_element.id_short for stored_submodel_element in submodel_elements):
                 submodel_elements.append(submodel_element)
 
     basyx_submodel = model.Submodel(
@@ -223,6 +234,14 @@ def create_submodel_element_template(
             value=reference,
         )
         return reference_element
+    elif typing.get_origin(attribute_type) is typing.Literal:
+        property = create_property(
+            attribute_name, str
+        )
+        return property
+    elif issubclass(attribute_type, Enum):
+        property = create_property(attribute_name, str)
+        return property
     elif issubclass(attribute_type, aas_model.SubmodelElementCollection):
         smc = create_submodel_element_collection(attribute_type)
         return smc
@@ -273,8 +292,6 @@ def create_submodel_element_collection(
             types_to_check = [attribute_info.field_info.annotation]
 
         for counter, type_annotation in enumerate(types_to_check):
-            print("checking", types_to_check)
-
             if len(types_to_check) > 1:
                 attribute_name = f"{attribute_info.name}_{counter}"
             else:
@@ -284,7 +301,12 @@ def create_submodel_element_collection(
                 attribute_info, submodel
             )
             submodel_element_data_specifications.append(attribute_data_specifications)
-            if submodel:
+            immutable_attribute_data_specification = convert_util.get_immutable_data_specification_for_attribute(
+                attribute_info
+            )
+            if immutable_attribute_data_specification:
+                submodel_element_data_specifications.append(immutable_attribute_data_specification)
+            if submodel and not any(stored_submodel_element.id_short == submodel.id_short for stored_submodel_element in value):
                 value.append(submodel)
 
     id_short = get_template_id(model_sec)
@@ -338,10 +360,11 @@ def create_submodel_element_list(
         submodel_elements.append(submodel_element)
 
     if submodel_elements and isinstance(submodel_elements[0], model.Property):
-        if len(typing.get_args(attribute_type)) > 1:
-            value_type_list_element = None
-        else:
-            value_type_list_element = submodel_elements[0].value_type
+        if len(typing.get_args(attribute_type)) > 1 and not all(arg is typing.get_args(attribute_type)[0] for arg in typing.get_args(attribute_type)):
+            raise ValueError(
+                f"Submodel element list with different types is not supported. Please use a SubmodelElementCollection instead."
+            )
+        value_type_list_element = submodel_elements[0].value_type
         type_value_list_element = type(submodel_elements[0])
     elif submodel_elements and isinstance(
         submodel_elements[0], model.Reference | model.SubmodelElementCollection | model.ReferenceElement | model.SubmodelElementList
@@ -356,7 +379,7 @@ def create_submodel_element_list(
     # context=tuple([KPILevelEnum(context.value) for context in kpi.context]),
     # Update: should be resolved, needs to be tested here...
     sml = model.SubmodelElementList(
-        id_short=get_template_id(attribute_type),
+        id_short=f"list_of_{get_template_id(typing.get_args(attribute_type)[0])}",
         type_value_list_element=type_value_list_element,
         value_type_list_element=value_type_list_element,
         value=submodel_elements,

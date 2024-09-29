@@ -64,9 +64,9 @@ def convert_aas_to_pydantic_model(
     for sm in pydantic_submodels:
         if not sm.id in aas_submodel_ids:
             continue
-        attribute_name_of_submodel = convert_util.get_attribute_name_from_basyx_template(
+        attribute_name_of_submodel = convert_util.get_attribute_names_from_basyx_template(
             aas, sm.id
-        )
+        )[0]
         dict_dynamic_model_creation.update(
             {
                 attribute_name_of_submodel: typing.Annotated[
@@ -236,9 +236,9 @@ def convert_submodel_to_model(sm: model.Submodel) -> aas_model.Submodel:
     dict_model_instantiation = get_initial_dict_for_model_instantiation(sm)
 
     for sm_element in sm.submodel_element:
-        attribute_name = convert_util.get_attribute_name_from_basyx_template(
+        attribute_name = convert_util.get_attribute_names_from_basyx_template(
             sm, sm_element.id_short
-        )
+        )[0]
         immutable = is_attribute_from_basyx_model_immutable(sm, sm_element.id_short)
         attribute_value = get_submodel_element_value(sm_element, immutable)
         sme_model_creation_dict = get_dynamic_model_creation_dict_from_submodel_element(
@@ -276,9 +276,9 @@ def convert_submodel_collection_to_pydantic_model(
     dict_model_instantiation = get_initial_dict_for_model_instantiation(sm_element)
 
     for sub_sm_element in sm_element.value:
-        attribute_name = convert_util.get_attribute_name_from_basyx_template(
+        attribute_name = convert_util.get_attribute_names_from_basyx_template(
             sm_element, sub_sm_element.id_short
-        )
+        )[0]
         immutable = is_attribute_from_basyx_model_immutable(
             sm_element, sub_sm_element.id_short
         )
