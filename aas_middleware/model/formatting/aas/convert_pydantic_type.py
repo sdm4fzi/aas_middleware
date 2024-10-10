@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import OrderedDict
 import json
 from types import NoneType
 import typing
@@ -345,7 +346,7 @@ def create_submodel_element_list(
     ordered=True
 ) -> model.SubmodelElementList:
     submodel_elements = []
-    submodel_element_ids = set()
+    submodel_element_ids = OrderedDict()
     for el in typing.get_args(attribute_type):
         # TODO: potentially check here because of Unions and Optional types inside lists and sets...
         submodel_element = create_submodel_element_template(name, el)
@@ -354,7 +355,7 @@ def create_submodel_element_list(
                 raise ValueError(
                     f"Submodel element collection with id {submodel_element.id_short} already exists in list"
                 )
-            submodel_element_ids.add(submodel_element.id_short)
+            submodel_element_ids.update({submodel_element.id_short: None})
             patch_id_short_with_temp_attribute(submodel_element)
         submodel_element.id_short = None
         submodel_elements.append(submodel_element)
