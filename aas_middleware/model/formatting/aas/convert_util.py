@@ -7,7 +7,6 @@ from basyx.aas import model
 import typing
 
 from basyx.aas.model import datatypes
-from igraph import union
 from pydantic import BaseModel, ConfigDict
 from pydantic.fields import FieldInfo
 
