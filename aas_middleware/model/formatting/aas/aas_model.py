@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from types import NoneType
-from typing import Annotated, Any, Callable, List, Self, Union
+from typing import Annotated, Any, Callable, List, TypeVar, Union
 import typing
 
 from basyx.aas.model import AssetAdministrationShell, DictObjectStore, Submodel
@@ -9,7 +9,6 @@ from pydantic import BaseModel, BeforeValidator, ValidationError, model_validato
 
 
 BasyxModels = AssetAdministrationShell | Submodel | DictObjectStore
-
 
 def string_does_start_with_a_character(v: str):
     assert v, "value must not be an empty string"
@@ -97,7 +96,7 @@ class AAS(Identifiable):
         return data
 
     @model_validator(mode="after")
-    def check_submodels(self) -> Self:
+    def check_submodels(self) -> Any:
         for field_name, field_info in self.model_fields.items():
             if field_name in ["id", "id_short", "description"]:
                 continue
@@ -141,7 +140,7 @@ class SubmodelElementCollection(HasSemantics, Referable):
     """
 
     @model_validator(mode="after")
-    def check_submodel_elements(self) -> Self:
+    def check_submodel_elements(self) -> Any:
         for field_name in self.model_fields:
             if field_name in ["id", "id_short", "description", "semantic_id"]:
                 continue
@@ -180,7 +179,7 @@ class Submodel(HasSemantics, Identifiable):
     """
 
     @model_validator(mode="after")
-    def check_submodel_elements(self) -> Self:
+    def check_submodel_elements(self) -> Any:
         for field_name in self.model_fields:
             if field_name in ["id", "id_short", "description", "semantic_id"]:
                 continue
