@@ -98,12 +98,17 @@ def get_class_name_from_basyx_model(
         content = data_spec.data_specification_content
         if not isinstance(content, model.DataSpecificationIEC61360):
             continue
-        if not any(
-            key.value == item.id_short for key in data_spec.data_specification.key
-        ):
-            continue
         if not content.preferred_name.get("en") == "class":
             continue
+        condition_smc = any(
+            key.value == item.id_short for key in data_spec.data_specification.key
+        )
+        condition_aas_sm = hasattr(item, "id") and any(
+            key.value == item.id for key in data_spec.data_specification.key
+        )
+        if not condition_smc and not condition_aas_sm:
+            continue
+
         return content.value
     raise ValueError(
         f"No class name found in item with id {item.id_short} and type {type(item)}"
