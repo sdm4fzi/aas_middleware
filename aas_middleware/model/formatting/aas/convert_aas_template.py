@@ -96,7 +96,7 @@ def convert_aas_to_pydantic_type(
     return model_type
 
 def get_submodel_element_type(
-    sm_element: model.SubmodelElement
+    sm_element: model.SubmodelElement, immutable: bool = False
 ) -> type[aas_model.SubmodelElement]:
     """
     Returns the value of a SubmodelElement.
@@ -110,7 +110,7 @@ def get_submodel_element_type(
     if isinstance(sm_element, model.SubmodelElementCollection):
         return convert_submodel_collection_to_pydantic_model(sm_element)
     elif isinstance(sm_element, model.SubmodelElementList):
-        return convert_submodel_list_to_pydantic_model(sm_element)
+        return convert_submodel_list_to_pydantic_model(sm_element, immutable)
     elif isinstance(sm_element, model.ReferenceElement):
         return convert_reference_element_to_pydantic_model(sm_element)
     elif isinstance(sm_element, model.RelationshipElement):
@@ -223,9 +223,11 @@ def convert_submodel_template_to_pydatic_type(sm: model.Submodel) -> type[aas_mo
             sm, sm_element.id_short
         )
         for attribute_name in attribute_names:
-            attribute_type = get_submodel_element_type(sm_element)
             optional = convert_util.is_optional_attribute_type(sm, attribute_name)
             union = convert_util.is_union_attribute_type(sm, attribute_name)
+            immutable = convert_util.is_attribute_from_basyx_model_immutable(sm, attribute_name)
+            attribute_type = get_submodel_element_type(sm_element, immutable)
+
             if optional:
                 attribute_type = typing.Optional[attribute_type]
             if attribute_type is None:
@@ -269,9 +271,11 @@ def convert_submodel_collection_to_pydantic_model(
             sm_element, sub_sm_element.id_short
         )
         for attribute_name in attribute_names:
-            attribute_type = get_submodel_element_type(sub_sm_element)
             optional = convert_util.is_optional_attribute_type(sm_element, attribute_name)
             union = convert_util.is_union_attribute_type(sm_element, attribute_name)
+            immutable = convert_util.is_attribute_from_basyx_model_immutable(sm_element, attribute_name)
+            attribute_type = get_submodel_element_type(sub_sm_element, immutable)
+
             if optional:
                 attribute_type = typing.Optional[attribute_type]
             if attribute_type is None:
@@ -331,7 +335,7 @@ def unpatch_id_short_from_temp_attribute(smec: model.SubmodelElementCollection):
 
 
 def convert_submodel_list_to_pydantic_model(
-    sm_element: model.SubmodelElementList
+    sm_element: model.SubmodelElementList, immutable: bool = False
 ) -> type[typing.Union[typing.List[aas_model.SubmodelElement], typing.Set[aas_model.SubmodelElement]]]:
     """
     Converts a SubmodelElementList to a Pydantic model.
@@ -342,7 +346,6 @@ def convert_submodel_list_to_pydantic_model(
     Returns:
         typing.List[aas_model.SubmodelElement]: List of Pydantic models of the submodel elements.
     """
-    sme_pydantic_models = []
     if sm_element.value_type_list_element is not None:
         value_type = convert_xsdtype_to_primitive_type(sm_element.value_type_list_element)
     else:
@@ -351,6 +354,8 @@ def convert_submodel_list_to_pydantic_model(
             sm_element_value = unpatch_id_short_from_temp_attribute(sm_element_value)
             value_type = convert_submodel_collection_to_pydantic_model(sm_element_value)
         elif isinstance(sm_element_value, model.SubmodelElementList):
+            # FIXME: if a nested list used, tuples cannot be detected currently, because the data specifications information about immutability is not set in the convert_pydantic_type
+            # immutable = convert_util.is_attribute_from_basyx_model_immutable(sm_element, "value")
             value_type = convert_submodel_list_to_pydantic_model(sm_element_value)
         elif isinstance(sm_element_value, model.ReferenceElement):
             value_type = convert_reference_element_to_pydantic_model(sm_element_value)
@@ -360,7 +365,11 @@ def convert_submodel_list_to_pydantic_model(
             value_type = convert_property_to_pydantic_model(sm_element_value)
         else:
             raise NotImplementedError("Type not implemented:", type(sm_element_value))
+    if immutable:
+        return typing.Tuple[value_type, ...]
+    print("ordered: ", sm_element.order_relevant)
     if not sm_element.order_relevant:
+        print("unordered list")
         return typing.Set[value_type]
     return typing.List[value_type]
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 import typing
 from pydantic import BaseModel, TypeAdapter
 
-from aas_middleware.model.formatting.aas import aas_model
+from aas_middleware.model.formatting.aas import aas_model, convert_aas_template
 from basyx.aas import model
 
 
@@ -159,7 +159,7 @@ def get_initial_dict_for_model_instantiation(
     return model_instantiation_dict
 
 
-def convert_submodel_to_model_instance(sm: model.Submodel, model_type: type[aas_model.Submodel]) -> aas_model.Submodel:
+def convert_submodel_to_model_instance(sm: model.Submodel, model_type: type[aas_model.Submodel] = None) -> aas_model.Submodel:
     """
     Converts a Submodel to a Pydantic model.
 
@@ -170,6 +170,10 @@ def convert_submodel_to_model_instance(sm: model.Submodel, model_type: type[aas_
     Returns:
         aas_model.Submodel: Pydantic model of the submodel.
     """
+    if model_type is None:
+        model_type = convert_aas_template.convert_submodel_template_to_pydatic_type(
+            sm
+        )
     dict_model_instantiation = get_initial_dict_for_model_instantiation(sm)
 
     for sm_element in sm.submodel_element:

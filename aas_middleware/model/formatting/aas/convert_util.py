@@ -2,6 +2,7 @@ import datetime
 import json
 from types import NoneType
 from typing import Any, Dict, List, Union
+import uuid
 from basyx.aas import model
 
 import typing
@@ -247,41 +248,6 @@ def get_attribute_names_from_basyx_template(
     return get_attribute_name_from_basyx_model(item, referenced_item_id_short)
     
 
-
-def is_attribute_from_basyx_model_immutable(
-    item: typing.Union[
-        model.AssetAdministrationShell, model.Submodel, model.SubmodelElementCollection
-    ],
-    referenced_item_id: str,
-) -> bool:
-    """
-    Returns if the referenced item of the item is immutable.
-
-    Args:
-        item (typing.Union[model.AssetAdministrationShell, model.Submodel, model.SubmodelElementCollection]): The container of the refernced item
-        referenced_item_id (str): The id of the referenced item
-
-    Raises:
-        ValueError: If not data specifications are found in the item or if no attribute name is found
-
-    Returns:
-        bool: If the referenced item is immutable
-    """
-    if not item.embedded_data_specifications:
-        raise ValueError("No data specifications found in item:", item)
-    for data_spec in item.embedded_data_specifications:
-        content = data_spec.data_specification_content
-        if not isinstance(content, model.DataSpecificationIEC61360):
-            continue
-        if not any(
-            key.value == referenced_item_id for key in data_spec.data_specification.key
-        ):
-            continue
-        if not content.preferred_name.get("en") == "immutable":
-            continue
-        return content.value == "true"
-    return False
-
 def get_data_specification_for_model_template(
     model_type: typing.Union[
         type[aas_model.AAS], type[aas_model.Submodel], type[aas_model.SubmodelElementCollection]
@@ -340,7 +306,7 @@ def get_model_keys_for_data_specification(
         return (
             model.Key(
                 type_=model.KeyTypes.GLOBAL_REFERENCE,
-                value="null",
+                value=uuid.uuid4().hex,
             ),
         )
     return (
@@ -391,11 +357,9 @@ def get_optional_data_specification_for_attribute(
     )
 
 
-def get_immutable_data_specification_for_attribute(
-    attribute_field_info: AttributeFieldInfo
-) -> typing.Optional[model.EmbeddedDataSpecification]:
-    if not typing.get_origin(attribute_field_info.field_info.annotation) == tuple:
-        return
+def get_immutable_data_specification_for_attribute_name(
+    attribute_name: str
+) -> model.EmbeddedDataSpecification:
     model_keys = get_model_keys_for_data_specification()
     return model.EmbeddedDataSpecification(
         data_specification=model.ExternalReference(
@@ -403,9 +367,17 @@ def get_immutable_data_specification_for_attribute(
         ),
         data_specification_content=model.DataSpecificationIEC61360(
             preferred_name=model.LangStringSet({"en": "immutable"}),
-            value=attribute_field_info.name,
+            value=attribute_name,
         ),
     )
+
+
+def get_immutable_data_specification_for_attribute(
+    attribute_field_info: AttributeFieldInfo
+) -> typing.Optional[model.EmbeddedDataSpecification]:
+    if not typing.get_origin(attribute_field_info.field_info.annotation) == tuple:
+        return
+    return get_immutable_data_specification_for_attribute_name(attribute_field_info.name)
 
 def get_union_data_specification_for_attribute(
     attribute_field_info: AttributeFieldInfo
@@ -423,6 +395,37 @@ def get_union_data_specification_for_attribute(
             value=attribute_field_info.name,
         ),
     )
+
+
+def is_attribute_from_basyx_model_immutable(
+    item: typing.Union[
+        model.AssetAdministrationShell, model.Submodel, model.SubmodelElementCollection
+    ],
+    attribute_name: str,
+) -> bool:
+    """
+    Returns if the referenced item of the item is immutable.
+
+    Args:
+        item (typing.Union[model.AssetAdministrationShell, model.Submodel, model.SubmodelElementCollection]): The container of the refernced item
+        referenced_item_id (str): The id of the referenced item
+
+    Raises:
+        ValueError: If not data specifications are found in the item or if no attribute name is found
+
+    Returns:
+        bool: If the referenced item is immutable
+    """
+    if not item.embedded_data_specifications:
+        return False
+    for data_spec in item.embedded_data_specifications:
+        content = data_spec.data_specification_content
+        if not isinstance(content, model.DataSpecificationIEC61360):
+            continue
+        if not content.preferred_name.get("en") == "immutable":
+            continue
+        return content.value == attribute_name
+    return False
 
 
 def is_optional_attribute_type(

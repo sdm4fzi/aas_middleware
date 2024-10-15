@@ -20,6 +20,7 @@ from aas_middleware.model.data_model_rebuilder import DataModelRebuilder
 from aas_middleware.model.formatting.aas import convert_util, aas_model
 
 from aas_middleware.model.formatting.aas.convert_util import (
+    AttributeFieldInfo,
     convert_primitive_type_to_xsdtype,
     get_attribute_field_infos,
     get_template_id,
@@ -213,16 +214,8 @@ def create_submodel_element_template(
     """
     if not attribute_type:
         return
-    if typing.get_origin(attribute_type) == list:
+    if typing.get_origin(attribute_type) == list or typing.get_origin(attribute_type) == tuple or typing.get_origin(attribute_type) == set:
         sml = create_submodel_element_list(attribute_name, attribute_type)
-        return sml
-    elif typing.get_origin(attribute_type) == tuple:
-        sml = create_submodel_element_list(attribute_name, attribute_type)
-        return sml
-    elif typing.get_origin(attribute_type) == set:
-        sml = create_submodel_element_list(
-            attribute_name, attribute_type, ordered=False
-        )
         return sml
     elif attribute_type == Reference:
         key = model.Key(
@@ -342,9 +335,7 @@ def patch_id_short_with_temp_attribute(
 
     
 def create_submodel_element_list(
-    name: str, attribute_type: Union[type[tuple], type[list], type[set]],
-    ordered=True
-) -> model.SubmodelElementList:
+    name: str, attribute_type: Union[type[tuple], type[list], type[set]]) -> model.SubmodelElementList:
     submodel_elements = []
     submodel_element_ids = OrderedDict()
     for el in typing.get_args(attribute_type):
@@ -376,11 +367,19 @@ def create_submodel_element_list(
         value_type_list_element = convert_primitive_type_to_xsdtype(str)
         type_value_list_element = model.Property
 
-    # FIXME: resolve problem with SubmodelElementList that cannot take Enum values...
-    # context=tuple([KPILevelEnum(context.value) for context in kpi.context]),
-    # Update: should be resolved, needs to be tested here...
+    if typing.get_origin(attribute_type) == set:
+        ordered = False
+        iterable_type = "set"
+        print("set detected at ", name)
+    elif typing.get_origin(attribute_type) == tuple:
+        ordered = True
+        iterable_type = "tuple"
+    elif typing.get_origin(attribute_type) == list:
+        ordered = True
+        iterable_type = "list"
+    
     sml = model.SubmodelElementList(
-        id_short=f"list_of_{get_template_id(typing.get_args(attribute_type)[0])}",
+        id_short=f"{iterable_type}_of_{get_template_id(typing.get_args(attribute_type)[0])}",
         type_value_list_element=type_value_list_element,
         value_type_list_element=value_type_list_element,
         value=submodel_elements,
