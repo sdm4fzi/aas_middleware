@@ -70,6 +70,8 @@ class DataModel(BaseModel):
             self.add_model(self)
         except ValidationError:
             for attribute_value in get_value_attributes(self).values():
+                if not attribute_value:
+                    continue
                 if is_identifiable_container(attribute_value):
                     self.add(*attribute_value)
                 else:
@@ -118,7 +120,7 @@ class DataModel(BaseModel):
         Returns:
             Set[str]: The set of ids.
         """
-        return set(self._key_ids_models.keys())
+        return self._key_ids_models.keys()
 
     def get_contained_ids(self) -> Set[str]:
         """
@@ -185,7 +187,8 @@ class DataModel(BaseModel):
                     raise ValueError(
                         f"Model with id {contained_model_id} already loaded but with different content. Make sure to only load models with unique ids."
                     )
-                replace_attribute_with_model(top_level_model, same_id_model)
+                # TODO: insert this functionality at another place in the code or validate if needed at all....
+            #     replace_attribute_with_model(top_level_model, same_id_model)
                 continue
             self._add_model(contained_model)
 
