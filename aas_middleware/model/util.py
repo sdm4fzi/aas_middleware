@@ -59,9 +59,10 @@ def is_identifiable(model: Any) -> bool:
     Returns:
         bool: True if the model is identifiable, False otherwise.
     """
-    if isinstance(model, UnIdentifiable):
-        return False
-    return True
+    # if isinstance(model, UnIdentifiable):
+    #     return False
+    # return True
+    return not isinstance(model, UnIdentifiable)
 
 
 # def get_identifier_type_fields(model: BaseModel) -> List[str]:
@@ -229,13 +230,16 @@ def is_identifiable_container(model: Any) -> bool:
     Returns:
         bool: True if the model is an identifiable container, False otherwise.
     """
+    if not model:
+        return False
     if not isinstance(model, list | tuple | set | dict):
         return False
-    if isinstance(model, list | tuple | set) and not all(
-        is_identifiable(element) for element in model
-    ):
-        return False
-    return True
+
+    if isinstance(model, dict):
+    #     # return any(is_identifiable(k) or is_identifiable(v) for k, v in model.items())
+    #     raise NotImplementedError("Dicts are not supported yet. Try using classes instead.")
+        return True
+    return any(is_identifiable(element) for element in model)
 
 
 def get_values_as_identifiable_list(value: Any) -> List[Optional[Identifiable]]:
