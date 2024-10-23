@@ -67,7 +67,6 @@ class ExampleSubmodel(Submodel):
     union_attribute: Union[str, int]
     submodel_element_collection_attribute_simple: SimpleExampleSEC
     submodel_element_collection_attribute: ExampleSEC
-    # FIXME: order of union arguments matters -> other way rounds leads to bug
     union_submodel_element_collection_attribute: Union[ExampleSEC, SimpleExampleSEC]
     list_submodel_element_collection_attribute: List[SimpleExampleSEC]
 

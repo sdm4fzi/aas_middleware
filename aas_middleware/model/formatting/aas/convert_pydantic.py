@@ -82,7 +82,7 @@ def convert_model_to_aas(
         attribute_data_specifications = convert_util.get_data_specification_for_attribute(
                 attribute_info, submodel
         )
-        aas_submodel_data_specifications += attribute_data_specifications
+        aas_submodel_data_specifications.append(attribute_data_specifications)
         if submodel:
             aas_submodels.append(submodel)
 
@@ -124,7 +124,7 @@ def convert_model_to_submodel(
         attribute_data_specifications = convert_util.get_data_specification_for_attribute(
                 attribute_info, submodel_element
         )
-        submodel_element_data_specifications += attribute_data_specifications
+        submodel_element_data_specifications.append(attribute_data_specifications)
         if submodel_element:
             submodel_elements.append(submodel_element)
 
@@ -227,7 +227,7 @@ def create_submodel_element_collection(
                 attribute_info, sme
             )
         )
-        submodel_element_data_specifications += attribute_data_specifications
+        submodel_element_data_specifications.append(attribute_data_specifications)
         if sme:
             value.append(sme)
 

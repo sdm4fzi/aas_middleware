@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import typing
 from pydantic import BaseModel, Field, create_model
+from pydantic_core import PydanticUndefined
 
 from aas_middleware.model.core import Reference
 from aas_middleware.model.formatting.aas import aas_model
@@ -130,7 +131,7 @@ def get_submodel_element_type(
 
 
 def get_dynamic_model_creation_dict_from_submodel_element(
-    attribute_name: str, attribute_type: typing.Type[typing.Any]
+    attribute_name: str, attribute_type: typing.Type[typing.Any], default_value: typing.Any = None
 ) -> typing.Dict[str, typing.Any]:
     """
     Converts a SubmodelElement to a dict.
@@ -142,9 +143,11 @@ def get_dynamic_model_creation_dict_from_submodel_element(
     Returns:
         dict: Dictionary that can be used to create a Pydantic model, with Annoated types for the attributes and examples.
     """
+    if not default_value:
+        default_value = PydanticUndefined
     return {
         attribute_name: typing.Annotated[
-            attribute_type, Field(examples=[])
+            attribute_type, Field(examples=[], default=default_value)
         ]
     }
 
@@ -187,22 +190,23 @@ def get_initial_dict_for_dynamic_model_creation(
     Returns:
         typing.Dict[str, typing.Any]: Dictionary that can be used to create a Pydantic model.
     """
-    model_creation_dict = {
-        "id_short": typing.Annotated[str, Field(examples=[basyx_model.id_short])],
-        "description": typing.Annotated[
-            str,
-            Field(examples=[convert_util.get_str_description(basyx_model.description)]),
-        ],
-    }
-    if isinstance(basyx_model, model.Identifiable):
-        model_creation_dict["id"] = typing.Annotated[
-            str, Field(examples=[str(basyx_model.id)])
-        ]
-    if isinstance(basyx_model, model.HasSemantics):
-        model_creation_dict["semantic_id"] = typing.Annotated[
-            str, Field(examples=[get_semantic_id_value_of_model(basyx_model)])
-        ]
-    return model_creation_dict
+    # model_creation_dict = {
+    #     "id_short": typing.Annotated[str, Field(examples=[basyx_model.id_short])],
+    #     "description": typing.Annotated[
+    #         str,
+    #         Field(examples=[convert_util.get_str_description(basyx_model.description)]),
+    #     ],
+    # }
+    # if isinstance(basyx_model, model.Identifiable):
+    #     model_creation_dict["id"] = typing.Annotated[
+    #         str, Field(examples=[str(basyx_model.id)])
+    #     ]
+    # if isinstance(basyx_model, model.HasSemantics):
+    #     model_creation_dict["semantic_id"] = typing.Annotated[
+    #         str, Field(examples=[get_semantic_id_value_of_model(basyx_model)])
+    #     ]
+    # return model_creation_dict
+    return {}
 
 def convert_submodel_template_to_pydatic_type(sm: model.Submodel) -> type[aas_model.Submodel]:
     """
@@ -218,7 +222,6 @@ def convert_submodel_template_to_pydatic_type(sm: model.Submodel) -> type[aas_mo
     dict_dynamic_model_creation = get_initial_dict_for_dynamic_model_creation(sm)
 
     for sm_element in sm.submodel_element:
-        # FIXME: resolve if the sm element type is used for multiple attributes -> iterate over attribute names and not submodels, if available...
         attribute_names = convert_util.get_attribute_names_from_basyx_template(
             sm, sm_element.id_short
         )
@@ -226,6 +229,7 @@ def convert_submodel_template_to_pydatic_type(sm: model.Submodel) -> type[aas_mo
             optional = convert_util.is_optional_attribute_type(sm, attribute_name)
             union = convert_util.is_union_attribute_type(sm, attribute_name)
             immutable = convert_util.is_attribute_from_basyx_model_immutable(sm, attribute_name)
+            default_value = convert_util.get_default_value_from_basyx_model(sm, sm_element.id_short)
             attribute_type = get_submodel_element_type(sm_element, immutable)
 
             if optional:
@@ -240,7 +244,7 @@ def convert_submodel_template_to_pydatic_type(sm: model.Submodel) -> type[aas_mo
                     dict_dynamic_model_creation[attribute_name], attribute_type
                 ]
             sme_model_creation_dict = get_dynamic_model_creation_dict_from_submodel_element(
-                attribute_name, attribute_type
+                attribute_name, attribute_type, default_value
             )
             dict_dynamic_model_creation.update(sme_model_creation_dict)
     model_type = create_model(
@@ -274,6 +278,7 @@ def convert_submodel_collection_to_pydantic_model(
             optional = convert_util.is_optional_attribute_type(sm_element, attribute_name)
             union = convert_util.is_union_attribute_type(sm_element, attribute_name)
             immutable = convert_util.is_attribute_from_basyx_model_immutable(sm_element, attribute_name)
+            default_value = convert_util.get_default_value_from_basyx_model(sm_element, sub_sm_element.id_short)
             attribute_type = get_submodel_element_type(sub_sm_element, immutable)
 
             if optional:
@@ -288,7 +293,7 @@ def convert_submodel_collection_to_pydantic_model(
                     dict_dynamic_model_creation[attribute_name], attribute_type
                 ] 
             dict_sme = get_dynamic_model_creation_dict_from_submodel_element(
-                attribute_name, attribute_type
+                attribute_name, attribute_type, default_value
             )
             dict_dynamic_model_creation.update(dict_sme)
     model_type = create_model(
@@ -367,9 +372,7 @@ def convert_submodel_list_to_pydantic_model(
             raise NotImplementedError("Type not implemented:", type(sm_element_value))
     if immutable:
         return typing.Tuple[value_type, ...]
-    print("ordered: ", sm_element.order_relevant)
     if not sm_element.order_relevant:
-        print("unordered list")
         return typing.Set[value_type]
     return typing.List[value_type]
 

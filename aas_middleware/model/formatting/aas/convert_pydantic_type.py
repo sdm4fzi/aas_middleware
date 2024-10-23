@@ -105,6 +105,13 @@ def convert_model_to_aas_template(
                 attribute_info, submodel
             )
             aas_submodel_data_specifications.append(attribute_data_specifications)
+            if not attribute_info.field_info.is_required():
+                print("Not required argument", attribute_info.name)
+                default_data_specification = convert_util.get_default_data_specification_for_attribute(
+                    attribute_info, submodel
+                )
+                aas_submodel_data_specifications.append(default_data_specification)
+        
             if submodel:
                 aas_submodels.append(submodel)
 
@@ -179,6 +186,12 @@ def convert_model_to_submodel_template(
             )
             if immutable_attribute_data_specification:
                 submodel_element_data_specifications.append(immutable_attribute_data_specification)
+            if not attribute_info.field_info.is_required():
+                print("Not required argument", attribute_info.name)
+                default_data_specification = convert_util.get_default_data_specification_for_attribute(
+                    attribute_info, submodel_element
+                )
+                submodel_element_data_specifications.append(default_data_specification)
             if submodel_element and not any(stored_submodel_element.id_short == submodel_element.id_short for stored_submodel_element in submodel_elements):
                 submodel_elements.append(submodel_element)
 
@@ -290,9 +303,9 @@ def create_submodel_element_collection(
                 attribute_name = f"{attribute_info.name}_{counter}"
             else:
                 attribute_name = attribute_info.name
-            submodel = create_submodel_element_template(attribute_name=attribute_name, attribute_type=type_annotation)
+            submodel_element = create_submodel_element_template(attribute_name=attribute_name, attribute_type=type_annotation)
             attribute_data_specifications = convert_util.get_data_specification_for_attribute(
-                attribute_info, submodel
+                attribute_info, submodel_element
             )
             submodel_element_data_specifications.append(attribute_data_specifications)
             immutable_attribute_data_specification = convert_util.get_immutable_data_specification_for_attribute(
@@ -300,8 +313,13 @@ def create_submodel_element_collection(
             )
             if immutable_attribute_data_specification:
                 submodel_element_data_specifications.append(immutable_attribute_data_specification)
-            if submodel and not any(stored_submodel_element.id_short == submodel.id_short for stored_submodel_element in value):
-                value.append(submodel)
+            if not attribute_info.field_info.is_required():
+                default_data_specification = convert_util.get_default_data_specification_for_attribute(
+                    attribute_info, submodel_element
+                )
+                submodel_element_data_specifications.append(default_data_specification)
+            if submodel_element and not any(stored_submodel_element.id_short == submodel_element.id_short for stored_submodel_element in value):
+                value.append(submodel_element)
 
     id_short = get_template_id(model_sec)
 
@@ -370,7 +388,6 @@ def create_submodel_element_list(
     if typing.get_origin(attribute_type) == set:
         ordered = False
         iterable_type = "set"
-        print("set detected at ", name)
     elif typing.get_origin(attribute_type) == tuple:
         ordered = True
         iterable_type = "tuple"

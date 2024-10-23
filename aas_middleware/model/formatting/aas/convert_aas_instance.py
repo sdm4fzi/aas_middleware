@@ -240,6 +240,8 @@ def convert_submodel_collection_to_pydantic_model(
             attribute_name, attribute_value
         )
         dict_model_instantiation.update(dict_sme_instantiation)
+    print("___new sec", sm_element.id_short, model_type)
+    print(dict_model_instantiation)
     return TypeAdapter(model_type).validate_python(dict_model_instantiation)
 
 

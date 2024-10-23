@@ -379,6 +379,22 @@ def get_immutable_data_specification_for_attribute(
         return
     return get_immutable_data_specification_for_attribute_name(attribute_field_info.name)
 
+
+def get_default_data_specification_for_attribute(attribute_field_info: AttributeFieldInfo, 
+                                                 basyx_attribute: typing.Union[NoneType, 
+        aas_model.AAS, aas_model.Submodel, aas_model.SubmodelElementCollection
+    ]) -> typing.Optional[model.EmbeddedDataSpecification]:
+    model_keys = get_model_keys_for_data_specification(basyx_attribute)
+    return model.EmbeddedDataSpecification(
+        data_specification=model.ExternalReference(
+            key=model_keys,
+        ),
+        data_specification_content=model.DataSpecificationIEC61360(
+            preferred_name=model.LangStringSet({"en": "default"}),
+            value=attribute_field_info.field_info.default,
+        ),
+    )
+
 def get_union_data_specification_for_attribute(
     attribute_field_info: AttributeFieldInfo
 ) -> typing.Optional[model.EmbeddedDataSpecification]:
@@ -397,6 +413,34 @@ def get_union_data_specification_for_attribute(
     )
 
 
+def get_default_value_from_basyx_model(
+        item: Union[
+            model.AssetAdministrationShell, model.Submodel, model.SubmodelElementCollection
+        ],
+        attribute_id: str
+) -> typing.Any:
+    """
+    Returns the default value of an attribute
+
+    Args:
+        item (Union[model.AssetAdministrationShell, model.Submodel, model.SubmodelElementCollection]): The item to check
+        attribute_name (str): The name of the attribute
+
+    Returns:
+        bool: If the attribute is optional
+    """
+    if not item.embedded_data_specifications:
+        return 
+    for data_spec in item.embedded_data_specifications:
+        content = data_spec.data_specification_content
+        if not isinstance(content, model.DataSpecificationIEC61360):
+            continue
+        if not (content.preferred_name.get("en") == "default"):
+            continue
+        if not any(key.value == attribute_id for key in data_spec.data_specification.key):
+            continue
+        return content.value
+    return 
 def is_attribute_from_basyx_model_immutable(
     item: typing.Union[
         model.AssetAdministrationShell, model.Submodel, model.SubmodelElementCollection
