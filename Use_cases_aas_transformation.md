@@ -45,3 +45,20 @@ submodel template validation:
 2. The submodel is transformed to its pydantic model instance
 3. The template is transformed to its pydantic model
 4. The submodel is validated against the template as a dictionary.
+
+
+
+
+
+# TODO: open TODOS vor v0.2.0
+
+- fix bug with tuples and list SECs during ddirect conversion from aas to pydantic model
+- remove old aas-pydantic-conversion code from middleware etc. and replace it with the new one
+- add a normalize data model function to DataModel before parsing it to ensure no redundancy in the DataModel
+- fix the bugs in DataModel with inconsistent data in attributes and internal models. Allow removal of models of a DataModel
+- Add File, Operation and Blob Support
+- add support for dict attrributes to be parsed as SubmodelElementCollections
+- tests for optional and dict attributes
+- add a basyx caching connector with internal caching or redis
+- add support for defining a DataModel with JsonSchema
+- allow to add triggers for workflows on events, also add an Listener and Publisher for pub/sub communication
