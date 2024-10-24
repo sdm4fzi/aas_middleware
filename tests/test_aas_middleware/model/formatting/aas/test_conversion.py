@@ -1,6 +1,8 @@
 import copy
 import json
 from typing import Any, Dict, Optional
+
+import pydantic
 from aas_middleware.model.formatting.aas.aas_model import (
     AAS,
     Submodel,
@@ -152,9 +154,13 @@ def test_convert_simple_submodel_with_template_extraction(example_submodel: Subm
 
 
 # def test_convert_simple_aas(example_aas: AAS):
-#     # TODO: update this to new type / instance conversion
-#     basyx_aas = convert_pydantic.convert_model_to_aas(example_aas)
-#     pydantic_models = convert_aas.convert_object_store_to_pydantic_models(basyx_aas)
-#     assert len(pydantic_models) == 1
-#     pydantic_model = pydantic_models[0]
-#     # assert pydantic_model.model_dump() == example_aas.model_dump()
+# #     # TODO: update this to new type / instance conversion
+#     object_store = convert_pydantic_type.convert_model_to_aas_template(type(example_aas))
+#     pydantic_type = convert_aas_template.convert_object_store_to_pydantic_types(object_store)
+#     assert len(pydantic_type) == 1
+#     assert compare_schemas(example_aas.model_json_schema(), pydantic_type[0].model_json_schema())
+
+#     object_store_instance = convert_pydantic_model.convert_model_to_aas(example_aas)
+#     pydantic_instance = convert_aas_instance.convert_object_store_to_pydantic_models(object_store_instance, types=pydantic_type)
+#     assert len(pydantic_instance) == 1
+#     assert pydantic_instance[0].model_dump() == example_aas.model_dump()

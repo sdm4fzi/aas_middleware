@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from collections import OrderedDict
 import json
+import typing
 from urllib import parse
 from enum import Enum
 import uuid
@@ -19,6 +21,7 @@ from aas_middleware.model.formatting.aas.convert_util import (
     get_attribute_infos,
     get_id_short,
     get_semantic_id,
+    get_template_id,
     get_value_type_of_attribute,
 )
 
@@ -128,6 +131,16 @@ def convert_model_to_submodel(
                 attribute_info, submodel_element
         )
         submodel_element_data_specifications.append(attribute_data_specification)
+        immutable_attribute_data_specification = convert_util.get_immutable_data_specification_for_attribute(
+                attribute_info
+        )
+        if immutable_attribute_data_specification:
+            submodel_element_data_specifications.append(immutable_attribute_data_specification)
+        if not attribute_info.field_info.is_required():
+            default_data_specification = convert_util.get_default_data_specification_for_attribute(
+                attribute_info, submodel_element
+            )
+            submodel_element_data_specifications.append(default_data_specification)
         if submodel_element:
             submodel_elements.append(submodel_element)
 
@@ -165,18 +178,8 @@ def create_submodel_element(
     if isinstance(attribute_value, aas_model.SubmodelElementCollection):
         smc = create_submodel_element_collection(attribute_value)
         return smc
-    elif isinstance(attribute_value, list):
+    elif isinstance(attribute_value, (list, tuple, set)):
         sml = create_submodel_element_list(attribute_name, attribute_value)
-        return sml
-    elif isinstance(attribute_value, tuple):
-        attribute_value_as_list = list(attribute_value)
-        sml = create_submodel_element_list(attribute_name, attribute_value_as_list)
-        return sml
-    elif isinstance(attribute_value, set):
-        attribute_value_as_list = list(attribute_value)	
-        sml = create_submodel_element_list(
-            attribute_name, attribute_value_as_list, ordered=False
-        )
         return sml
     elif (isinstance(attribute_value, str)) and (
         (
@@ -234,6 +237,16 @@ def create_submodel_element_collection(
             )
         )
         submodel_element_data_specifications.append(attribute_data_specification)
+        immutable_attribute_data_specification = convert_util.get_immutable_data_specification_for_attribute(
+                attribute_info
+            )
+        if immutable_attribute_data_specification:
+            submodel_element_data_specifications.append(immutable_attribute_data_specification)
+        if not attribute_info.field_info.is_required():
+            default_data_specification = convert_util.get_default_data_specification_for_attribute(
+                attribute_info, sme
+            )
+            submodel_element_data_specifications.append(default_data_specification)
         if sme:
             value.append(sme)
 
@@ -268,24 +281,26 @@ def patch_id_short_with_temp_attribute(
 
     
 def create_submodel_element_list(
-    attribute_name: str, value: list | tuple | set, ordered=True
+    attribute_name: str, value: list | tuple | set
 ) -> model.SubmodelElementList:
     submodel_elements = []
-    submodel_element_ids = set()
+    submodel_element_ids = OrderedDict()
     for el in value:
         submodel_element = create_submodel_element(attribute_name, el)
         if isinstance(submodel_element, model.SubmodelElementCollection):
+            print("SEc ", len(submodel_element.value))
             if submodel_element.id_short in submodel_element_ids:
                 raise ValueError(
                     f"Submodel element collection with id {submodel_element.id_short} already exists in list"
                 )
-            submodel_element_ids.add(submodel_element.id_short)
+            submodel_element_ids.update({submodel_element.id_short: None})
             patch_id_short_with_temp_attribute(submodel_element)
         submodel_element.id_short = None
+        print("SEc 2", len(submodel_element.value))
         submodel_elements.append(submodel_element)
 
     if submodel_elements and isinstance(submodel_elements[0], model.Property):
-        value_type_list_element = type(value[0])
+        value_type_list_element = type(value.__iter__().__next__())
         type_value_list_element = type(submodel_elements[0])
     elif submodel_elements and isinstance(
         submodel_elements[0], model.Reference | model.SubmodelElementCollection
@@ -295,16 +310,31 @@ def create_submodel_element_list(
     else:
         value_type_list_element = convert_primitive_type_to_xsdtype(str)
         type_value_list_element = model.Property
+    print(type(value))
+    if isinstance(value, set):
+        ordered = False
+        iterable_type = "set"
+    elif isinstance(value, tuple):
+        ordered = True
+        iterable_type = "tuple"
+    elif isinstance(value, list):
+        ordered = True
+        iterable_type = "list"
+    else:
+        raise ValueError(f"Value must be a list, tuple or set, provided type {type(value)}")
 
-    # FIXME: resolve problem with SubmodelElementList that cannot take Enum values...
-    # context=tuple([KPILevelEnum(context.value) for context in kpi.context]),
     sml = model.SubmodelElementList(
-        id_short=attribute_name,
+        id_short=f"{iterable_type}_{uuid.uuid4().hex}",
         type_value_list_element=type_value_list_element,
         value_type_list_element=value_type_list_element,
         value=submodel_elements,
         order_relevant=ordered,
     )
+    for sec in sml.value:
+        if isinstance(sec, model.SubmodelElementCollection):
+            print("SEc 3", len(sml.value))
+            for value in sec.value:
+                print("sec value", value)
     return sml
 
 

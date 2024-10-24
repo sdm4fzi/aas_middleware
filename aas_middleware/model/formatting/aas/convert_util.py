@@ -662,3 +662,52 @@ def convert_primitive_type_to_xsdtype(primitive_type: aas_model.PrimitiveSubmode
         return datatypes.Integer
     else:
         raise NotImplementedError("Type not implemented:", primitive_type)
+    
+
+def unpatch_id_short_from_temp_attribute(smec: model.SubmodelElementCollection):
+    """
+    Unpatches the id_short attribute of a SubmodelElementCollection from the temporary attribute.
+
+    Args:
+        sm_element (model.SubmodelElementCollection): SubmodelElementCollection to unpatch.
+    """
+    if not smec.id_short.startswith("generated_submodel_list_hack_"):
+        return smec
+    no_temp_values = []
+    id_short = None
+    for sm_element in smec.value:
+        if isinstance(sm_element, model.Property) and sm_element.id_short.startswith("temp_id_short_attribute"):
+            id_short = sm_element.value
+            continue
+        no_temp_values.append(sm_element)
+
+    if not id_short:
+        # return smec
+        new_id_short = smec.parent.id_short
+        smec.parent = None
+        smec.id_short = new_id_short
+        return smec
+        
+    for value in no_temp_values:
+        smec.value.remove(value)
+    new_smec = model.SubmodelElementCollection(
+        id_short=id_short, value=no_temp_values,
+        embedded_data_specifications=smec.embedded_data_specifications,
+    )
+    return new_smec
+        
+
+def repatch_id_short_to_temp_attribute(smec: model.SubmodelElementCollection, temp_smec: model.SubmodelElementCollection):
+    """
+    Repatches the id_short attribute of a SubmodelElementCollection to the temporary attribute.
+
+    Args:
+        sm_element (model.SubmodelElementCollection): SubmodelElementCollection to repatch.
+    """
+    values_to_repatch = []
+    for sm_element in temp_smec.value:
+        values_to_repatch.append(sm_element)
+    temp_smec.value.clear()
+    for sm_element in values_to_repatch:
+        smec.value.add(sm_element)
+    return smec

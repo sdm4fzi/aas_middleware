@@ -14,6 +14,8 @@ from aas_middleware.model.formatting.aas import convert_util
 from aas_middleware.model.formatting.aas.convert_util import (
     convert_xsdtype_to_primitive_type,
     get_semantic_id_value_of_model,
+    repatch_id_short_to_temp_attribute,
+    unpatch_id_short_from_temp_attribute,
 )
 
 
@@ -304,41 +306,6 @@ def convert_submodel_collection_to_pydantic_model(
     return model_type
 
 
-def unpatch_id_short_from_temp_attribute(smec: model.SubmodelElementCollection):
-    """
-    Unpatches the id_short attribute of a SubmodelElementCollection from the temporary attribute.
-
-    Args:
-        sm_element (model.SubmodelElementCollection): SubmodelElementCollection to unpatch.
-    """
-    if not smec.id_short.startswith("generated_submodel_list_hack_"):
-        return smec
-    no_temp_values = []
-    id_short = None
-    for sm_element in smec.value:
-        if isinstance(sm_element, model.Property) and sm_element.id_short.startswith("temp_id_short_attribute"):
-            id_short = sm_element.value
-            continue
-        no_temp_values.append(sm_element)
-
-    if not id_short:
-        # return smec
-        new_id_short = smec.parent.id_short
-        smec.parent = None
-        smec.id_short = new_id_short
-        return smec
-        
-    for value in no_temp_values:
-        smec.value.remove(value)
-    new_smec = model.SubmodelElementCollection(
-        id_short=id_short, value=no_temp_values,
-        embedded_data_specifications=smec.embedded_data_specifications,
-    )
-    return new_smec
-        
-
-
-
 def convert_submodel_list_to_pydantic_model(
     sm_element: model.SubmodelElementList, immutable: bool = False
 ) -> type[typing.Union[typing.List[aas_model.SubmodelElement], typing.Set[aas_model.SubmodelElement]]]:
@@ -356,11 +323,11 @@ def convert_submodel_list_to_pydantic_model(
     else:
         sm_element_value = sm_element.value[0]
         if isinstance(sm_element_value, model.SubmodelElementCollection):
-            sm_element_value = unpatch_id_short_from_temp_attribute(sm_element_value)
-            value_type = convert_submodel_collection_to_pydantic_model(sm_element_value)
+            new_sm_element_value = unpatch_id_short_from_temp_attribute(sm_element_value)
+            value_type = convert_submodel_collection_to_pydantic_model(new_sm_element_value)
+            repatch_id_short_to_temp_attribute(sm_element_value, new_sm_element_value)
+
         elif isinstance(sm_element_value, model.SubmodelElementList):
-            # FIXME: if a nested list used, tuples cannot be detected currently, because the data specifications information about immutability is not set in the convert_pydantic_type
-            # immutable = convert_util.is_attribute_from_basyx_model_immutable(sm_element, "value")
             value_type = convert_submodel_list_to_pydantic_model(sm_element_value)
         elif isinstance(sm_element_value, model.ReferenceElement):
             value_type = convert_reference_element_to_pydantic_model(sm_element_value)

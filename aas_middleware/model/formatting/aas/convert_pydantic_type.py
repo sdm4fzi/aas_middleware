@@ -394,6 +394,8 @@ def create_submodel_element_list(
     elif typing.get_origin(attribute_type) == list:
         ordered = True
         iterable_type = "list"
+    else:
+        raise ValueError(f"Type {attribute_type} is not supported for SubmodelElementList, provided subclass of list, tuple or set")
     
     sml = model.SubmodelElementList(
         id_short=f"{iterable_type}_of_{get_template_id(typing.get_args(attribute_type)[0])}",

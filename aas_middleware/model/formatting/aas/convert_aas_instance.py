@@ -8,9 +8,11 @@ from basyx.aas import model
 
 
 from aas_middleware.model.formatting.aas import convert_util
+from aas_middleware.model.formatting.aas.convert_aas import unpatch_id_short_from_temp_attribute
 from aas_middleware.model.formatting.aas.convert_util import (
     is_attribute_from_basyx_model_immutable,
     get_semantic_id_value_of_model,
+    repatch_id_short_to_temp_attribute,
 )
 
 
@@ -245,36 +247,6 @@ def convert_submodel_collection_to_pydantic_model(
     return TypeAdapter(model_type).validate_python(dict_model_instantiation)
 
 
-def unpatch_id_short_from_temp_attribute(smec: model.SubmodelElementCollection):
-    """
-    Unpatches the id_short attribute of a SubmodelElementCollection from the temporary attribute.
-
-    Args:
-        sm_element (model.SubmodelElementCollection): SubmodelElementCollection to unpatch.
-    """
-    if not smec.id_short.startswith("generated_submodel_list_hack_"):
-        return smec
-    if not any(isinstance(sm_element, model.Property) and sm_element.id_short.startswith("temp_id_short_attribute") for sm_element in smec.value):
-        raise ValueError("No temporary id_short attribute found in SubmodelElementCollection.")
-    no_temp_values = []
-    id_short = None
-    for sm_element in smec.value:
-        if isinstance(sm_element, model.Property) and sm_element.id_short.startswith("temp_id_short_attribute"):
-            id_short = sm_element.value
-            continue
-        no_temp_values.append(sm_element)
-        
-    for value in no_temp_values:
-        smec.value.remove(value)
-    new_smec = model.SubmodelElementCollection(
-        id_short=id_short, value=no_temp_values,
-        embedded_data_specifications=smec.embedded_data_specifications,
-    )
-    return new_smec
-        
-
-
-
 def convert_submodel_list_to_pydantic_model(
     sm_element: model.SubmodelElementList, model_type: type[typing.Any]
 ) -> typing.Union[typing.List[aas_model.SubmodelElement], typing.Set[aas_model.SubmodelElement], typing.Tuple[aas_model.SubmodelElement]]:
@@ -290,10 +262,11 @@ def convert_submodel_list_to_pydantic_model(
     sme_pydantic_models = []
     for sme in sm_element.value:
         if isinstance(sme, model.SubmodelElementCollection):
-            sme = unpatch_id_short_from_temp_attribute(sme)
+            new_sme = unpatch_id_short_from_temp_attribute(sme)
             sme_pydantic_models.append(
-                convert_submodel_collection_to_pydantic_model(sme, model_type=typing.get_args(model_type)[0])
+                convert_submodel_collection_to_pydantic_model(new_sme, model_type=typing.get_args(model_type)[0])
             )
+            repatch_id_short_to_temp_attribute(sme, new_sme)
         elif isinstance(sme, model.SubmodelElementList):
             sme_pydantic_models.append(convert_submodel_list_to_pydantic_model(sme, model_type=typing.get_args(model_type)[0]))
         elif isinstance(sme, model.ReferenceElement):
