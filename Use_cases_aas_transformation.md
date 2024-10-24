@@ -52,7 +52,6 @@ submodel template validation:
 
 # TODO: open TODOS vor v0.2.0
 
-- fix bug with tuples and list SECs during ddirect conversion from aas to pydantic model
 - remove old aas-pydantic-conversion code from middleware etc. and replace it with the new one
 - add a normalize data model function to DataModel before parsing it to ensure no redundancy in the DataModel
 - fix the bugs in DataModel with inconsistent data in attributes and internal models. Allow removal of models of a DataModel
