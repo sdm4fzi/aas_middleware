@@ -79,7 +79,7 @@ def convert_model_to_aas(
         model.DictObjectStore[model.Identifiable]: DictObjectStore with all Submodels
     """
     aas_attribute_infos = get_attribute_infos(model_aas)
-    aas_submodels = []
+    aas_submodels = {}
     aas_submodel_data_specifications = []
     for attribute_info in aas_attribute_infos:
         submodel = convert_model_to_submodel(model_submodel=attribute_info.value)        
@@ -87,9 +87,8 @@ def convert_model_to_aas(
                 attribute_info, submodel
         )
         aas_submodel_data_specifications.append(attribute_data_specification)
-        if submodel:
-            aas_submodels.append(submodel)
-
+        if submodel and not submodel.id_short in aas_submodels:
+            aas_submodels.update({submodel.id_short: submodel})
 
     asset_information = model.AssetInformation(
         global_asset_id=model.Identifier(model_aas.id),
@@ -103,13 +102,13 @@ def convert_model_to_aas(
         id_=model.Identifier(model_aas.id),
         description=convert_util.get_basyx_description_from_model(model_aas),
         submodel={
-            model.ModelReference.from_referable(submodel) for submodel in aas_submodels
+            model.ModelReference.from_referable(submodel) for submodel in aas_submodels.values()
         },
         embedded_data_specifications=convert_util.get_data_specification_for_model(model_aas) + aas_submodel_data_specifications,
     )
     obj_store: model.DictObjectStore[model.Identifiable] = model.DictObjectStore()
     obj_store.add(basyx_aas)
-    for sm in aas_submodels:
+    for sm in aas_submodels.values():
         obj_store.add(sm)
     return obj_store
 
@@ -288,7 +287,6 @@ def create_submodel_element_list(
     for el in value:
         submodel_element = create_submodel_element(attribute_name, el)
         if isinstance(submodel_element, model.SubmodelElementCollection):
-            print("SEc ", len(submodel_element.value))
             if submodel_element.id_short in submodel_element_ids:
                 raise ValueError(
                     f"Submodel element collection with id {submodel_element.id_short} already exists in list"
@@ -296,7 +294,6 @@ def create_submodel_element_list(
             submodel_element_ids.update({submodel_element.id_short: None})
             patch_id_short_with_temp_attribute(submodel_element)
         submodel_element.id_short = None
-        print("SEc 2", len(submodel_element.value))
         submodel_elements.append(submodel_element)
 
     if submodel_elements and isinstance(submodel_elements[0], model.Property):
@@ -310,7 +307,6 @@ def create_submodel_element_list(
     else:
         value_type_list_element = convert_primitive_type_to_xsdtype(str)
         type_value_list_element = model.Property
-    print(type(value))
     if isinstance(value, set):
         ordered = False
         iterable_type = "set"
@@ -330,11 +326,6 @@ def create_submodel_element_list(
         value=submodel_elements,
         order_relevant=ordered,
     )
-    for sec in sml.value:
-        if isinstance(sec, model.SubmodelElementCollection):
-            print("SEc 3", len(sml.value))
-            for value in sec.value:
-                print("sec value", value)
     return sml
 
 

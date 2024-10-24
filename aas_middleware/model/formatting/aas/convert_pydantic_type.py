@@ -80,7 +80,7 @@ def convert_model_to_aas_template(
         model.DictObjectStore[model.Identifiable]: DictObjectStore with all Submodels
     """
     aas_attribute_infos = get_attribute_field_infos(model_type)
-    aas_submodels = []
+    aas_submodels = {}
     aas_submodel_data_specifications = []
     for attribute_info in aas_attribute_infos:
         if typing.get_origin(attribute_info.field_info.annotation) == Union:
@@ -106,14 +106,13 @@ def convert_model_to_aas_template(
             )
             aas_submodel_data_specifications.append(attribute_data_specifications)
             if not attribute_info.field_info.is_required():
-                print("Not required argument", attribute_info.name)
                 default_data_specification = convert_util.get_default_data_specification_for_attribute(
                     attribute_info, submodel
                 )
                 aas_submodel_data_specifications.append(default_data_specification)
         
-            if submodel:
-                aas_submodels.append(submodel)
+            if submodel and not submodel.id_short in aas_submodels:
+                aas_submodels.update({submodel.id_short: submodel})
 
 
     asset_information = model.AssetInformation(
@@ -128,13 +127,13 @@ def convert_model_to_aas_template(
         id_=model.Identifier(get_template_id(model_type)),
         description={"en": f"Type aas with id {get_template_id(model_type)} that contains submodel templates"},
         submodel={
-            model.ModelReference.from_referable(submodel) for submodel in aas_submodels
+            model.ModelReference.from_referable(submodel) for submodel in aas_submodels.values()
         },
         embedded_data_specifications=convert_util.get_data_specification_for_model_template(model_type) + aas_submodel_data_specifications,
     )
     obj_store: model.DictObjectStore[model.Identifiable] = model.DictObjectStore()
     obj_store.add(basyx_aas)
-    for sm in aas_submodels:
+    for sm in aas_submodels.values():
         obj_store.add(sm)
     return obj_store
 
@@ -187,7 +186,6 @@ def convert_model_to_submodel_template(
             if immutable_attribute_data_specification:
                 submodel_element_data_specifications.append(immutable_attribute_data_specification)
             if not attribute_info.field_info.is_required():
-                print("Not required argument", attribute_info.name)
                 default_data_specification = convert_util.get_default_data_specification_for_attribute(
                     attribute_info, submodel_element
                 )

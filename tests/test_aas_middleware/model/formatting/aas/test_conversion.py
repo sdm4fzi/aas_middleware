@@ -63,15 +63,15 @@ def compare_properties(schema1: Dict[str, Any], schema2: Dict[str, Any], referen
     properties2 = schema2.get("properties", {})
     
     # Normalize and compare properties
-    # normalized_schema1 = normalize_schema(properties1, reference_schemas=reference_schemas)
-    # normalized_schema2 = normalize_schema(properties2, reference_schemas=reference_schemas)
-    # for key, value in normalized_schema1.items():
-    #     if not key in normalized_schema2:
-    #         print("missing key", key)
-    #     if value != normalized_schema2[key]:
-    #         print("different values")
-    #         print(value)
-    #         print(normalized_schema2[key])
+    normalized_schema1 = normalize_schema(properties1, reference_schemas=reference_schemas)
+    normalized_schema2 = normalize_schema(properties2, reference_schemas=reference_schemas)
+    for key, value in normalized_schema1.items():
+        if not key in normalized_schema2:
+            print("missing key", key)
+        if value != normalized_schema2[key]:
+            print("different values")
+            print(value)
+            print(normalized_schema2[key])
     if normalize_schema(properties1, reference_schemas=reference_schemas) != normalize_schema(properties2, reference_schemas=reference_schemas):
         return False
 
@@ -153,14 +153,14 @@ def test_convert_simple_submodel_with_template_extraction(example_submodel: Subm
     assert pydantic_model.model_dump() == example_submodel.model_dump()
 
 
-# def test_convert_simple_aas(example_aas: AAS):
-# #     # TODO: update this to new type / instance conversion
-#     object_store = convert_pydantic_type.convert_model_to_aas_template(type(example_aas))
-#     pydantic_type = convert_aas_template.convert_object_store_to_pydantic_types(object_store)
-#     assert len(pydantic_type) == 1
-#     assert compare_schemas(example_aas.model_json_schema(), pydantic_type[0].model_json_schema())
+def test_convert_simple_aas(example_aas: AAS):
+#     # TODO: update this to new type / instance conversion
+    object_store = convert_pydantic_type.convert_model_to_aas_template(type(example_aas))
+    pydantic_type = convert_aas_template.convert_object_store_to_pydantic_types(object_store)
+    assert len(pydantic_type) == 1
+    assert compare_schemas(example_aas.model_json_schema(), pydantic_type[0].model_json_schema())
 
-#     object_store_instance = convert_pydantic_model.convert_model_to_aas(example_aas)
-#     pydantic_instance = convert_aas_instance.convert_object_store_to_pydantic_models(object_store_instance, types=pydantic_type)
-#     assert len(pydantic_instance) == 1
-#     assert pydantic_instance[0].model_dump() == example_aas.model_dump()
+    object_store_instance = convert_pydantic_model.convert_model_to_aas(example_aas)
+    pydantic_instance = convert_aas_instance.convert_object_store_to_pydantic_models(object_store_instance, types=pydantic_type)
+    assert len(pydantic_instance) == 1
+    assert pydantic_instance[0].model_dump() == example_aas.model_dump()

@@ -15,6 +15,33 @@ from aas_middleware.model.formatting.aas.convert_util import (
     repatch_id_short_to_temp_attribute,
 )
 
+def get_types_name_dict(types: typing.List[typing.Type[aas_model.AAS | aas_model.Submodel]]) -> typing.Dict[str, type]:
+    """
+    Returns a dictionary with the type names as keys and the types as values.
+
+    Args:
+        types (typing.List[type]): List of types to create the dictionary from.
+
+    Returns:
+        typing.Dict[str, type]: Dictionary with the type names as keys and the types as values.
+    """
+    types_name_dict = {t.__name__.split(".")[-1]: t for t in types}
+    for top_level_type in types:
+        if not issubclass(top_level_type, aas_model.AAS):
+            continue
+        for attribute_name, attribute_type in top_level_type.model_fields.items():
+            if typing.get_origin(attribute_type.annotation) is typing.Union:
+                for contained_type in typing.get_args(attribute_type.annotation):
+                    if typing.get_origin(contained_type) is typing.Annotated:
+                        contained_type = typing.get_args(contained_type)[0]
+                    if not issubclass(contained_type, aas_model.Submodel):
+                        continue
+                    types_name_dict[contained_type.__name__.split(".")[-1]] = contained_type
+                continue
+            if not issubclass(attribute_type.annotation, aas_model.Submodel):
+                continue
+            types_name_dict[attribute_type.annotation.__name__.split(".")[-1]] = attribute_type.annotation
+    return types_name_dict
 
 def convert_object_store_to_pydantic_models(
     obj_store: model.DictObjectStore, types: typing.List[type] = None
@@ -28,7 +55,8 @@ def convert_object_store_to_pydantic_models(
     Returns:
         typing.List[aas_model.AAS]: List of pydantic models
     """
-    type_name_dict = {t.__name__.split(".")[-1]: t for t in types}
+    type_name_dict = get_types_name_dict(types)
+    
     pydantic_submodels: typing.List[aas_model.Submodel] = []
     for identifiable in obj_store:
         if not isinstance(identifiable, model.Submodel):
@@ -242,8 +270,6 @@ def convert_submodel_collection_to_pydantic_model(
             attribute_name, attribute_value
         )
         dict_model_instantiation.update(dict_sme_instantiation)
-    print("___new sec", sm_element.id_short, model_type)
-    print(dict_model_instantiation)
     return TypeAdapter(model_type).validate_python(dict_model_instantiation)
 
 
