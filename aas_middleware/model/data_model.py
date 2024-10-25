@@ -16,6 +16,7 @@ from aas_middleware.model.util import (
     get_value_attributes,
     is_identifiable_container,
     models_are_equal,
+    normalize_identifiables_in_model,
 )
 
 from aas_middleware.model.util import (
@@ -160,7 +161,7 @@ class DataModel(BaseModel):
         Args:
             model (Identifiable): The model to load.
         """
-        # Identifiable.model_validate(model)
+        normalize_identifiables_in_model(model, self._key_ids_models)
         model_id = get_id_with_patch(model)
         if model_id in self.model_ids:
             raise ValueError(f"Model with id {model_id} already loaded.")
@@ -182,14 +183,7 @@ class DataModel(BaseModel):
         """
         for contained_model_id, contained_model in contained_models_map.items():
             if contained_model_id in self.model_ids:
-                same_id_model = self.get_model(contained_model_id)
-                if not models_are_equal(same_id_model, contained_model):
-                    raise ValueError(
-                        f"Model with id {contained_model_id} already loaded but with different content. Make sure to only load models with unique ids."
-                    )
-                # TODO: insert this functionality at another place in the code or validate if needed at all....
-            #     replace_attribute_with_model(top_level_model, same_id_model)
-                continue
+                continue # model already loaded, imhomoegeneous data model would be found in normalize_identifiables_in_model
             self._add_model(contained_model)
 
     def _add_contained_schemas(

@@ -1,6 +1,7 @@
+from pydantic import BaseModel
 from aas_middleware.model.data_model import DataModel
 
-from aas_middleware.model.util import get_id_with_patch
+from aas_middleware.model.util import get_id_with_patch, normalize_identifiables, normalize_identifiables_in_model
 from tests.conftest import (
     ExampleSubmodel,
     ValidAAS,
@@ -35,6 +36,24 @@ def test_minimal_example_with_AAS(example_aas: ValidAAS):
     assert data_model.get_referenced_models(example_aas.example_submodel.submodel_element_collection_attribute_simple) == [
     ]
 
+
+def test_normalize_complex_example(
+    example_aas: ValidAAS,
+    referenced_aas_1: ValidAAS
+):
+    example_aas_list = [example_aas.model_copy(deep=True) for _ in range(3)]
+    referenced_aas_1_list = [referenced_aas_1.model_copy(deep=True) for _ in range(3)]
+    referenced_aas_1_list[0].id = "other_id"
+    for model in referenced_aas_1_list:
+        model.example_submodel = model.example_submodel.model_copy(deep=True)
+    assert id(example_aas_list[0]) != id(example_aas_list[1]) and id(example_aas_list[1]) != id(example_aas_list[2]) and id(example_aas_list[0]) != id(example_aas_list[2])
+    assert id(referenced_aas_1_list[0].example_submodel) != id(referenced_aas_1_list[1].example_submodel) and id(referenced_aas_1_list[1].example_submodel) != id(referenced_aas_1_list[2].example_submodel) and id(referenced_aas_1_list[0].example_submodel) != id(referenced_aas_1_list[2].example_submodel)
+
+    normalized_list = normalize_identifiables(example_aas_list)
+    assert id(normalized_list[0]) == id(normalized_list[1]) and id(normalized_list[1]) == id(normalized_list[2]) and id(normalized_list[0]) == id(normalized_list[2])
+    
+    normalized_referenced_aas_1_list = normalize_identifiables(referenced_aas_1_list)
+    assert id(normalized_referenced_aas_1_list[0].example_submodel) == id(normalized_referenced_aas_1_list[1].example_submodel) and id(normalized_referenced_aas_1_list[1].example_submodel) == id(normalized_referenced_aas_1_list[2].example_submodel) and id(normalized_referenced_aas_1_list[0].example_submodel) == id(normalized_referenced_aas_1_list[2].example_submodel)
 
 def test_more_complex_example(
     example_aas: ValidAAS,

@@ -15,11 +15,11 @@ T = TypeVar("T", bound=AAS)
 S = TypeVar("S", bound=Submodel)
 
 class BasyxAASConnector(Generic[T]):
-    def __init__(self, model: T, host: str, port: int, submodel_host: Optional[str] = None, submodel_port: Optional[int] = None, aas_type_template: Optional[T] = None):
+    def __init__(self, model: T, host: str, port: int, submodel_host: Optional[str] = None, submodel_port: Optional[int] = None):
         self.host = host
         self.port = port
         self.aas_id = model.id
-        self.aas_type_template: Optional[T] = aas_type_template
+        self.aas_type_template: Optional[T] = type(model)
 
         if not submodel_host:
             submodel_host = host
@@ -31,10 +31,6 @@ class BasyxAASConnector(Generic[T]):
         self.aas_server_address = f"http://{host}:{port}"
         self.submodel_server_address = f"http://{submodel_host}:{submodel_port}"
 
-        # self.aas_client = AASClient(base_url=self.aas_server_address)
-        # # TODO: make it possible that multiple submodel clients can be used mapped to different submodel repos for different submodels by their id
-        # self.submodel_client = SubmodelClient(base_url=self.submodel_server_address)
-
     @property
     def aas_client(self):
         return AASClient(base_url=self.aas_server_address)
@@ -45,12 +41,6 @@ class BasyxAASConnector(Generic[T]):
 
     async def connect(self):
         await check_aas_and_sm_server_online(self.aas_server_address, self.submodel_server_address)
-        if self.aas_type_template:
-            return
-        aas_instance = await get_aas_from_server(self.aas_id, self.aas_client, self.submodel_client)
-        if not aas_instance:
-            return
-        self.aas_type_template = type(aas_instance)
 
     async def disconnect(self):
         pass
@@ -78,11 +68,11 @@ class BasyxAASConnector(Generic[T]):
 
 
 class BasyxSubmodelConnector(Generic[S]):
-    def __init__(self, submodel: S, host: str, port: int, submodel_type_template: Optional[S] = None):
+    def __init__(self, submodel: S, host: str, port: int):
         self.host = host
         self.port = port
         self.submodel_id = submodel.id
-        self.submodel_type_template = submodel_type_template
+        self.submodel_type_template = type(submodel)
 
         self.submodel_server_address = f"http://{host}:{port}"
 
@@ -90,12 +80,6 @@ class BasyxSubmodelConnector(Generic[S]):
 
     async def connect(self):
         await check_sm_server_online(self.submodel_server_address)
-        if self.submodel_type_template:
-            return
-        submodel_instance = await get_submodel_from_server(self.submodel_id, self.submodel_client)
-        if not submodel_instance:
-            return
-        self.submodel_type_template = type(submodel_instance)
 
     async def disconnect(self):
         pass
