@@ -1,22 +1,26 @@
 from __future__ import annotations
 
-from typing import List
+from typing import List, Optional
 
 from fastapi import HTTPException
 from pydantic import BaseModel
 
 from aas_middleware.connect.connectors.aas_client_connector import client_utils
+from aas_middleware.model.data_model import DataModel
 from aas_middleware.model.formatting.aas import aas_model
 
 from ba_syx_aas_environment_component_client import Client as SubmodelClient
 from ba_syx_aas_environment_component_client.api.submodel_repository_api import delete_submodel_by_id, get_all_submodels, get_submodel_by_id, post_submodel, put_submodel_by_id
 from ba_syx_aas_environment_component_client.models.submodel import Submodel as ClientSubmodel
-from basyx.aas import model
+from basyx.aas import model as basyx_model
 
-from aas_middleware.model.formatting.aas.convert_aas import convert_submodel_to_model
-from aas_middleware.model.formatting.aas.convert_pydantic import convert_model_to_submodel
+# from aas_middleware.model.formatting.aas.convert_aas import convert_submodel_to_model
+# from aas_middleware.model.formatting.aas.convert_pydantic import convert_model_to_submodel
+from aas_middleware.model.formatting.aas.basyx_formatter import BasyxFormatter
+from aas_middleware.model.formatting.aas.convert_aas_instance import convert_submodel_to_model_instance
+from aas_middleware.model.formatting.aas.convert_pydantic_model import convert_model_to_submodel
 
-async def get_basyx_submodel_from_server(submodel_id: str, submodel_client: SubmodelClient) -> model.Submodel:
+async def get_basyx_submodel_from_server(submodel_id: str, submodel_client: SubmodelClient) -> basyx_model.Submodel:
     """
     Function to get a submodel from the server
     Args:
@@ -40,7 +44,7 @@ async def get_basyx_submodel_from_server(submodel_id: str, submodel_client: Subm
             status_code=400, detail=f"Submodel with id {submodel_id} could not be retrieved. Error: {e}"
         )
 
-async def get_all_basyx_submodels_from_server(aas: model.AssetAdministrationShell, submodel_client: SubmodelClient) -> List[ClientSubmodel]:
+async def get_all_basyx_submodels_from_server(aas: basyx_model.AssetAdministrationShell, submodel_client: SubmodelClient) -> List[ClientSubmodel]:
     """
     Function to get all submodels from an AAS in basyx format
     Args:
@@ -117,11 +121,13 @@ async def put_submodel_to_server(submodel: aas_model.Submodel, submodel_client: 
     )
 
 
-async def get_submodel_from_server(submodel_id: str, submodel_client: SubmodelClient) -> aas_model.Submodel:
+async def get_submodel_from_server(submodel_id: str, submodel_client: SubmodelClient, submodel_type: Optional[aas_model.Submodel]=None) -> aas_model.Submodel:
     """
     Function to get a submodel from the server
     Args:
         submodel_id (str): id of the submodel
+        submodel_client (SubmodelClient): client to connect to the server
+        submodel_type (aas_model.Submodel): Pydantic model of the submodel
     Returns:
         aas_model.Submodel: submodel retrieved from the server
 
@@ -130,7 +136,7 @@ async def get_submodel_from_server(submodel_id: str, submodel_client: SubmodelCl
     """
     try:
         basyx_submodel = await get_basyx_submodel_from_server(submodel_id, submodel_client)
-        return convert_submodel_to_model(basyx_submodel)
+        return convert_submodel_to_model_instance(basyx_submodel, submodel_type)
     except HTTPException as e:
         raise HTTPException(
             status_code=400, detail=f"Submodel with id {submodel_id} could not be retrieved. Error: {e}"
@@ -148,22 +154,24 @@ async def get_all_submodel_data_from_server(submodel_client: SubmodelClient) -> 
     return submodel_data
 
 
-async def get_all_submodels_of_type(model: BaseModel, submodel_client: SubmodelClient) -> List[aas_model.Submodel]:
+async def get_all_submodels_of_type(model: BaseModel, submodel_client: SubmodelClient, submodel_types: Optional[list[aas_model.Submodel]]=None) -> DataModel:
     """
     Function to get all submodels of a certain type from the server
     Args:
         model (BaseModel): Pydantic model of the submodel
+        submodel_client (SubmodelClient): client to connect to the server
+        submodel_type (aas_model.Submodel): Pydantic model of the submodel
+
     Returns:
         List[aas_model.Submodel]: List of submodels retrieved from the server
     """
     submodels_data = await get_all_submodel_data_from_server(submodel_client)
-    submodels_of_type = []
-    for submodel_data in submodels_data:
-        basyx_submodel = client_utils.transform_client_to_basyx_model(submodel_data)
-        submodel = convert_submodel_to_model(basyx_submodel)
-        if submodel.__class__.__name__ == model.__name__:
-            submodels_of_type.append(submodel)
-    return submodels_of_type
+    submodels_list = [client_utils.transform_client_to_basyx_model(submodel_data) for submodel_data in submodels_data]
+    obj_store = basyx_model.DictObjectStore()
+    [obj_store.add(submodel) for submodel in submodels_list]
+
+    data_model = BasyxFormatter().deserialize(obj_store, submodel_types)
+    return data_model
 
 
 async def delete_submodel_from_server(submodel_id: str, submodel_client: SubmodelClient):

@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import os
-from typing import List
+from typing import List, Optional
 from basyx.aas import model
 
 from pydantic import BaseModel
 
 from aas_middleware.connect.connectors.aas_client_connector import client_utils
 from aas_middleware.connect.connectors.aas_client_connector.submodel_client import get_all_basyx_submodels_from_server, get_submodel_from_server, post_submodel_to_server, put_submodel_to_server, submodel_is_on_server
+from aas_middleware.model.data_model import DataModel
 from aas_middleware.model.formatting.aas import aas_model
 
 from ba_syx_aas_environment_component_client import Client as AASClient
@@ -15,8 +16,9 @@ from ba_syx_aas_environment_component_client import Client as SubmodelClient
 from ba_syx_aas_environment_component_client.api.asset_administration_shell_repository_api import delete_asset_administration_shell_by_id, get_all_asset_administration_shells, get_asset_administration_shell_by_id, post_asset_administration_shell, put_asset_administration_shell_by_id
 from fastapi import HTTPException
 
+from aas_middleware.connect.connectors.aas_client_connector.aas_client_model import ClientModel
 from aas_middleware.model.formatting.aas.basyx_formatter import BasyxFormatter
-from aas_middleware.model.formatting.aas.convert_pydantic import ClientModel, convert_model_to_aas
+from aas_middleware.model.formatting.aas.convert_pydantic_model import convert_model_to_aas
 from aas_middleware.model.util import get_value_attributes
 
 import logging
@@ -125,7 +127,7 @@ async def get_basyx_aas_from_server(aas_id: str, aas_client: AASClient) -> model
         )
 
 
-async def get_aas_from_server(aas_id: str, aas_client: AASClient, submodel_client: SubmodelClient) -> aas_model.AAS:
+async def get_aas_from_server(aas_id: str, aas_client: AASClient, submodel_client: SubmodelClient, aas_type: Optional[aas_model.AAS]=None) -> aas_model.AAS:
     """
     Function to get an AAS from the server
     Args:
@@ -153,13 +155,13 @@ async def get_aas_from_server(aas_id: str, aas_client: AASClient, submodel_clien
     obj_store.add(aas)
     [obj_store.add(submodel) for submodel in aas_submodels]
 
-    data_model = BasyxFormatter().deserialize(obj_store)
+    data_model = BasyxFormatter().deserialize(obj_store, [aas_type])
     model_data = data_model.get_model(aas_id)
 
     return model_data
 
 
-async def get_all_aas_from_server(pydantic_model: BaseModel, aas_client: AASClient, submodel_client: SubmodelClient) -> List[aas_model.AAS]:
+async def get_all_aas_from_server(aas_client: AASClient, submodel_client: SubmodelClient, types: Optional[list[type[aas_model.Submodel]]]=None) -> DataModel:
     """
     Function to get all AAS from the server
     Returns:
@@ -177,10 +179,8 @@ async def get_all_aas_from_server(pydantic_model: BaseModel, aas_client: AASClie
     [obj_store.add(aas) for aas in aas_list]
     [obj_store.add(submodel) for submodel in submodels if not any(submodel.id == other_sm.id for other_sm in obj_store)]
 
-    data_model = BasyxFormatter().deserialize(model_data)
-    model_data = data_model.get_models_of_type(aas_model.AAS)
-    model_data = [model for model in model_data if model.__class__.__name__ == pydantic_model.__name__]
-    return model_data
+    data_model = BasyxFormatter().deserialize(obj_store, types)
+    return data_model
 
 async def delete_aas_from_server(aas_id: str, aas_client: AASClient):
     """

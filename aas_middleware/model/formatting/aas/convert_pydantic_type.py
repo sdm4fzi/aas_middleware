@@ -12,11 +12,9 @@ import uuid
 import attr
 from basyx.aas import model
 
-from typing import Any, List, Optional, Set, Tuple, Union
+from typing import Any, Optional, Set, Union
 from pydantic import BaseModel, ConfigDict
 from aas_middleware.model.core import Reference
-from aas_middleware.model.data_model import DataModel
-from aas_middleware.model.data_model_rebuilder import DataModelRebuilder
 from aas_middleware.model.formatting.aas import convert_util, aas_model
 
 from aas_middleware.model.formatting.aas.convert_util import (
@@ -30,41 +28,6 @@ import basyx.aas.adapter.json.json_serialization
 import logging
 
 logger = logging.getLogger(__name__)
-
-
-def infere_aas_structure(
-    data: DataModel,
-) -> Tuple[List[aas_model.AAS], List[aas_model.Submodel]]:
-    """
-    The function assert that the data contained in the data model fulfills the aas meta model structure.
-
-    Args:
-        data (DataModel): The Data Model containing the objects that should be transformed to AAS models
-
-    Returns:
-        Tuple[List[aas_model.AAS], List[aas_model.Submodel]]: Tuple with AAS models and Submodel models
-    """
-    if all(all(isinstance(model, aas_model.AAS) for model in model_items) for model_items in data.get_top_level_models().values()):
-        top_level_models_list = []
-        for models in data.get_top_level_models().values():
-            top_level_models_list += models
-        return top_level_models_list, []
-    logger.warning(
-        "The data model does not contain only AAS models. Trying to infer the AAS structure by rebuilding the data model."
-    )
-    new_data_model = DataModelRebuilder(data).rebuild_data_model_for_AAS_structure()
-    top_level_models_list = []
-    for models in new_data_model.get_top_level_models().values():
-        top_level_models_list += models
-    aas_models = [
-        model for model in top_level_models_list if isinstance(model, aas_model.AAS)
-    ]
-    submodel_models = [
-        model
-        for model in top_level_models_list
-        if isinstance(model, aas_model.Submodel)
-    ]
-    return aas_models, submodel_models
 
 
 def convert_model_to_aas_template(
@@ -403,17 +366,3 @@ def create_submodel_element_list(
         order_relevant=ordered,
     )
     return sml
-
-
-class ClientModel(BaseModel):
-    basyx_object: Union[model.AssetAdministrationShell, model.Submodel]
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    def to_dict(self) -> dict:
-        basyx_json_string = json.dumps(
-            self.basyx_object, cls=basyx.aas.adapter.json.AASToJsonEncoder
-        )
-        data: dict = json.loads(basyx_json_string)
-
-        return data

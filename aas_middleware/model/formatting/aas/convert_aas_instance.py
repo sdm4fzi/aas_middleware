@@ -8,11 +8,11 @@ from basyx.aas import model
 
 
 from aas_middleware.model.formatting.aas import convert_util
-from aas_middleware.model.formatting.aas.convert_aas import unpatch_id_short_from_temp_attribute
 from aas_middleware.model.formatting.aas.convert_util import (
     is_attribute_from_basyx_model_immutable,
     get_semantic_id_value_of_model,
     repatch_id_short_to_temp_attribute,
+    unpatch_id_short_from_temp_attribute,
 )
 
 def get_types_name_dict(types: typing.List[typing.Type[aas_model.AAS | aas_model.Submodel]]) -> typing.Dict[str, type]:

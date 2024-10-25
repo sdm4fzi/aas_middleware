@@ -52,13 +52,14 @@ submodel template validation:
 
 # TODO: open TODOS vor v0.2.0
 
-- remove old aas-pydantic-conversion code from middleware etc. and replace it with the new one
+- Use more efficiently types when defining the BasyxConnectors
+- Add scanning function that parses an aas server and retrieves all models from it
 - add a normalize data model function to DataModel before parsing it to ensure no redundancy in the DataModel
 - fix the bugs in DataModel with inconsistent data in attributes and internal models. Allow removal of models of a DataModel
 - Add File, Operation and Blob Support
 - add support for dict attrributes to be parsed as SubmodelElementCollections
 - tests for dict attributes
-- add a basyx caching connector with internal caching or redis
+- add a basyx caching connector with internal caching or redis and also use only one aiohttp session!
 - add support for defining a DataModel with JsonSchema
 - allow to add triggers for workflows on events, also add an Listener and Publisher for pub/sub communication
 - Add an example how to load an IDTA submodel template and use it
