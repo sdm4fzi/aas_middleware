@@ -57,7 +57,9 @@ submodel template validation:
 - fix the bugs in DataModel with inconsistent data in attributes and internal models. Allow removal of models of a DataModel
 - Add File, Operation and Blob Support
 - add support for dict attrributes to be parsed as SubmodelElementCollections
-- tests for optional and dict attributes
+- tests for dict attributes
 - add a basyx caching connector with internal caching or redis
 - add support for defining a DataModel with JsonSchema
 - allow to add triggers for workflows on events, also add an Listener and Publisher for pub/sub communication
+- Add an example how to load an IDTA submodel template and use it
+- Add documentation for easy examples on the read the docs site with chatgpt

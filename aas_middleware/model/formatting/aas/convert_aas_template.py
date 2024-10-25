@@ -73,23 +73,25 @@ def convert_aas_to_pydantic_type(
             aas, basyx_submodel.id_short
         )
         for attribute_name in attribute_names_of_submodel:
+            attribute_type = pydantic_submodel_type
             optional = convert_util.is_optional_attribute_type(aas, attribute_name)
             union = convert_util.is_union_attribute_type(aas, attribute_name)
             if optional:
-                pydantic_submodel_type = typing.Optional[pydantic_submodel_type]
-            if pydantic_submodel_type is None:
+                attribute_type = typing.Optional[attribute_type]
+            if attribute_type is None:
                 logging.warning(
                     f"Could not convert submodel {submodel_id} to Pydantic model. Skipping."
                 )
                 continue
             if union and attribute_name in dict_dynamic_model_creation:
-                pydantic_submodel_type = typing.Union[
-                    dict_dynamic_model_creation[attribute_name], pydantic_submodel_type
+                previous_attribute_type = typing.get_args(dict_dynamic_model_creation[attribute_name])[0]
+                attribute_type = typing.Union[
+                    previous_attribute_type, attribute_type
                 ]
             dict_dynamic_model_creation.update(
                 {
                     attribute_name: typing.Annotated[
-                        pydantic_submodel_type, Field(examples=[])
+                        attribute_type, Field(examples=[])
                     ]
                 }
             )
