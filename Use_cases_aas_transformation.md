@@ -53,16 +53,16 @@ submodel template validation:
 # TODO: open TODOS vor v0.2.0
 
 internal optimization:
-- add a basyx caching connector with internal caching or redis and also use only one aiohttp session!
+- (1): add a basyx caching connector with internal caching or redis and also use only one aiohttp session!
 
 new features:
-- add support for defining a DataModel with JsonSchema
-- allow to add triggers for workflows on events, also add an Listener and Publisher for pub/sub communication
+- (3): add support for defining a DataModel with JsonSchema
+- (2): allow to add triggers for workflows on events, also add an Listener and Publisher for pub/sub communication
 
 basyx enhancements:
-- Add scanning function that parses an aas server and retrieves all models from it
-- Add File, Operation and Blob Support
+- (2): Add scanning function that parses an aas server and retrieves all models from it
+- (2): Add File, Operation and Blob Support
 
 documentation:
-- Add an example how to load an IDTA submodel template and use it
-- Add documentation for easy examples on the read the docs site with chatgpt
+- (1): Add an example how to load an IDTA submodel template and use it
+- (1): Add documentation for easy examples on the read the docs site with chatgpt
