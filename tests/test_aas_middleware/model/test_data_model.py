@@ -1,5 +1,7 @@
+from typing import List, Optional
 from pydantic import BaseModel
 from aas_middleware.model.data_model import DataModel
+from aas_middleware.model.core import Identifier, Reference
 
 from aas_middleware.model.util import get_id_with_patch, normalize_identifiables, normalize_identifiables_in_model
 from tests.conftest import (
@@ -139,5 +141,59 @@ def test_more_complex_example(
     assert referenced_model_ids == {"referenced_aas_1_id", "referenced_aas_2_id"}
 
 # TODO: add tests to rebuild data model with direct / indirect references / aas structure
-# TODO: also add tests for subclassing Dataclass and making mixed use as data model and basemodel
-# TODO: also add tests for adding / removing model instances from data model
+
+class Teacher(BaseModel):
+    age: int
+    name: Identifier
+    subject: str
+
+class Student(BaseModel):
+    age: int
+    name: Identifier
+    grade: int
+    teachers: List[Reference]
+
+class Registry(DataModel):
+    teachers: list[Teacher]
+    students: list[Student]
+    head_teacher: Teacher
+    support_teacher: Optional[Teacher]
+
+
+def test_remove_and_data_model_as_base_model():
+    john_doe = Teacher(age=30, name="John Doe", subject="Math")
+    jane_doe = Teacher(age=40, name="Jane Doe", subject="Science")
+    alice = Student(age=10, name="Alice", grade=5, teachers=["John Doe"])
+    bob = Student(age=11, name="Bob", grade=6, teachers=["Jane Doe"])
+    john_smith = Teacher(age=50, name="John Smith", subject="History")
+    jane_smith = Teacher(age=60, name="Jane Smith", subject="Geography")
+
+    registry = Registry(
+        teachers=[john_doe, jane_doe],
+        students=[alice, bob],
+        head_teacher=john_smith,
+        support_teacher=jane_smith,
+    )
+    assert len(registry.get_contained_ids()) == 6
+    assert registry.get_referencing_models(
+        Teacher(name="John Doe", age=30, subject="Math")
+    ) == [alice]
+    try:
+        registry.remove("John Doe") # removal not possible because Alice links to John doe with a reference
+        assert False
+    except ValueError as e:
+        pass
+    registry.remove("Alice")
+    assert set(registry.get_contained_ids()) == {"Jane Doe", "Bob", "John Smith", "Jane Smith", "John Doe"}
+    registry.remove("John Doe")
+    registry.remove("Jane Smith")
+
+    assert set(registry.get_contained_ids()) == {"Jane Doe", "Bob", "John Smith"}
+    assert registry.teachers == [jane_doe]
+    assert registry.students == [bob]
+    assert registry.get_models_of_type_name("Student") == [bob]
+    assert registry.support_teacher == None
+
+    registry.students = []
+    assert "student" not in registry._top_level_models
+    assert "student" not in registry._models_key_type

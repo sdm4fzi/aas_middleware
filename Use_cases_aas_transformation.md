@@ -52,12 +52,17 @@ submodel template validation:
 
 # TODO: open TODOS vor v0.2.0
 
-- Add scanning function that parses an aas server and retrieves all models from it
-- fix the bugs in DataModel with inconsistent data in attributes and internal models. Allow removal of models of a DataModel
-- Add File, Operation and Blob Support
-- add support for dict attrributes to be parsed as SubmodelElementCollections and add tests for it
+internal optimization:
 - add a basyx caching connector with internal caching or redis and also use only one aiohttp session!
+
+new features:
 - add support for defining a DataModel with JsonSchema
 - allow to add triggers for workflows on events, also add an Listener and Publisher for pub/sub communication
+
+basyx enhancements:
+- Add scanning function that parses an aas server and retrieves all models from it
+- Add File, Operation and Blob Support
+
+documentation:
 - Add an example how to load an IDTA submodel template and use it
 - Add documentation for easy examples on the read the docs site with chatgpt
