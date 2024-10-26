@@ -20,8 +20,6 @@ class Product(aas_middleware.AAS):
     bill_of_material: BillOfMaterial
     process_model: typing.Optional[ProcessModel]
 
-# FIXME: save json schema in data specifications.... not with the class name attribute name hack -> is not working for optional types or unions....
-
 example_product = Product(
     id="example_product_id",
     id_short="example_product_id",

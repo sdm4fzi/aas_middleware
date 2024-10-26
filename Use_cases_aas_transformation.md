@@ -64,5 +64,6 @@ basyx enhancements:
 - (2): Add File, Operation and Blob Support
 
 documentation:
+- (1): Rework guides and example scripts
 - (1): Add an example how to load an IDTA submodel template and use it
 - (1): Add documentation for easy examples on the read the docs site with chatgpt
