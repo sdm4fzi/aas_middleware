@@ -1,5 +1,7 @@
 import asyncio
 import json
+import os
+import sys
 from typing import Any, Optional
 import aiomqtt
 
@@ -11,6 +13,9 @@ class MqttClientConnector:
         self.value = None
 
     async def connect(self):
+        if sys.platform.lower() == "win32" or os.name.lower() == "nt":
+            from asyncio import set_event_loop_policy, WindowsSelectorEventLoopPolicy
+            set_event_loop_policy(WindowsSelectorEventLoopPolicy())
         self.mqtt_client = aiomqtt.Client(self.mqtt_broker_ip)
         await self.mqtt_client.__aenter__()
         loop = asyncio.get_event_loop()
