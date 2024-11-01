@@ -10,6 +10,7 @@ from basyx.aas.model import DictObjectStore
 import basyx.aas.adapter.json
 
 
+from aas_middleware.model.formatting.aas.aas_model import AAS, Submodel
 from aas_middleware.model.formatting.aas.basyx_formatter import BasyxFormatter, BasyxTemplateFormatter
 
 class AasTemplateJsonFormatter:
@@ -71,8 +72,7 @@ class AasJsonFormatter:
         basyx_dict_obj_store = BasyxFormatter().serialize(data)
         return json.loads(basyx.aas.adapter.json.object_store_to_json(basyx_dict_obj_store))
 
-
-    def deserialize(self, data: Dict[Literal["assetAdministrationShells", "submodels"], List[str]]) -> DataModel:
+    def deserialize(self, data: Dict[Literal["assetAdministrationShells", "submodels"], List[str]], types: List[type[Submodel]] | List[type[AAS]]) -> DataModel:
         """
         Deserialize the specific format of the formater to a DataModel object.
 
@@ -92,7 +92,4 @@ class AasJsonFormatter:
                 for submodel_item in items:
                     submodel = json.loads(json.dumps(submodel_item), cls=basyx.aas.adapter.json.AASFromJsonDecoder)
                     object_store.add(submodel)
-        return BasyxFormatter().deserialize(object_store)
-        
-
-        
+        return BasyxFormatter().deserialize(object_store, types)

@@ -55,6 +55,7 @@ def convert_object_store_to_pydantic_models(
     Returns:
         typing.List[aas_model.AAS]: List of pydantic models
     """
+    # FIXME: make types here mandatory -> template function needs to be used first to retrieve types...
     type_name_dict = get_types_name_dict(types)
     
     pydantic_submodels: typing.List[aas_model.Submodel] = []
