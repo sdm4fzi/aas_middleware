@@ -173,7 +173,7 @@ json_data = {
 
 try:
     instance = DynamicModel.model_validate(json_data)  # Works with date in correct format
-    assert instance.dict() == json_data
+    assert instance.model_dump() == json_data
     print(instance)
 except ValidationError as e:
     print(e)

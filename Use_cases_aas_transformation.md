@@ -61,7 +61,8 @@ new features:
 
 basyx enhancements:
 - (2): Add scanning function that parses an aas server and retrieves all models from it
-- (2): Add File, Operation and Blob Support
+- (2): Add Operation support to trigger them as like a workflow
+- (1): Add File and Blob support -> add API endpoints for Files and Blobs to aas-middleware
 
 documentation:
 - (1): Rework guides and example scripts
