@@ -59,13 +59,9 @@ def is_identifiable(model: Any) -> bool:
     Returns:
         bool: True if the model is identifiable, False otherwise.
     """
-    # if isinstance(model, UnIdentifiable):
-    #     return False
-    # return True
     return not isinstance(model, UnIdentifiable)
 
 
-# def get_identifier_type_fields(model: BaseModel) -> List[str]:
 def get_identifier_type_fields(field_info_dict: Dict[str, FieldInfo]) -> List[str]:
     """
     Function to get the fields of a model that are of type Identifier.
@@ -117,7 +113,6 @@ def get_id(model: Any) -> str | int | UUID:
             raise ValueError(f"Model {model} has multiple Identifier attributes.")
         if potential_identifier:
             return getattr(model, potential_identifier[0])
-
     if isinstance(model, BaseModel):
         data = model.model_dump()
     elif isinstance(model, dict):

@@ -125,11 +125,9 @@ def get_submodel_element_type(
     elif isinstance(sm_element, model.MultiLanguageProperty):
         return convert_multi_language_property_to_pydantic_model(sm_element)
     elif isinstance(sm_element, model.File):
-        # TODO: handle files in the future
-        print(f"file with id {sm_element.id_short} and value: {sm_element.value}")
+        return convert_file_to_pydantic_model(sm_element)
     elif isinstance(sm_element, model.Blob):
-        # TODO: handle blobs in the future
-        print(f"blob with id {sm_element.id_short} and value: {sm_element.value}")
+        return convert_blob_to_pydantic_model(sm_element)
     else:
         raise NotImplementedError("Type not implemented:", type(sm_element))
 
@@ -397,3 +395,29 @@ def convert_multi_language_property_to_pydantic_model(
         aas_model.PrimitiveSubmodelElement: Value of the MultiLanguageProperty.
     """
     return str
+
+
+def convert_file_to_pydantic_model(sm_element: model.File) -> type[aas_model.File]:
+    """
+    Convert a File to a pydantic model
+
+    Args:
+        sm_element (model.File): Basyx File to convert.
+
+    Returns:
+        aas_model.File: Pydantic model of the file
+    """
+    return aas_model.File
+
+
+def convert_blob_to_pydantic_model(sm_element: model.Blob) -> type[aas_model.Blob]:
+    """
+    Convert a Blob to a pydantic model
+
+    Args:
+        sm_element (model.Blob): Basyx Blob to convert.
+
+    Returns:
+        aas_model.Blob: Pydantic model of the Blob
+    """
+    return aas_model.Blob

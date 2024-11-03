@@ -213,6 +213,10 @@ def create_submodel_element_template(
     elif issubclass(attribute_type, aas_model.SubmodelElementCollection):
         smc = create_submodel_element_collection(attribute_type)
         return smc
+    elif issubclass(attribute_type, aas_model.File):
+        return create_file(attribute_type)
+    elif issubclass(attribute_type, aas_model.Blob):
+        return create_blob(attribute_type)
     else:
         property = create_property(attribute_name, attribute_type)
 
@@ -309,10 +313,8 @@ def patch_id_short_with_temp_attribute(
         value=submodel_element_collection.id_short,
     )
     submodel_element_collection.value.add(temp_id_short_property)
-        
-        
 
-    
+
 def create_submodel_element_list(
     name: str, attribute_type: Union[type[tuple], type[list], type[set]]) -> model.SubmodelElementList:
     submodel_elements = []
@@ -357,7 +359,7 @@ def create_submodel_element_list(
         iterable_type = "list"
     else:
         raise ValueError(f"Type {attribute_type} is not supported for SubmodelElementList, provided subclass of list, tuple or set")
-    
+
     sml = model.SubmodelElementList(
         id_short=f"{iterable_type}_of_{get_template_id(typing.get_args(attribute_type)[0])}",
         type_value_list_element=type_value_list_element,
@@ -366,3 +368,35 @@ def create_submodel_element_list(
         order_relevant=ordered,
     )
     return sml
+
+
+def create_file(attribute_type: type[aas_model.File]) -> model.File:
+    """
+    Function generates a basyx file objects from a pydantic File.
+
+    Args:
+        attribute_value (aas_model.File): pydantic File instance.
+
+    Returns:
+        model.File: Basyx file.
+    """
+    return model.File(
+        id_short=get_template_id(attribute_type), 
+        content_type="unknown"
+        )
+
+
+def create_blob(attribute_type: type[aas_model.Blob]) -> model.Blob:
+    """
+    Function generates a basyx file objects from a pydantic File.
+
+    Args:
+        attribute_value (aas_model.File): pydantic File instance.
+
+    Returns:
+        model.File: Basyx file.
+    """
+    return model.Blob(
+        id_short=get_template_id(attribute_type),
+        content_type="unknown"
+    )

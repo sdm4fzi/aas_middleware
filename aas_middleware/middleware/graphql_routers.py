@@ -19,7 +19,7 @@ from starlette_graphene3 import (
 )
 
 from aas_middleware.model.formatting.aas.aas_middleware_util import get_all_submodel_elements_from_submodel, get_contained_models_attribute_info, is_basemodel_union_type, is_optional_basemodel_type
-from aas_middleware.model.formatting.aas.aas_model import AAS, Submodel, SubmodelElementCollection
+from aas_middleware.model.formatting.aas.aas_model import AAS, Blob, File, Submodel, SubmodelElementCollection
 
 def get_base_query_and_mutation_classes() -> (
     typing.Tuple[graphene.ObjectType, graphene.ObjectType]
@@ -280,6 +280,14 @@ def create_graphe_pydantic_output_type_for_submodel_elements(
             attribute_value, SubmodelElementCollection
         ):
             create_graphe_pydantic_output_type_for_submodel_elements(attribute_value)
+        elif hasattr(attribute_value, "model_fields") and issubclass(
+            attribute_value, Blob
+        ):
+            create_graphe_pydantic_output_type_for_model(Blob, union_type)
+        elif hasattr(attribute_value, "model_fields") and issubclass(
+            attribute_value, File
+        ):
+            create_graphe_pydantic_output_type_for_model(File, union_type)
         # FIXME: handle optional list here....
         elif is_typing_list_or_tuple(attribute_value) or is_optional_typing_list_or_tuple(attribute_value):
             if is_optional_typing_list_or_tuple(attribute_value):

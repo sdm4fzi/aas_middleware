@@ -11,6 +11,7 @@ import uuid
 from basyx.aas import model
 
 from typing import List, Optional, Tuple, Union
+from numpy import isin
 from pydantic import BaseModel, ConfigDict
 from aas_middleware.model.data_model import DataModel
 from aas_middleware.model.data_model_rebuilder import DataModelRebuilder
@@ -161,6 +162,10 @@ def create_submodel_element(
             value=reference,
         )
         return reference_element
+    elif isinstance(attribute_value, aas_model.File):
+        return create_file(attribute_value)
+    elif isinstance(attribute_value, aas_model.Blob):
+        return create_blob(attribute_value)
     else:
         property = create_property(attribute_name, attribute_value)
 
@@ -239,10 +244,8 @@ def patch_id_short_with_temp_attribute(
         value=submodel_element_collection.id_short,
     )
     submodel_element_collection.value.add(temp_id_short_property)
-        
-        
 
-    
+
 def create_submodel_element_list(
     attribute_name: str, value: list | tuple | set
 ) -> model.SubmodelElementList:
@@ -291,3 +294,41 @@ def create_submodel_element_list(
         order_relevant=ordered,
     )
     return sml
+
+
+def create_file(attribute_value: aas_model.File) -> model.File:
+    """
+    Function generates a basyx file objects from a pydantic File. 
+
+    Args:
+        attribute_value (aas_model.File): pydantic File instance.
+
+    Returns:
+        model.File: Basyx file.
+    """
+    return model.File(
+        id_short=attribute_value.id_short,
+        description=attribute_value.description,
+        semantic_id=attribute_value.semantic_id,
+        content_type=attribute_value.media_type,
+        value=attribute_value.path
+    )
+
+
+def create_blob(attribute_value: aas_model.Blob) -> model.Blob:
+    """
+    Function generates a basyx file objects from a pydantic File.
+
+    Args:
+        attribute_value (aas_model.File): pydantic File instance.
+
+    Returns:
+        model.File: Basyx file.
+    """
+    return model.Blob(
+        id_short=attribute_value.id_short,
+        description=attribute_value.description,
+        semantic_id=attribute_value.semantic_id,
+        content_type=attribute_value.media_type,
+        value=attribute_value.content,
+    )

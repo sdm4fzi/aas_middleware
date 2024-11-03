@@ -17,6 +17,8 @@ class BillOfMaterial(aas_middleware.Submodel):
 
 class ProcessModel(aas_middleware.Submodel):
     processes: typing.List[str]
+    example_file: aas_middleware.File
+    example_blob: aas_middleware.Blob
 
 
 class Product(aas_middleware.AAS):
@@ -46,6 +48,16 @@ example_product = Product(
         id_short="example_process_model_id",
         description="Example Process Model",
         processes=["process_1", "process_2"],
+        example_file=aas_middleware.File(
+            id_short="example_file_123211",
+            media_type="application/json",
+            path="www.wbk.kit.edu"            
+            ),
+        example_blob=aas_middleware.Blob(
+            id_short="example_blob12344",
+            media_type="application/pdf",
+            content=b"12375890243790812735891034710347"
+        )
     ),
 )
 

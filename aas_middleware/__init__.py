@@ -26,7 +26,7 @@ from aas_middleware.model.core import Reference, Identifier
 from aas_middleware.model.data_model import DataModel
 from aas_middleware.model.data_model_rebuilder import DataModelRebuilder
 
-from aas_middleware.model.formatting.aas.aas_model import AAS, Submodel, SubmodelElementCollection
+from aas_middleware.model.formatting.aas.aas_model import AAS, Submodel, SubmodelElementCollection, Blob, File
 
 from aas_middleware.model import formatting
 
