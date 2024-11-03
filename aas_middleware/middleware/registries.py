@@ -45,7 +45,7 @@ class ConnectionRegistry:
 
     def __init__(self):
         self.connectors: typing.Dict[str, Connector] = {}
-        self.connection_types: typing.Dict[str, typing.Type[Connector]] = {}
+        self.connection_types: typing.Dict[str, typing.Type[typing.Any]] = {}
         self.connections: typing.Dict[ConnectionInfo, typing.List[str]] = {}
 
 
@@ -84,7 +84,7 @@ class ConnectionRegistry:
         return self.connectors[connector_id]
 
 
-    def add_connector(self, connector_id: str, connector: Connector, connection_type: typing.Type[Connector]):
+    def add_connector(self, connector_id: str, connector: Connector, connection_type: typing.Type[typing.Any]):
         """
         Function to add a connector to the connection manager.
 

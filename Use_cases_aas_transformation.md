@@ -53,7 +53,7 @@ submodel template validation:
 # TODO: open TODOS vor v0.2.0
 
 internal optimization:
-- (1): add a basyx caching connector with internal caching or redis and also use only one aiohttp session!
+- (done): add a basyx caching connector with internal caching or redis and also use only one aiohttp session!
 
 new features:
 - (3): add support for defining a DataModel with JsonSchema
