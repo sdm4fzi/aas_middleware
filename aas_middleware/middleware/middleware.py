@@ -112,16 +112,17 @@ class Middleware:
         Args:
             app (FastAPI): The FastAPI app that should be used for the lifespan.
         """
+        for connector in self.connection_registry.connectors.values():
+            await connector.connect()
+        for persistence in self.persistence_registry.connectors.values():
+            await persistence.connect()
         for workflow in self.workflow_registry.get_workflows():
             if workflow.on_startup:
                 # TODO: make a case distinction for workflows that postpone start up or not...
                 asyncio.create_task(workflow.execute())
         for callback in self.on_start_up_callbacks:
             await callback()
-        for connector in self.connection_registry.connectors.values():
-            await connector.connect()
-        for persistence in self.persistence_registry.connectors.values():
-            await persistence.connect()
+
         yield
         for workflow in self.workflow_registry.get_workflows():
             if workflow.on_shutdown:
@@ -306,7 +307,7 @@ class Middleware:
         connection_info = ConnectionInfo(data_model_name=data_model_name, model_id=model.id, contained_model_id=None, field_id=None)
         if connection_info in self.persistence_registry.connections:
             raise ValueError(f"Connection {connection_info} already exists. Try using the existing connector or remove it first.")
-        self.persistence_registry.add_to_persistence(connection_info, model, persistence_factory)
+        await self.persistence_registry.add_to_persistence(connection_info, model, persistence_factory)
         connector = self.persistence_registry.get_connection(connection_info)
         # TODO: raise an error if consume is not possible and remove the persistence in the persistence registry
         await connector.consume(model)

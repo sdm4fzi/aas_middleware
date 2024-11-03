@@ -53,8 +53,8 @@ data_model = aas_middleware.DataModel.from_models(example_product)
 basyx_object_store = aas_middleware.formatting.BasyxFormatter().serialize(data_model)
 
 json_aas = aas_middleware.formatting.AasJsonFormatter().serialize(data_model)
-with open("example_aas.json", "w") as f:
-    f.write(json.dumps(json_aas, indent=4))
+# with open("example_aas.json", "w") as f:
+#     f.write(json.dumps(json_aas, indent=4))
 
 
 infered_data_model_with_templates = BasyxTemplateFormatter().deserialize(basyx_object_store)
