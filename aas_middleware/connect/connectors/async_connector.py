@@ -30,6 +30,15 @@ class Subsciber(Protocol):
         """
         ...
 
+    async def on_message(self, body: Any) -> None:
+        """
+        Interface for a subscriber to be executed upon arrival of a message from the subscriber.
+
+        Args:
+            body (Any): The body of the message received.
+        """
+        ...
+
 
 @runtime_checkable
 class Publisher(Protocol):
@@ -47,13 +56,13 @@ class Publisher(Protocol):
         """
         ...
 
-    async def publish(self, topic: str, message: Any) -> None:
+    async def publish(self, topic: str, body: Any) -> None:
         """
         Interfaces for a publisher to publish messages to a topic.
 
         Args:
             topic (str): The topic to publish the message to.
-            message (Any): The message to be published.
+            body (Any): The body of the message to be published.
 
         Raises:
             ConnectionError: If the publishing of the message failed.

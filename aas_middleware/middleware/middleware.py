@@ -11,10 +11,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from basyx.aas import model
 
 import aas_middleware
+from aas_middleware.connect.connectors.async_connector import AsyncConnector
 from aas_middleware.connect.connectors.connector import Connector
 from aas_middleware.middleware.connector_router import generate_connector_endpoint, generate_persistence_connector_endpoint
 from aas_middleware.middleware.graphql_routers import GraphQLRouter
-from aas_middleware.middleware.registries import ConnectionInfo, ConnectionRegistry, MapperRegistry, PersistenceConnectionRegistry, WorkflowRegistry
+from aas_middleware.middleware.registries import AsyncConnectionRegistry, ConnectionInfo, ConnectionRegistry, MapperRegistry, PersistenceConnectionRegistry, WorkflowRegistry
 from aas_middleware.middleware.model_registry_api import generate_model_api
 from aas_middleware.middleware.persistence_factory import PersistenceFactory
 from aas_middleware.middleware.rest_routers import RestRouter
@@ -68,6 +69,7 @@ class Middleware:
 
         self.persistence_registry: PersistenceConnectionRegistry = PersistenceConnectionRegistry()
         self.connection_registry: ConnectionRegistry = ConnectionRegistry()
+        self.async_connection_registry: AsyncConnectionRegistry = AsyncConnectionRegistry()
         self.workflow_registry: WorkflowRegistry = WorkflowRegistry()
 
         self.mapper_registry: MapperRegistry = MapperRegistry()
@@ -313,6 +315,20 @@ class Middleware:
         await connector.consume(model)
 
 
+    def add_trigger(self, subscriber: Connector | Workflow, trigger: AsyncConnector):
+        """
+        Function allows to define a trigger to a connector or workflow that executes the connector or provides when the trigger has happened.
+
+        Args:
+            subscriber (Connector | Workflow): The Workflow or Connector to execute upon triggering
+            trigger (AsyncConnector): The AsyncConnector that triggers the subscriber
+        """
+
+        # TODO: add functionality that the on_message function of the asyncConnector is linked to 
+        # the execute / the consume function -> use synchronization module here
+        pass
+
+
     def add_connector(self, connector_id: str, connector: Connector, model_type: typing.Type[typing.Any], data_model_name: typing.Optional[str]=None, model_id: typing.Optional[str]=None, contained_model_id: typing.Optional[str]=None, field_id: typing.Optional[str]=None):
         """
         Function to add a connector to the middleware.
@@ -334,8 +350,8 @@ class Middleware:
         Function to generate a REST endpoint for a connector.
 
         Args:
-            connector_id (str): _description_
-            connection_info (typing.Optional[ConnectionInfo], optional): _description_. Defaults to None.
+            connector_id (str): The id of the connector to generate a REST endpoint for
+            connection_info (typing.Optional[ConnectionInfo], optional): The ConnectionInfo specifying if the connector is linked to a DataModel. Defaults to None.
 
         Raises:
             ValueError: _description_
@@ -348,11 +364,7 @@ class Middleware:
             router = generate_connector_endpoint(connector_id, connector, model_type)
         else:
             router = generate_persistence_connector_endpoint(connector_id, connector, connection_info, model_type)
-        self.app.include_router(router)
-
-
-    # TODO: handle also async connectors!!
-        
+        self.app.include_router(router)        
 
     def connect_connector_to_persistence(self, connector_id: str, data_model_name: str, model_id: typing.Optional[str]=None, contained_model_id: typing.Optional[str]=None, field_id: typing.Optional[str]=None, persistence_mapper: typing.Optional[Mapper]=None, external_mapper: typing.Optional[Mapper]=None, formatter: typing.Optional[Formatter]=None):
         """

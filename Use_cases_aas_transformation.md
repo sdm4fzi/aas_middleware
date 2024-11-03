@@ -59,6 +59,15 @@ new features:
 - (3): add support for defining a DataModel with JsonSchema
 - (2): allow to add triggers for workflows on events, also add an Listener and Publisher for pub/sub communication
 
+Async Connector functionality:
+- Should allow to define easily a connector that is based on pub/sub communication principle.
+- subscribe / publish function should hold thereby the code to define how a subscription is build up or how a publish is done
+- A subscription should not be started automatically, only the connect function. However, it should be possible to add the connectors to the middleware so that the automatically execute the subscripe function with a defined topic
+-Both subscribe and publish should be executed via the API of AAS middleware
+- It should be possible to link the async connector to other exectuables (workflows / connectors). In this case, the async connector automatically triggers the other function. The middleware should have a function "add_trigger", where a trigger (i.e. the AsyncConnector) and a subscriber (i.e. Workfow / Connector) is used to define the event-based interaction.
+- Workflows should also allow to insert in their decorator, if some trigger is used for its execution. 
+- If an async connector is linked with a connector / workflow as trigger, in the connection registry a wrapper around the on_message function is added, which then executes the listeners.
+
 basyx enhancements:
 - (2): Add scanning function that parses an aas server and retrieves all models from it
 - (2): Add File, Operation and Blob Support
