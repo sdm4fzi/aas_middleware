@@ -198,18 +198,25 @@ def jsonschema_to_pydantic(
 
 
 if __name__ == "__main__":
-    class OtherModel(BaseModel):
-        id: int
-        name: str
+    # class MoreNestedModel(BaseModel):
+    #     id: int
+    #     full_name: str
 
+    # class OtherModel(BaseModel):
+    #     id: int
+    #     name: str
+    #     more_nested: MoreNestedModel
 
-    class ExampleModel(BaseModel):
-        id: int
-        name: str
-        other_model: OtherModel
+    # class ExampleModel(BaseModel):
+    #     id: int
+    #     name: str
+    #     other_model: OtherModel
 
-    parsed_json_obj = ExampleModel.model_json_schema()
-    with open("ProvisionofSimulationModelsAAS_schema.json", "r") as f:
+    # parsed_json_obj = ExampleModel.model_json_schema()
+
+    # with open("ProvisionofSimulationModelsAAS_schema.json", "r") as f:
+    #     parsed_json_obj = json.loads(f.read())
+    with open("RecreatedSchema.json", "r") as f:
         parsed_json_obj = json.loads(f.read())
 
     # json.loads may be required.  In my case I had been using Json type in pydantic/sqlalchemy
@@ -218,5 +225,7 @@ if __name__ == "__main__":
     )
     # PydanticModel.model_rebuild(_parent_namespace_depth=6)
 
-    # assert parsed_json_obj == PydanticModel.model_json_schema()
+    assert parsed_json_obj == PydanticModel.model_json_schema()
+    with open("RecreatedSchema.json", "w") as f:
+        f.write(json.dumps(PydanticModel.model_json_schema(), indent=4))
     print(PydanticModel.model_fields)

@@ -1,0 +1,64 @@
+{
+    "$defs": {
+        "MoreNestedModel": {
+            "properties": {
+                "id": {
+                    "title": "Id",
+                    "type": "integer"
+                },
+                "full_name": {
+                    "title": "Full Name",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "id",
+                "full_name"
+            ],
+            "title": "MoreNestedModel",
+            "type": "object"
+        },
+        "OtherModel": {
+            "properties": {
+                "id": {
+                    "title": "Id",
+                    "type": "integer"
+                },
+                "name": {
+                    "title": "Name",
+                    "type": "string"
+                },
+                "more_nested": {
+                    "$ref": "#/$defs/MoreNestedModel"
+                }
+            },
+            "required": [
+                "id",
+                "name",
+                "more_nested"
+            ],
+            "title": "OtherModel",
+            "type": "object"
+        }
+    },
+    "properties": {
+        "id": {
+            "title": "Id",
+            "type": "integer"
+        },
+        "name": {
+            "title": "Name",
+            "type": "string"
+        },
+        "other_model": {
+            "$ref": "#/$defs/OtherModel"
+        }
+    },
+    "required": [
+        "id",
+        "name",
+        "other_model"
+    ],
+    "title": "ExampleModel",
+    "type": "object"
+}
