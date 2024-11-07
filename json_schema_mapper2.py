@@ -29,7 +29,7 @@ from datamodel_code_generator.parser.jsonschema import (
 )
 from datamodel_code_generator.types import DataTypeManager, StrictTypes
 
-from pydantic import BaseConfig, BaseModel, create_model
+from pydantic import BaseModel, ConfigDict, create_model
 
 
 # extend the data-model json-schema-parser to accept a source of a JsonSchemaObject
@@ -148,12 +148,11 @@ class JsonSchemaParser(BaseJsonSchemaParser):
 
 
 # define a class config to use for create_model
-class JsonSchemaConfig(BaseConfig):
-    arbitrary_types_allowed = True
-    allow_population_by_field_name = True
+class JsonSchemaConfig(ConfigDict):
+    populate_by_name = True
     validate_assignment = True
-    validate_all = True
-    orm_mode = True
+    validate_default = True
+    from_attributes = True
 
 
 def jsonschema_to_pydantic(
@@ -176,7 +175,8 @@ def jsonschema_to_pydantic(
         use_annotated=True,
     )
     parser.parse_obj(schema.title, obj=schema)
-    results = parser.results[0]
+    print(len(parser.results))
+    result: DataModel = parser.results[0]
     # this is added for my use case.  I excluded some fields from the generated model based on an indicator column
     fields_to_exclude = [
         attr
@@ -187,20 +187,36 @@ def jsonschema_to_pydantic(
     ]
 
     fields = {}
-    for attr in results.fields:
+    for attr in result.fields:
         if attr.name not in fields_to_exclude:
             fields[attr.name] = (attr.type_hint, ... if attr.required else attr.default)
+            if attr.unresolved_types:
+                # FIXME: create a model for the unresolved types....
+                print("Unresolved types found", attr.unresolved_types)
 
     return create_model(schema.title, __config__=config, **fields)
 
 
 if __name__ == "__main__":
+    class OtherModel(BaseModel):
+        id: int
+        name: str
+
+
+    class ExampleModel(BaseModel):
+        id: int
+        name: str
+        other_model: OtherModel
+
+    parsed_json_obj = ExampleModel.model_json_schema()
     with open("ProvisionofSimulationModelsAAS_schema.json", "r") as f:
         parsed_json_obj = json.loads(f.read())
+
     # json.loads may be required.  In my case I had been using Json type in pydantic/sqlalchemy
     PydanticModel = jsonschema_to_pydantic(
         schema=JsonSchemaObject.model_validate(parsed_json_obj),
     )
-    print(PydanticModel.model_fields)
+    # PydanticModel.model_rebuild(_parent_namespace_depth=6)
+
     # assert parsed_json_obj == PydanticModel.model_json_schema()
-    PydanticModel.model_rebuild()
+    print(PydanticModel.model_fields)
