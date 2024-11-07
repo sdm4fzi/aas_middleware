@@ -1,19 +1,23 @@
 # Standard Library
 from collections import defaultdict
 import json
+from types import NoneType
 from typing import (
     Any,
     Callable,
     DefaultDict,
     Dict,
     Iterable,
+    Literal,
     Mapping,
     Optional,
     Sequence,
     Set,
     Tuple,
     Type,
+    Union,
 )
+import typing
 
 # Third Party Libraries
 from datamodel_code_generator.format import PythonVersion
@@ -25,16 +29,27 @@ from datamodel_code_generator.parser.jsonschema import (
     JsonSchemaObject,
 )
 from datamodel_code_generator.parser.jsonschema import (
-    JsonSchemaParser as BaseJsonSchemaParser,
+    JsonSchemaParser,
 )
 from datamodel_code_generator.types import DataTypeManager, StrictTypes
-
 from pydantic import BaseModel, ConfigDict, create_model
 
+from aas_middleware.model.formatting.util import compare_schemas
 
-# extend the data-model json-schema-parser to accept a source of a JsonSchemaObject
-# remove template options from the init methods and default them to none in the super() call
-class JsonSchemaParser(BaseJsonSchemaParser):
+
+ORIGIN_TYPES = {
+    "Optional": Optional,
+    "List": list,
+    "Dict": dict,
+    "Set": set,
+    "FrozenSet": frozenset,
+    "Tuple": tuple,
+    "Union": Union,
+    "Any": Any,
+    "Literal": Literal
+}
+
+class JsonSchemaToPydanticParser(JsonSchemaParser):
     def __init__(
         self,
         source: JsonSchemaObject,
@@ -78,8 +93,9 @@ class JsonSchemaParser(BaseJsonSchemaParser):
         use_annotated: bool = False,
         use_non_positive_negative_number_constrained_types: bool = False,
     ):
+        _source = json.dumps(source)
         super().__init__(
-            source=source,
+            source=_source,
             data_model_type=data_model_type,
             data_model_root_type=data_model_root_type,
             data_type_manager_type=data_type_manager_type,
@@ -130,22 +146,6 @@ class JsonSchemaParser(BaseJsonSchemaParser):
         self.reserved_refs: DefaultDict[Tuple[str], Set[str]] = defaultdict(set)
         self.field_keys: Set[str] = {*DEFAULT_FIELD_KEYS, *self.field_extra_keys}
 
-    # remove path from the required options
-    def parse_obj(self, name: str, obj: JsonSchemaObject) -> None:
-        if obj.is_array:  # noqa: WPS223
-            self.parse_array(name, obj, [])
-        elif obj.allOf:
-            self.parse_all_of(name, obj, [])
-        elif obj.oneOf:
-            self.parse_root_type(name, obj, [])
-        elif obj.is_object:
-            self.parse_object(name, obj, [])
-        elif obj.enum:
-            self.parse_enum(name, obj, [])
-        else:
-            self.parse_root_type(name, obj, [])
-        self.parse_ref(obj, [])
-
 
 # define a class config to use for create_model
 class JsonSchemaConfig(ConfigDict):
@@ -156,12 +156,12 @@ class JsonSchemaConfig(ConfigDict):
 
 
 def jsonschema_to_pydantic(
-    schema: JsonSchemaObject,
+    schema: dict[str, str],
     *,
     config: Type = JsonSchemaConfig,
 ) -> Type[BaseModel]:
-    parser = JsonSchemaParser(
-        source=None,
+    parser = JsonSchemaToPydanticParser(
+        source=schema,
         validation=True,
         field_constraints=True,
         snake_case_field=True,
@@ -174,27 +174,41 @@ def jsonschema_to_pydantic(
         apply_default_values_for_required_fields=False,
         use_annotated=True,
     )
-    parser.parse_obj(schema.title, obj=schema)
-    print(len(parser.results))
-    result: DataModel = parser.results[0]
-    # this is added for my use case.  I excluded some fields from the generated model based on an indicator column
-    fields_to_exclude = [
-        attr
-        for attr in schema.properties
-        if schema.properties[attr].extras.get(
-            "an_extra_column_use_to_indicate_exclude", None
-        )
-    ]
+    parser.parse()
+    results: list[DataModel] = parser.results
 
-    fields = {}
-    for attr in result.fields:
-        if attr.name not in fields_to_exclude:
-            fields[attr.name] = (attr.type_hint, ... if attr.required else attr.default)
-            if attr.unresolved_types:
-                # FIXME: create a model for the unresolved types....
-                print("Unresolved types found", attr.unresolved_types)
+    # sort results depending on their refenced classes
+    results.sort(key=lambda x: len(x.reference_classes))
 
-    return create_model(schema.title, __config__=config, **fields)
+    # sort the results that they don't have a reference to a class that is after them
+    copied_results = [*results]
+
+    sorted_results: list[DataModel] = []
+    while copied_results:
+        for result in copied_results:
+            if not result.reference_classes:
+                sorted_results.append(result)
+                copied_results.remove(result)
+                continue
+            if all(any(True for result in sorted_results if ref.split("/")[-1] == result.name) for ref in result.reference_classes):
+                sorted_results.append(result)
+                copied_results.remove(result)
+                continue
+
+
+    pydantic_models = {}
+
+    for sorted_result in sorted_results:
+        fields = {}
+        for attr in sorted_result.fields:
+            type_hint = eval(attr.type_hint, ORIGIN_TYPES, pydantic_models)
+            if type_hint is None:
+                type_hint = NoneType
+            fields[attr.name] = (type_hint, ... if attr.required else attr.default)
+        pydantic_models.update({
+            sorted_result.name: create_model(sorted_result.name, __config__=config, **fields)
+        })
+    return pydantic_models[schema["title"]]
 
 
 if __name__ == "__main__":
@@ -214,18 +228,15 @@ if __name__ == "__main__":
 
     # parsed_json_obj = ExampleModel.model_json_schema()
 
-    # with open("ProvisionofSimulationModelsAAS_schema.json", "r") as f:
-    #     parsed_json_obj = json.loads(f.read())
-    with open("RecreatedSchema.json", "r") as f:
+    with open("ProvisionofSimulationModelsAAS_schema.json", "r") as f:
         parsed_json_obj = json.loads(f.read())
-
-    # json.loads may be required.  In my case I had been using Json type in pydantic/sqlalchemy
+    # with open("RecreatedSchema.json", "r") as f:
+    #     parsed_json_obj = json.loads(f.read())
     PydanticModel = jsonschema_to_pydantic(
-        schema=JsonSchemaObject.model_validate(parsed_json_obj),
+        schema=parsed_json_obj,
     )
-    # PydanticModel.model_rebuild(_parent_namespace_depth=6)
-
-    assert parsed_json_obj == PydanticModel.model_json_schema()
     with open("RecreatedSchema.json", "w") as f:
         f.write(json.dumps(PydanticModel.model_json_schema(), indent=4))
+    assert compare_schemas(parsed_json_obj, PydanticModel.model_json_schema())
+
     print(PydanticModel.model_fields)
