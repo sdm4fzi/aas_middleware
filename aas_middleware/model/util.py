@@ -168,7 +168,7 @@ def is_identifiable_type(schema: Type[Any]) -> bool:
     """
     # TODO: refactor to combine is_identifiable and is_identifiable_type
     # TODO: handle here also union types
-    if not isinstance(schema, type):
+    if not isinstance(schema, type) or typing.get_origin(schema) in [list, tuple, set]:
         return False
     if issubclass(schema, UnIdentifiable):
         return False

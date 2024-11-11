@@ -63,7 +63,7 @@ def normalize_schema(
 
 
 def compare_properties(
-    schema1: Dict[str, Any], schema2: Dict[str, Any], reference_schemas: Dict[str, Any]
+    schema1: Dict[str, Any], schema2: Dict[str, Any], reference_schemas: Dict[str, Any], ignore_tuple_type_hints: bool = False
 ) -> bool:
     """Compare properties and required attributes of two schemas."""
     # Check if both schemas define properties
@@ -77,6 +77,7 @@ def compare_properties(
     normalized_schema2 = normalize_schema(
         properties2, reference_schemas=reference_schemas
     )
+    keys_to_update_in_properties2 = {}
     for key, value in normalized_schema1.items():
         if not key in normalized_schema2:
             print("missing key", key)
@@ -84,6 +85,11 @@ def compare_properties(
             print("different values", key)
             print(value)
             print(normalized_schema2[key])
+            keys_to_update_in_properties2[key] = value["items"]
+    if ignore_tuple_type_hints:
+        for key, value in keys_to_update_in_properties2.items():
+            print("updating key", key, "items from", properties2[key]["items"], "to", value)
+            properties2[key]["items"] = value
     if normalize_schema(
         properties1, reference_schemas=reference_schemas
     ) != normalize_schema(properties2, reference_schemas=reference_schemas):
@@ -124,6 +130,7 @@ def compare_schemas(
     schema1: Dict[str, Any],
     schema2: Dict[str, Any],
     reference_schemas: Optional[Dict[str, Any]] = None,
+    ignore_tuple_type_hints: bool = False,
 ) -> bool:
     """Compare two JSON schemas recursively, including properties, references, and required fields."""
     if not reference_schemas:
@@ -138,7 +145,7 @@ def compare_schemas(
         return False
 
     if not compare_properties(
-        normalized_schema1, normalized_schema2, reference_schemas=reference_schemas
+        normalized_schema1, normalized_schema2, reference_schemas=reference_schemas, ignore_tuple_type_hints=ignore_tuple_type_hints
     ):
         return False
 

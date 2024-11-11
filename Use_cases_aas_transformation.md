@@ -56,7 +56,7 @@ internal optimization:
 - (done): add a basyx caching connector with internal caching or redis and also use only one aiohttp session!
 
 new features:
-- (3): add support for defining a DataModel with JsonSchema
+- (done): add support for defining a DataModel with JsonSchema
 - (2): allow to add triggers for workflows on events, also add an Listener and Publisher for pub/sub communication
 
 basyx enhancements:

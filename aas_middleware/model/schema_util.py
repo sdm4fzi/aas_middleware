@@ -23,7 +23,7 @@ def get_attribute_dict_of_schema(schema: Type[Identifiable]) -> Dict[str, Type[I
     attribute_dict = {}
     if not isinstance(schema, type):
         return attribute_dict
-    if issubclass(schema, BaseModel):
+    if not typing.get_origin(schema) and issubclass(schema, BaseModel):
         for field_name, field in schema.model_fields.items():
             attribute_dict[field_name] = field.annotation
     else:
