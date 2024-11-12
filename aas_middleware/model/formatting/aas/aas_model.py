@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from types import NoneType
-from typing import Annotated, Any, List, Union
+from typing import Annotated, Any, List, Optional, Union
 import typing
 
 from basyx.aas.model import AssetAdministrationShell, DictObjectStore, Submodel
-from pydantic import BaseModel, BeforeValidator, ValidationError, model_validator
+from pydantic import BaseModel, BeforeValidator, Field, ValidationError, field_validator, model_validator
 
 
 BasyxModels = AssetAdministrationShell | Submodel | DictObjectStore
@@ -168,7 +168,7 @@ class File(HasSemantics, Referable):
 
 class Blob(HasSemantics, Referable):
     media_type: str
-    content: bytes
+    content: Optional[bytes] = None
 
 
 PrimitiveSubmodelElement = int | float | str | bool | bytes

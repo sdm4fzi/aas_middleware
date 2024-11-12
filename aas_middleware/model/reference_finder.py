@@ -155,9 +155,7 @@ def get_reference_info_for_schema(schema: Type[Identifiable], attribute_name: st
 
 def patch_references(references: Set[ReferenceInfo], schemas: List[Type[Identifiable]]) -> Set[ReferenceInfo]:
     patched_references = set()
-    # FIXME: this is not working properly ---> make case distinctions and resolve them step by step
     schema_names = {schema.__name__.split(".")[-1] for schema in schemas}
-    print(schema_names)
     for reference in references:
         if reference.reference_type == ReferenceType.ASSOCIATION:
             continue
@@ -165,7 +163,6 @@ def patch_references(references: Set[ReferenceInfo], schemas: List[Type[Identifi
             for schema_name in schema_names:
                 adjusted_reference_id = reference.reference_id.split(".")[-1]
                 if adjusted_reference_id in schema_name and len(adjusted_reference_id) > len(schema_name) and not reference.identifiable_id == schema_name:
-                    # print(f"Patch reference from {reference.identifiable_id} to {reference.reference_id} to {schema_name}")
                     patched_references.add(
                         ReferenceInfo(
                             identifiable_id=reference.reference_id,
@@ -177,7 +174,6 @@ def patch_references(references: Set[ReferenceInfo], schemas: List[Type[Identifi
         elif reference.reference_type == ReferenceType.REFERENCE:
             for schema_name in schema_names:
                 if reference.reference_id in schema_name and len(reference.reference_id) < len(schema_name) and not reference.identifiable_id == schema_name:
-                    # print(f"Patch reference from {reference.identifiable_id} to {reference.reference_id} to {schema_name}")
                     patched_references.add(
                         ReferenceInfo(
                             identifiable_id=reference.reference_id,

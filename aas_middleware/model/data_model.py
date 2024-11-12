@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from typing import Dict, List, Set, Tuple, TypeVar, Union, Any, Type
+from typing import Dict, List, Optional, Set, Tuple, TypeVar, Union, Any, Type
 from datetime import datetime
 
 from pydantic import BaseModel, ValidationError
@@ -59,6 +59,8 @@ class DataModel(BaseModel):
     _reference_info_dict_for_referencing: Dict[str, Dict[str, ReferenceInfo]] = {}
     _reference_info_dict_for_referenced: Dict[str, Dict[str, ReferenceInfo]] = {}
 
+
+    # TODO: refactor so that all schema information is in a seperate class called Schema
     _schemas: Dict[str, Type[Any]] = {}
     _top_level_schemas: Set[str] = set()
     _schema_reference_infos: Set[ReferenceInfo] = set()
@@ -82,7 +84,6 @@ class DataModel(BaseModel):
     def __setattr__(self, name: str, value):
         if name not in self.model_fields:
             return super().__setattr__(name, value)
-        print("####")
         if is_identifiable_container(value) or value == []:
             current_values_of_the_attribute = super().__getattribute__(name)
             new_ids_of_models = set([get_id_with_patch(model) for model in value])
@@ -245,7 +246,6 @@ class DataModel(BaseModel):
             if not attribute_value:
                 continue
             if is_identifiable_container(attribute_value):
-                print("remove", get_id_with_patch(model), "from", attribute_name)
                 for item in attribute_value:
                     if get_id_with_patch(item) == get_id_with_patch(model):
                         attribute_value.remove(item)
@@ -273,7 +273,6 @@ class DataModel(BaseModel):
             for referenced_id, reference_info in references_dict.items():
                 self._reference_info_dict_for_referenced[referenced_id].pop(model_id)
                 self._reference_infos.remove(reference_info)
-                print("remove", reference_info, referenced_id)
                 if reference_info.reference_type == ReferenceType.REFERENCE:
                     continue
                 if not self.get_model(referenced_id):
@@ -546,6 +545,25 @@ class DataModel(BaseModel):
         return list(
             self._reference_info_dict_for_referenced[referenced_model_id].values()
         )
+    
+    def get_schema_referencing_info(
+        self, referenced_schema: Type[Identifiable]
+    ) -> List[ReferenceInfo]:
+        """
+        Method to get all reference infos of a schema.
+
+        Args:
+            referenced_schema (Type[Identifiable]): The schema to get the reference infos for.
+
+        Returns:
+            List[ReferenceInfo]: The list of reference infos.
+        """
+        referenced_schema_id = referenced_schema.__name__
+        if not referenced_schema_id in self._schema_reference_info_for_referenced:
+            return []
+        return list(
+            self._schema_reference_info_for_referenced[referenced_schema_id].values()
+        )
 
     def get_referencing_models(
         self, referenced_model: Identifiable
@@ -656,7 +674,7 @@ class DataModel(BaseModel):
             if isinstance(self.get_model(model_id), referenced_model_type)
         ]
 
-    def get_model(self, model_id: str) -> Identifiable:
+    def get_model(self, model_id: str) -> Optional[Identifiable]:
         """
         Method to get a model by its id.
 
@@ -664,7 +682,7 @@ class DataModel(BaseModel):
             model_id (str): The id of the model to get.
 
         Returns:
-            Identifiable: The model.
+            Optional[Identifiable]: The model if found, None otherwise.
         """
         if model_id not in self.model_ids:
             return None

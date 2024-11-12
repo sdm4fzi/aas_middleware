@@ -8,6 +8,8 @@ from aas_middleware.model.formatting.aas.basyx_formatter import BasyxTemplateFor
 class BillOfMaterialInfo(aas_middleware.SubmodelElementCollection):
     manufacterer: str
     product_type: str
+    example_file: aas_middleware.File
+    example_blob: aas_middleware.Blob
 
 
 class BillOfMaterial(aas_middleware.Submodel):
@@ -17,12 +19,19 @@ class BillOfMaterial(aas_middleware.Submodel):
 
 class ProcessModel(aas_middleware.Submodel):
     processes: typing.List[str]
+    example_file: aas_middleware.File
+    example_blob: aas_middleware.Blob
 
 
 class Product(aas_middleware.AAS):
     bill_of_material: BillOfMaterial
     process_model: typing.Optional[ProcessModel]
 
+
+pdf_file_path = "C:/Users/Sebas/Code/aas_middleware/examples/SB_354.pdf"
+
+with open(pdf_file_path, "rb") as f:
+    pdf_file_content = f.read()
 
 example_product = Product(
     id="example_product_id",
@@ -39,67 +48,61 @@ example_product = Product(
             description="Example Bill of Material Info",
             manufacterer="Example Manufacterer",
             product_type="Example Product Type",
+            example_file=aas_middleware.File(
+                id_short="example_file_123",
+                media_type="text/html",
+                path="https://www.wbk.kit.edu",
+            ),
+            example_blob=aas_middleware.Blob(
+                id_short="example_blob123",
+                media_type="text/html",
+                content=b"""
+                        <html>
+                            <head>
+                                <title>Some HTML in here</title>
+                            </head>
+                            <body>
+                                <h1>Look ma! HTML!</h1>
+                            </body>
+                        </html>
+                        """,
+            ),
         ),
     ),
     process_model=ProcessModel(
         id="example_process_model_id",
         id_short="example_process_model_id",
         description="Example Process Model",
-        processes=["process_1", "process_2"]
+        processes=["process_1", "process_2"],
+        example_file=aas_middleware.File(
+            id_short="example_file_123211",
+            media_type="application/pdf",
+            path="https://www.wbk.kit.edu/wbkintern/CI_Tools/Studentenarbeiten/SB_354.pdf",
+        ),
+        example_blob=aas_middleware.Blob(
+            id_short="example_blob12344",
+            media_type="application/pdf",
+            content=pdf_file_content,
+        ),
     ),
 )
 
 data_model = aas_middleware.DataModel.from_models(example_product)
-basyx_object_store = aas_middleware.formatting.BasyxFormatter().serialize(data_model)
-
-json_aas = aas_middleware.formatting.AasJsonFormatter().serialize(data_model)
-# with open("example_aas.json", "w") as f:
-#     f.write(json.dumps(json_aas, indent=4))
-
-
-infered_data_model_with_templates = BasyxTemplateFormatter().deserialize(basyx_object_store)
-types = list(infered_data_model_with_templates._schemas.values())
-reformatted_data_model = aas_middleware.formatting.AasJsonFormatter().deserialize(
-    json_aas, types
-)
-print(reformatted_data_model.get_model("example_product_id"))
-
 
 middleware = aas_middleware.AasMiddleware()
 middleware.load_aas_persistent_data_model(
-    "example", data_model, "localhost", 8081, "localhost", 8081, persist_instances=True, caching=True
+    "example",
+    data_model,
+    "localhost",
+    8081,
+    "localhost",
+    8081,
+    persist_instances=True,
+    caching=True,
 )
 
 middleware.generate_rest_api_for_data_model("example")
 middleware.generate_graphql_api_for_data_model("example")
-
-
-class TrivialConnector:
-    def __init__(self):
-        pass
-
-    async def connect(self):
-        pass
-
-    async def disconnect(self):
-        pass
-
-    async def consume(self, body: str) -> None:
-        print(body)
-        pass
-
-    async def provide(self) -> typing.Any:
-        return "trivial connector example value"
-
-
-example_connector = TrivialConnector()
-middleware.add_connector("test_connector", example_connector, model_type=str)
-
-
-@middleware.workflow()
-def example_workflow(a: str) -> str:
-    print(a)
-    return a
 
 
 if __name__ == "__main__":

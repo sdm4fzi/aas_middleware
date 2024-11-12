@@ -11,7 +11,6 @@ import uuid
 from basyx.aas import model
 
 from typing import List, Optional, Tuple, Union
-from numpy import isin
 from pydantic import BaseModel, ConfigDict
 from aas_middleware.model.data_model import DataModel
 from aas_middleware.model.data_model_rebuilder import DataModelRebuilder
@@ -31,6 +30,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 def convert_model_to_aas(
     model_aas: aas_model.AAS,
 ) -> model.DictObjectStore[model.Identifiable]:
@@ -47,9 +47,9 @@ def convert_model_to_aas(
     aas_submodels = {}
     aas_submodel_data_specifications = []
     for attribute_info in aas_attribute_infos:
-        submodel = convert_model_to_submodel(model_submodel=attribute_info.value)        
-        attribute_data_specification = convert_util.get_data_specification_for_attribute(
-                attribute_info, submodel
+        submodel = convert_model_to_submodel(model_submodel=attribute_info.value)
+        attribute_data_specification = (
+            convert_util.get_data_specification_for_attribute(attribute_info, submodel)
         )
         aas_submodel_data_specifications.append(attribute_data_specification)
         if submodel and not submodel.id_short in aas_submodels:
@@ -67,9 +67,13 @@ def convert_model_to_aas(
         id_=model.Identifier(model_aas.id),
         description=convert_util.get_basyx_description_from_model(model_aas),
         submodel={
-            model.ModelReference.from_referable(submodel) for submodel in aas_submodels.values()
+            model.ModelReference.from_referable(submodel)
+            for submodel in aas_submodels.values()
         },
-        embedded_data_specifications=convert_util.get_data_specification_for_model(model_aas) + aas_submodel_data_specifications,
+        embedded_data_specifications=convert_util.get_data_specification_for_model(
+            model_aas
+        )
+        + aas_submodel_data_specifications,
     )
     obj_store: model.DictObjectStore[model.Identifiable] = model.DictObjectStore()
     obj_store.add(basyx_aas)
@@ -91,18 +95,24 @@ def convert_model_to_submodel(
         submodel_element = create_submodel_element(
             attribute_info.name, attribute_info.value
         )
-        attribute_data_specification = convert_util.get_data_specification_for_attribute(
+        attribute_data_specification = (
+            convert_util.get_data_specification_for_attribute(
                 attribute_info, submodel_element
+            )
         )
         submodel_element_data_specifications.append(attribute_data_specification)
-        immutable_attribute_data_specification = convert_util.get_immutable_data_specification_for_attribute(
-                attribute_info
+        immutable_attribute_data_specification = (
+            convert_util.get_immutable_data_specification_for_attribute(attribute_info)
         )
         if immutable_attribute_data_specification:
-            submodel_element_data_specifications.append(immutable_attribute_data_specification)
+            submodel_element_data_specifications.append(
+                immutable_attribute_data_specification
+            )
         if not attribute_info.field_info.is_required():
-            default_data_specification = convert_util.get_default_data_specification_for_attribute(
-                attribute_info, submodel_element
+            default_data_specification = (
+                convert_util.get_default_data_specification_for_attribute(
+                    attribute_info, submodel_element
+                )
             )
             submodel_element_data_specifications.append(default_data_specification)
         if submodel_element:
@@ -112,7 +122,9 @@ def convert_model_to_submodel(
         id_short=get_id_short(model_submodel),
         id_=model.Identifier(model_submodel.id),
         description=convert_util.get_basyx_description_from_model(model_submodel),
-        embedded_data_specifications=convert_util.get_data_specification_for_model(model_submodel)
+        embedded_data_specifications=convert_util.get_data_specification_for_model(
+            model_submodel
+        )
         + submodel_element_data_specifications,
         semantic_id=get_semantic_id(model_submodel),
         submodel_element=submodel_elements,
@@ -200,19 +212,21 @@ def create_submodel_element_collection(
     for attribute_info in smc_attributes:
         sme = create_submodel_element(attribute_info.name, attribute_info.value)
         attribute_data_specification = (
-            convert_util.get_data_specification_for_attribute(
-                attribute_info, sme
-            )
+            convert_util.get_data_specification_for_attribute(attribute_info, sme)
         )
         submodel_element_data_specifications.append(attribute_data_specification)
-        immutable_attribute_data_specification = convert_util.get_immutable_data_specification_for_attribute(
-                attribute_info
-            )
+        immutable_attribute_data_specification = (
+            convert_util.get_immutable_data_specification_for_attribute(attribute_info)
+        )
         if immutable_attribute_data_specification:
-            submodel_element_data_specifications.append(immutable_attribute_data_specification)
+            submodel_element_data_specifications.append(
+                immutable_attribute_data_specification
+            )
         if not attribute_info.field_info.is_required():
-            default_data_specification = convert_util.get_default_data_specification_for_attribute(
-                attribute_info, sme
+            default_data_specification = (
+                convert_util.get_default_data_specification_for_attribute(
+                    attribute_info, sme
+                )
             )
             submodel_element_data_specifications.append(default_data_specification)
         if sme:
@@ -224,14 +238,18 @@ def create_submodel_element_collection(
         id_short=id_short,
         value=value,
         description=convert_util.get_basyx_description_from_model(model_sec),
-        embedded_data_specifications=convert_util.get_data_specification_for_model(model_sec) + submodel_element_data_specifications,
+        embedded_data_specifications=convert_util.get_data_specification_for_model(
+            model_sec
+        )
+        + submodel_element_data_specifications,
         semantic_id=get_semantic_id(model_sec),
     )
     return smc
 
+
 def patch_id_short_with_temp_attribute(
-        submodel_element_collection: model.SubmodelElementCollection
-    ) -> None:
+    submodel_element_collection: model.SubmodelElementCollection,
+) -> None:
     """
     Patch the id_short of a SubmodelElementCollection as an attribute in the value of the SubmodelElementCollection, to make it accesible after retrieving from the value list.
 
@@ -284,7 +302,9 @@ def create_submodel_element_list(
         ordered = True
         iterable_type = "list"
     else:
-        raise ValueError(f"Value must be a list, tuple or set, provided type {type(value)}")
+        raise ValueError(
+            f"Value must be a list, tuple or set, provided type {type(value)}"
+        )
 
     sml = model.SubmodelElementList(
         id_short=f"{iterable_type}_{uuid.uuid4().hex}",
@@ -298,7 +318,7 @@ def create_submodel_element_list(
 
 def create_file(attribute_value: aas_model.File) -> model.File:
     """
-    Function generates a basyx file objects from a pydantic File. 
+    Function generates a basyx file objects from a pydantic File.
 
     Args:
         attribute_value (aas_model.File): pydantic File instance.
@@ -311,7 +331,7 @@ def create_file(attribute_value: aas_model.File) -> model.File:
         description=attribute_value.description,
         semantic_id=attribute_value.semantic_id,
         content_type=attribute_value.media_type,
-        value=attribute_value.path
+        value=attribute_value.path,
     )
 
 
