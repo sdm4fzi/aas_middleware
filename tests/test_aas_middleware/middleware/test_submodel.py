@@ -76,8 +76,7 @@ def delete_submodel(client: TestClient, example_aas_instance: ValidAAS):
     assert response.status_code == 200
 
     response = client.get(url=f"/{class_name}/{example_aas_instance.id}/optional_submodel")
-    assert response.status_code == 200
-    assert response.json() == None
+    assert response.status_code == 400
 
     response = client.get(url=f"/{class_name}/{example_aas_instance.id}/")
     assert response.status_code == 200

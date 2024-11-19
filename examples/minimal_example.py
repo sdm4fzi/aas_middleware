@@ -52,7 +52,8 @@ example_product = Product(
 data_model = aas_middleware.DataModel.from_models(example_product)
 basyx_object_store = aas_middleware.formatting.BasyxFormatter().serialize(data_model)
 
-json_aas = aas_middleware.formatting.AasJsonFormatter().serialize(data_model)
+formatter = aas_middleware.formatting.AasJsonFormatter()
+json_aas = formatter.serialize(data_model)  
 # with open("example_aas.json", "w") as f:
 #     f.write(json.dumps(json_aas, indent=4))
 
