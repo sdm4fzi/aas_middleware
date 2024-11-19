@@ -45,7 +45,7 @@ class ConnectionRegistry:
 
     def __init__(self):
         self.connectors: typing.Dict[str, Connector] = {}
-        self.connection_types: typing.Dict[str, typing.Type[Connector]] = {}
+        self.connection_types: typing.Dict[str, typing.Type[typing.Any]] = {}
         self.connections: typing.Dict[ConnectionInfo, typing.List[str]] = {}
 
 
@@ -84,7 +84,7 @@ class ConnectionRegistry:
         return self.connectors[connector_id]
 
 
-    def add_connector(self, connector_id: str, connector: Connector, connection_type: typing.Type[Connector]):
+    def add_connector(self, connector_id: str, connector: Connector, connection_type: typing.Type[typing.Any]):
         """
         Function to add a connector to the connection manager.
 
@@ -259,7 +259,7 @@ class PersistenceConnectionRegistry(ConnectionRegistry):
         logger.warning(f"No persistence factory found for {data_model_connection_info} and model type {persisted_model_type.__name__}. Using default persistence factory.")
         return PersistenceFactory(ModelConnector)
 
-    def add_to_persistence(self, connection_info: ConnectionInfo, model: Identifiable, persistence_factory: typing.Optional[PersistenceFactory]):
+    async def add_to_persistence(self, connection_info: ConnectionInfo, model: Identifiable, persistence_factory: typing.Optional[PersistenceFactory]):
         """
         Function to add a persistent connection to the connection manager.
 
@@ -269,6 +269,7 @@ class PersistenceConnectionRegistry(ConnectionRegistry):
         if not persistence_factory:
             persistence_factory = self.get_default_persistence_factory(connection_info, type(model))
         connector = persistence_factory.create(model)
+        await connector.connect()
         self.add_connection(connection_info, connector, type(model))
 
     def add_connection(self, connection_info: ConnectionInfo, connector: Connector, type_connection_info: typing.Type[typing.Any]):

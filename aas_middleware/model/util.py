@@ -59,13 +59,9 @@ def is_identifiable(model: Any) -> bool:
     Returns:
         bool: True if the model is identifiable, False otherwise.
     """
-    # if isinstance(model, UnIdentifiable):
-    #     return False
-    # return True
     return not isinstance(model, UnIdentifiable)
 
 
-# def get_identifier_type_fields(model: BaseModel) -> List[str]:
 def get_identifier_type_fields(field_info_dict: Dict[str, FieldInfo]) -> List[str]:
     """
     Function to get the fields of a model that are of type Identifier.
@@ -117,7 +113,6 @@ def get_id(model: Any) -> str | int | UUID:
             raise ValueError(f"Model {model} has multiple Identifier attributes.")
         if potential_identifier:
             return getattr(model, potential_identifier[0])
-
     if isinstance(model, BaseModel):
         data = model.model_dump()
     elif isinstance(model, dict):
@@ -173,7 +168,7 @@ def is_identifiable_type(schema: Type[Any]) -> bool:
     """
     # TODO: refactor to combine is_identifiable and is_identifiable_type
     # TODO: handle here also union types
-    if not isinstance(schema, type):
+    if not isinstance(schema, type) or typing.get_origin(schema) in [list, tuple, set]:
         return False
     if issubclass(schema, UnIdentifiable):
         return False
@@ -249,6 +244,21 @@ def get_values_as_identifiable_list(value: Any) -> List[Optional[Identifiable]]:
         return value
     else:
         return []
+    
+
+def get_identifiable_attributes_dict_of_model(
+    potential_identifiable_container: Identifiable,
+) -> Dict[str, Identifiable]:
+    referable_values = {}
+    if not is_identifiable(potential_identifiable_container):
+        return {}
+    else:
+        attribute_dict = vars(potential_identifiable_container)
+    for attribute_name, attribute_value in attribute_dict.items():
+        if not is_identifiable(attribute_value) or is_identifiable_container(attribute_value):
+            continue
+        referable_values[attribute_name] = attribute_value
+    return referable_values
 
 
 def get_identifiable_attributes_of_model(
@@ -257,8 +267,7 @@ def get_identifiable_attributes_of_model(
     referable_values = []
     if not is_identifiable(potential_identifiable_container):
         return []
-    else:
-        attribute_dict = vars(potential_identifiable_container)
+    attribute_dict = vars(potential_identifiable_container)
     for attribute_value in attribute_dict.values():
         referable_values += get_values_as_identifiable_list(attribute_value)
     return referable_values
@@ -569,3 +578,57 @@ def models_are_equal(model1: Identifiable, model2: Identifiable) -> bool:
         elif attribute_value1 != model2_attributes[attribute_name1]:
             return False
     return True
+
+
+
+def check_and_replace(model: Identifiable, id_map: Dict[str, Identifiable]) -> Identifiable:
+        model_id = get_id_with_patch(model)
+
+        # If the model is already in the id_map and the values are the same, return the cached model
+        if model_id in id_map:
+            existing_model = id_map[model_id]
+            if not model.model_dump() == existing_model.model_dump():
+                raise ValueError(
+                    f"Duplicate models with id {model_id} have different values"
+                )
+            return existing_model
+        # If it's not a duplicate, add it to the map and check nested models
+        id_map[model_id] = model
+
+        for field_name, field_value in get_identifiable_attributes_dict_of_model(model).items():
+            if is_identifiable(field_value):
+                setattr(model, field_name, check_and_replace(field_value, id_map))
+            elif is_identifiable_container(field_value):
+                normalized_list = [check_and_replace(item, id_map) for item in field_value]
+                setattr(model, field_name, normalized_list)
+
+        return model
+
+def normalize_identifiables_in_model(model: List[Identifiable], id_map: Dict[str, Identifiable] = {}):
+    """
+    Normalize a list of Pydantic models by replacing duplicate models that share the same ID
+    and have the same values.
+
+    Args:
+        model (Identifiable): List of Pydantic models (can be nested).
+    """
+    local_id_map = dict(id_map)
+    check_and_replace(model, local_id_map)
+
+
+def normalize_identifiables(models: List[Identifiable]) -> List[Identifiable]:
+    """
+    Normalize a list of Pydantic models by replacing duplicate models that share the same ID
+    and have the same values.
+
+    Args:
+        models (List[Identifiable]): List of Pydantic models (can be nested).
+
+    Returns:
+        List[Identifiable]: The normalized list of models.
+    """
+    id_map = {}
+    new_models = []
+    for model in models:
+        new_models.append(check_and_replace(model, id_map))
+    return new_models

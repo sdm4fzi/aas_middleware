@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from types import NoneType
-from typing import Annotated, Any, Callable, List, TypeVar, Union
+from typing import Annotated, Any, List, Optional, Union
 import typing
 
 from basyx.aas.model import AssetAdministrationShell, DictObjectStore, Submodel
-from pydantic import BaseModel, BeforeValidator, ValidationError, model_validator
+from pydantic import BaseModel, BeforeValidator, Field, ValidationError, field_validator, model_validator
 
 
 BasyxModels = AssetAdministrationShell | Submodel | DictObjectStore
@@ -30,7 +30,6 @@ class Referable(BaseModel):
 
     id_short: AasIdString
     description: str = ""
-
 
 class Identifiable(Referable):
     """
@@ -122,6 +121,10 @@ def is_valid_submodel_element(submodel_element: Any) -> bool:
         return all(is_valid_submodel_element(element) for element in submodel_element)
     elif isinstance(submodel_element, Operation):
         return True
+    elif isinstance(submodel_element, File):
+        return True
+    elif isinstance(submodel_element, Blob):
+        return True
     try:
         SubmodelElementCollection.model_validate(submodel_element)
         return True
@@ -158,12 +161,24 @@ class Operation(HasSemantics, Referable):
     # and check usage of operations of this with conversion to AAS standard
 
 
-PrimitiveSubmodelElement = int | float | str | bool
+class File(HasSemantics, Referable):
+    media_type: str
+    path: str
+
+
+class Blob(HasSemantics, Referable):
+    media_type: str
+    content: Optional[bytes] = None
+
+
+PrimitiveSubmodelElement = int | float | str | bool | bytes
 SubmodelElement = (
     PrimitiveSubmodelElement
     | SubmodelElementCollection
     | List["SubmodelElement"]
     | Operation
+    | Blob
+    | File
 )
 
 

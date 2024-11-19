@@ -169,7 +169,7 @@ class DataModelRebuilder:
             )
             aas_objects.append(patched_aas_object)
 
-        aas_data_model = DataModel.from_models(*aas_objects + submodel_objects)
+        aas_data_model = DataModel.from_models(*(aas_objects + submodel_objects))
         return aas_data_model
 
     def rebuild_data_model_with_references(self) -> DataModel:

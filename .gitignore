@@ -54,3 +54,8 @@ venv.bak/
 
 # Vscode
 .vscode/
+
+
+CarbonFootprintAAS_schema.json
+CarbonFootprintAAS_schema_recreated.json
+idta_carbon_foot_print_submodel_template_recreated.json

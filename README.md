@@ -107,7 +107,7 @@ With this instance of the product, we can create a DataModel.
 
 
 ```python
-data_model = aas_middleware.DataModel.from_model(example_product)
+data_model = aas_middleware.DataModel.from_models(example_product)
 ```
 
 
@@ -120,7 +120,8 @@ basyx_object_store = aas_middleware.formatting.BasyxFormatter().serialize(data_m
 Or serialize it to a JSON-serialized asset administration shell according to the official [specification of the asset administration shell ](https://industrialdigitaltwin.org/content-hub/aasspecifications):
 
 ```python
-json_aas = aas_middleware.formatting.AasJsonFormatter().serialize(data_model)
+formatter = aas_middleware.formatting.aasJsonFormatter()
+json_aas = formatter.serialize(data_model)
 print(json_aas)
 ```
 

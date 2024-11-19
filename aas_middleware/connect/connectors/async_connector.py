@@ -18,13 +18,12 @@ class Subsciber(Protocol):
         """
         ...
 
-    async def subscribe(self, topic: str, callback: Callable[[Any], Awaitable[None] | Any]) -> None:
+    async def subscribe(self, topic: str) -> None:
         """
         Interfaces for a subscriber to subscribe to a topic and receive messages.
 
         Args:
             topic (str): The topic to subscribe to.
-            callback (Callable[[str, str], Awaitable[None]]): The callback to be executed when a message is received.
 
         Raises:
             ConnectionError: If the subscribing to the topic failed.

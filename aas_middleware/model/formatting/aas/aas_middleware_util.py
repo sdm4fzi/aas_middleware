@@ -8,21 +8,7 @@ import typing
 
 from pydantic.fields import FieldInfo
 from aas_middleware.model.formatting.aas import aas_model
-
-
-def convert_under_score_to_camel_case_str(underscore_str: str) -> str:
-    """
-    Convert a underscore seperated string to a camel case string.
-
-    Args:
-        class_name (str): The underscore seperated string to convert.
-
-    Returns:
-        str: The camel case string.
-    """
-    words = underscore_str.split("_")
-    camel_case_str = "".join(word.title() for word in words)
-    return camel_case_str
+from aas_middleware.model.util import convert_under_score_to_camel_case_str
 
 
 def save_model_list_with_schema(model_list: typing.List[BaseModel], path: str):

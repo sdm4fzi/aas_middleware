@@ -160,11 +160,11 @@ def visualize_graph(graph: ig.Graph, show: bool = False, save: Optional[Literal[
     # plt.show()
     # Save the graph as an image file
     if save == "png":
-        fig.savefig(f"{graph["title"]}.png")
+        fig.savefig(f"{graph['title']}.png")
     elif save == "jpg":
-        fig.savefig(f"{graph["title"]}.jpg")
+        fig.savefig(f"{graph['title']}.jpg")
     elif save == "svg":
-        fig.savefig(f"{graph["title"]}.svg")
+        fig.savefig(f"{graph['title']}.svg")
 
 import numpy as np
 

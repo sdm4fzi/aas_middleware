@@ -151,12 +151,9 @@ def synchronize_workflow_with_persistence_consumer(workflow: Workflow, connectio
 
     @wraps(workflow.execute)
     async def wrapped_execute(execute_body: Any):
-        print("execute body: ", execute_body)
         workflow_return = await original_execute(execute_body)
-        print("workflow return: ", workflow_return)
         persistence_connector = persistence_registry.get_connector_by_data_model_and_model_id(data_model_name=connection_info.data_model_name, model_id=connection_info.model_id)
         persistence_body = adjust_body_for_persistence_schema(workflow_return, external_mapper, formatter)
-        print("persistence body: ", persistence_body)
         await update_persistence_with_value(persistence_connector, connection_info, persistence_body)
         return workflow_return
     

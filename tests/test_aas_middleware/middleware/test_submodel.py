@@ -29,8 +29,6 @@ def get_submodel(client: TestClient, example_aas_instance: ValidAAS):
 
     response = client.get(url=f"/{class_name}/{example_aas_instance.id}/example_submodel")
     assert response.status_code == 200
-    # assert response.json() == example_submodel.model_dump()
-    # FIXME: fix problem with enum values
     assert response.text == example_submodel.model_dump_json()
 
 
@@ -99,7 +97,6 @@ def post_submodel(client: TestClient, example_aas_instance: ValidAAS):
 
     data = optional_submodel.model_dump_json()
     response = client.post(url=f"/{class_name}/{example_aas_instance.id}/optional_submodel", content=data)
-    print(response.text)
     assert response.status_code == 200
 
     response = client.get(url=f"/{class_name}/{example_aas_instance.id}/")
@@ -108,6 +105,4 @@ def post_submodel(client: TestClient, example_aas_instance: ValidAAS):
 
     response = client.get(url=f"/{class_name}/{example_aas_instance.id}/optional_submodel")
     assert response.status_code == 200
-    # FIXME: fix problem with enum values
-    # assert response.json() == optional_submodel.model_dump()
     assert response.text == optional_submodel.model_dump_json()

@@ -67,7 +67,6 @@ class ExampleSubmodel(Submodel):
     union_attribute: Union[str, int]
     submodel_element_collection_attribute_simple: SimpleExampleSEC
     submodel_element_collection_attribute: ExampleSEC
-    # FIXME: order of union arguments matters -> other way rounds leads to bug
     union_submodel_element_collection_attribute: Union[ExampleSEC, SimpleExampleSEC]
     list_submodel_element_collection_attribute: List[SimpleExampleSEC]
 
@@ -243,9 +242,9 @@ def example_submodel(simple_submodel_element_collection: SubmodelElementCollecti
         float_attribute=1.1,
         literal_attribute="value1",
         enum_attribute=ExampleEnum.value1,
-        list_attribute=["string1", "string2"],
-        tuple_attribute=("string1", "string2"),
-        set_attribute={"string1", "string2"},
+        list_attribute=["string1_list", "string2_list"],
+        tuple_attribute=("string1_tuple", "string2_tuple"),
+        set_attribute={"string1_set", "string2_set"},
         union_attribute="string",
         submodel_element_collection_attribute_simple=simple_submodel_element_collection,
         submodel_element_collection_attribute=example_submodel_element_collection,
@@ -281,9 +280,9 @@ def example_submodel_for_union(simple_submodel_element_collection: SubmodelEleme
         float_attribute=1.1,
         literal_attribute="value1",
         enum_attribute=ExampleEnum.value1,
-        list_attribute=["string1", "string2"],
-        tuple_attribute=("string1", "string2"),
-        set_attribute={"string1", "string2"},
+        list_attribute=["string1_list", "string2_list"],
+        tuple_attribute=("string1_tuple", "string2_tuple"),
+        set_attribute={"string1_set", "string2_set"},
         union_attribute="string",
         submodel_element_collection_attribute_simple=simple_submodel_element_collection,
         submodel_element_collection_attribute=example_submodel_element_collection,
@@ -300,9 +299,9 @@ def example_optional_submodel(simple_submodel_element_collection: SubmodelElemen
         float_attribute=1.1,
         literal_attribute="value1",
         enum_attribute=ExampleEnum.value1,
-        list_attribute=["string1", "string2"],
-        tuple_attribute=("string1", "string2"),
-        set_attribute={"string1", "string2"},
+        list_attribute=["string1_list", "string2_list"],
+        tuple_attribute=("string1_tuple", "string2_tuple"),
+        set_attribute={"string1_set", "string2_set"},
         union_attribute="string",
         submodel_element_collection_attribute_simple=simple_submodel_element_collection,
         submodel_element_collection_attribute=example_submodel_element_collection,

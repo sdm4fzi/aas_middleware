@@ -1,21 +1,23 @@
 from __future__ import annotations
 
 import json
-from typing import Dict, List, Set, Tuple, TypeVar, Union, Any, Type
+from typing import Dict, List, Optional, Set, Tuple, TypeVar, Union, Any, Type
 from datetime import datetime
 
 from pydantic import BaseModel, ValidationError
 
 from aas_middleware.model.core import Identifiable
 
-from aas_middleware.model.reference_finder import ReferenceFinder, ReferenceInfo, patch_references
+from aas_middleware.model.reference_finder import ReferenceFinder, ReferenceInfo, ReferenceType, patch_references
 from aas_middleware.model.util import (
     convert_under_score_to_camel_case_str,
     convert_camel_case_to_underscrore_str,
     get_id_with_patch,
     get_value_attributes,
+    is_identifiable,
     is_identifiable_container,
     models_are_equal,
+    normalize_identifiables_in_model,
 )
 
 from aas_middleware.model.util import (
@@ -57,6 +59,8 @@ class DataModel(BaseModel):
     _reference_info_dict_for_referencing: Dict[str, Dict[str, ReferenceInfo]] = {}
     _reference_info_dict_for_referenced: Dict[str, Dict[str, ReferenceInfo]] = {}
 
+
+    # TODO: refactor so that all schema information is in a seperate class called Schema
     _schemas: Dict[str, Type[Any]] = {}
     _top_level_schemas: Set[str] = set()
     _schema_reference_infos: Set[ReferenceInfo] = set()
@@ -76,6 +80,24 @@ class DataModel(BaseModel):
                     self.add(*attribute_value)
                 else:
                     self.add(attribute_value)
+
+    def __setattr__(self, name: str, value):
+        if name not in self.model_fields:
+            return super().__setattr__(name, value)
+        if is_identifiable_container(value) or value == []:
+            current_values_of_the_attribute = super().__getattribute__(name)
+            new_ids_of_models = set([get_id_with_patch(model) for model in value])
+            current_ids_of_models = set([get_id_with_patch(model) for model in current_values_of_the_attribute])
+            model_ids_to_remove = current_ids_of_models - new_ids_of_models
+            self.remove(*model_ids_to_remove)
+            self.add(*value)
+        elif is_identifiable(value):
+            current_value_of_the_attribute = super().__getattribute__(name)
+            self.remove(get_id_with_patch(current_value_of_the_attribute))
+            self.add(value)
+
+        return super().__setattr__(name, value)
+
 
     @classmethod
     def from_models(
@@ -141,6 +163,23 @@ class DataModel(BaseModel):
         for model in models:
             self.add_model(model)
 
+
+    def remove(self, *model_ids: str) -> None:
+        """
+        Method to remove models from the data model.
+
+        Args:
+            *model_ids (Tuple[str]): The ids of the models to remove from the data model.
+
+        Raises:
+            ValueError: If a model with the id is not found or a removal was not succesfull.
+        """
+        for model_id in model_ids:
+            model = self.get_model(model_id)
+            if model is None:
+                raise ValueError(f"Model with id {model_id} not found.")
+            self.remove_model(model)
+
     def add_schema(self, schema: Type[Identifiable]) -> None:
         """
         Method to add a schema of the data model.
@@ -160,7 +199,7 @@ class DataModel(BaseModel):
         Args:
             model (Identifiable): The model to load.
         """
-        # Identifiable.model_validate(model)
+        normalize_identifiables_in_model(model, self._key_ids_models)
         model_id = get_id_with_patch(model)
         if model_id in self.model_ids:
             raise ValueError(f"Model with id {model_id} already loaded.")
@@ -169,6 +208,80 @@ class DataModel(BaseModel):
         self._add_contained_models(model, contained_models_map)
         self._add_top_level_model(model)
         self._add_references_to_referencing_models_dict(reference_infos)
+
+
+    def remove_model(self, model: Identifiable) -> None:
+        """
+        Method to remove a model from the data model.
+
+        Args:
+            model (Identifiable): The model to remove.
+        Raises:
+            ValueError: If the model is not loaded or if the model is referenced by other models.
+        """
+        model_id = get_id_with_patch(model)
+        if model_id not in self.model_ids:
+            raise ValueError(f"Model with id {model_id} not loaded.")
+        self.remove_references(model)
+        self._key_ids_models.pop(model_id)
+        type_name = model.__class__.__name__.split(".")[-1]
+        self._models_key_type[type_name].remove(model_id)
+        if not self._models_key_type[type_name]:
+            self._models_key_type.pop(type_name)
+        underscore_type_name = convert_camel_case_to_underscrore_str(type_name)
+        if underscore_type_name in self._top_level_models and model_id in self._top_level_models[underscore_type_name]:
+            self._top_level_models[underscore_type_name].remove(model_id)
+            if not self._top_level_models[underscore_type_name]:
+                self._top_level_models.pop(underscore_type_name)
+            self.remove_model_from_pydantic_fields(model)
+                
+    def remove_model_from_pydantic_fields(self, model: Identifiable) -> None:
+        """
+        Method to remove a model from the pydantic fields of the data model.
+
+        Args:
+            model (Identifiable): The model to remove from the pydantic fields.
+        """
+        for attribute_name, attribute_value in get_value_attributes(self).items():
+            if not attribute_value:
+                continue
+            if is_identifiable_container(attribute_value):
+                for item in attribute_value:
+                    if get_id_with_patch(item) == get_id_with_patch(model):
+                        attribute_value.remove(item)
+            elif is_identifiable(attribute_value):
+                setattr(self, attribute_name, None)
+
+    def remove_references(self, model: Identifiable) -> None:
+        """
+        Method to remove all references of a model from the data model.
+
+        Args:
+            model (Identifiable): The model to remove the references for.
+
+        Raises:
+            ValueError: If the model is referenced by other models.
+        """
+        model_id = get_id_with_patch(model)
+        # at first check if this model is refernced, if so, raise an error
+        referncing_models = self.get_referencing_models(model)
+        if referncing_models:
+            raise ValueError(f"Model with id {model_id} is referenced by other models and can therefore not be removed. Remove all references to {model_id} first.")
+        # remove all references to this model
+        if model_id in self._reference_info_dict_for_referencing:
+            references_dict = self._reference_info_dict_for_referencing.pop(model_id)
+            for referenced_id, reference_info in references_dict.items():
+                self._reference_info_dict_for_referenced[referenced_id].pop(model_id)
+                self._reference_infos.remove(reference_info)
+                if reference_info.reference_type == ReferenceType.REFERENCE:
+                    continue
+                if not self.get_model(referenced_id):
+                    continue
+                try:
+                    self.remove_model(self.get_model(referenced_id))
+                except ValueError:
+                    pass
+        
 
     def _add_contained_models(
         self, top_level_model: Identifiable, contained_models_map: Dict[str, Identifiable]
@@ -182,14 +295,7 @@ class DataModel(BaseModel):
         """
         for contained_model_id, contained_model in contained_models_map.items():
             if contained_model_id in self.model_ids:
-                same_id_model = self.get_model(contained_model_id)
-                if not models_are_equal(same_id_model, contained_model):
-                    raise ValueError(
-                        f"Model with id {contained_model_id} already loaded but with different content. Make sure to only load models with unique ids."
-                    )
-                # TODO: insert this functionality at another place in the code or validate if needed at all....
-            #     replace_attribute_with_model(top_level_model, same_id_model)
-                continue
+                continue # model already loaded, imhomoegeneous data model would be found in normalize_identifiables_in_model
             self._add_model(contained_model)
 
     def _add_contained_schemas(
@@ -439,6 +545,25 @@ class DataModel(BaseModel):
         return list(
             self._reference_info_dict_for_referenced[referenced_model_id].values()
         )
+    
+    def get_schema_referencing_info(
+        self, referenced_schema: Type[Identifiable]
+    ) -> List[ReferenceInfo]:
+        """
+        Method to get all reference infos of a schema.
+
+        Args:
+            referenced_schema (Type[Identifiable]): The schema to get the reference infos for.
+
+        Returns:
+            List[ReferenceInfo]: The list of reference infos.
+        """
+        referenced_schema_id = referenced_schema.__name__
+        if not referenced_schema_id in self._schema_reference_info_for_referenced:
+            return []
+        return list(
+            self._schema_reference_info_for_referenced[referenced_schema_id].values()
+        )
 
     def get_referencing_models(
         self, referenced_model: Identifiable
@@ -549,7 +674,7 @@ class DataModel(BaseModel):
             if isinstance(self.get_model(model_id), referenced_model_type)
         ]
 
-    def get_model(self, model_id: str) -> Identifiable:
+    def get_model(self, model_id: str) -> Optional[Identifiable]:
         """
         Method to get a model by its id.
 
@@ -557,7 +682,7 @@ class DataModel(BaseModel):
             model_id (str): The id of the model to get.
 
         Returns:
-            Identifiable: The model.
+            Optional[Identifiable]: The model if found, None otherwise.
         """
         if model_id not in self.model_ids:
             return None
