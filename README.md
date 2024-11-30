@@ -9,7 +9,7 @@
 [![DOI](https://zenodo.org/badge/830680867.svg)](https://zenodo.org/doi/10.5281/zenodo.12786362)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-aas-middleware has the goal to make information flow and orchestration in industrial environments easier and more automated. To do so, it is build upon three concepts: well defined data models and interfaces, connectors and workflows. The data models are used to define the structure of the data that is exchanged between different systems. The connectors are used to connect the data models to technologically different data sources and sinks. Workflows are used to define the orchestration of the data flow between different systems. 
+aas-middleware has the goal to make information flow and orchestration in industrial environments easier and more automated. To do so, it is build upon three concepts: well defined data models, connectors, and, workflows. The data models are used to define the structure of the data that is exchanged between different systems. The connectors are used to connect the data models to technologically different data sources and sinks. Workflows are used to define the orchestration of the data flow between different systems, connectors, and, data models. 
 
 aas-middleware uses modern api technologies (Rest or GraphQL) to make it easy to access the integrated data models or exchange data with low-level sensors and actuators. The middleware can be used to integrate different systems in the industrial environment, such as MES, ERP, SCADA, PLC, sensors, actuators and asset administration shells. By the modular and extensible design of aas-middleware, it can be used from small use cases, such as streaming sensor values, to large integrations and workflows for automated production planning and control. 
 
@@ -307,15 +307,15 @@ curl -X 'GET' \
 
 The contents above only demostrate the most fundamental features of the aas-middleware. For more advanced features, like connecting this fundametals for automated information flow in a production environment, refer to the [documentation](https://sdm4fzi.github.io/aas_middleware/).
 
-## Contributing
+# Contributing
 
 `aas-middleware` is a new project and has therefore much room for improvement. Therefore, it would be a pleasure to get feedback or support! If you want to contribute to the package, either create issues on [aas-middlweware github page](https://github.com/sdm4fzi/aas_middleware) for discussing new features or contact me directly via [github](https://github.com/SebBehrendt) or [email](mailto:sebastian.behrendt@kit.edu).
 
-## License
+# License
 
 The package is licensed under the [MIT license](LICENSE).
 
-## Acknowledgements
+# Acknowledgements
 
 We extend our sincere thanks to the German Federal Ministry for Economic Affairs and Climate Action
 (BMWK) for supporting this research project 13IK001ZF “Software-Defined Manufacturing for the

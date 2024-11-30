@@ -1,12 +1,9 @@
-import asyncio
 import functools
 from inspect import signature
-from types import NoneType
 from typing import Dict, List
 import typing
 
-import anyio
-from fastapi import APIRouter, BackgroundTasks, Body, HTTPException
+from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel, Field, create_model
 from aas_middleware.connect.workflows.worfklow_description import WorkflowDescription
 from aas_middleware.connect.workflows.workflow import Workflow
@@ -90,50 +87,35 @@ def generate_workflow_endpoint(workflow: Workflow) -> List[APIRouter]:
         if workflow.get_description().interval is None:
             @router.post("/execute", response_model=return_type)
             async def execute():
-                if workflow.running:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"Workflow {workflow.get_name()} is already running. Wait for it to finish or interrupt it first.",
-                    )
-                return await workflow.execute()
+                try:
+                    return await workflow.execute()
+                except RuntimeError as e:
+                    raise HTTPException(status_code=409, detail=str(e))
 
         @router.post("/execute_background", response_model=Dict[str, str])
         async def execute_background(background_tasks: BackgroundTasks):
-            if workflow.running:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Workflow {workflow.get_name()} is already running. Wait for it to finish or interrupt it first.",
-                )
             background_tasks.add_task(workflow.execute)
             return {"message": f"Started exeuction of workflow {workflow.get_name()}"}
     else:
         if workflow.get_description().interval is None:
             @router.post("/execute", response_model=return_type)
-            # TODO: make the optional not here, but add a method that updates the POST endpoints after a connection is added, to have optional parameters...
             async def execute(arg: typing.Optional[input_type_hints]=None): # type: ignore
-                if workflow.running:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"Workflow {workflow.get_name()} is already running. Wait for it to finish or interrupt it first.",
-                    )
-                if isinstance(arg, BaseModel) and len(type_hints) > 1:
-                    input_value = dict(arg)
-                    return await workflow.execute(**input_value)
-                else:
-                    return await workflow.execute(arg)
+                try:
+                    if isinstance(arg, BaseModel) and len(type_hints) > 1:
+                        input_value = dict(arg)
+                        return await workflow.execute(**input_value)
+                    else:
+                        return await workflow.execute(arg)
+                except RuntimeError as e:  
+                    raise HTTPException(status_code=409, detail=str(e))
 
         @router.post("/execute_background", response_model=Dict[str, str])
         async def execute_background(background_tasks: BackgroundTasks, arg: typing.Optional[input_type_hints]=None): # type: ignore
-            if workflow.running:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Workflow {workflow.get_name()} is already running. Wait for it to finish or interrupt it first.",
-                )
             if isinstance(arg, BaseModel) and len(type_hints) > 1:
                 input_value = dict(arg)
                 background_tasks.add_task(workflow.execute, **input_value)
             else:
-                background_tasks.add_task(workflow.execute, arg.model_dump())
+                background_tasks.add_task(workflow.execute, arg)
             return {"message": f"Started exeuction of workflow {workflow.get_name()}"}
         
 
@@ -146,7 +128,7 @@ def generate_workflow_endpoint(workflow: Workflow) -> List[APIRouter]:
         try:
             await workflow.interrupt()
         except ValueError as e:
-            raise HTTPException(status_code=400, detail=str(e))
+            raise HTTPException(status_code=409, detail=str(e))
         return {"message": f"Stopped execution of workflow {workflow.get_name()}"}
 
     return router

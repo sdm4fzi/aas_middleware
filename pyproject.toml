@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "aas-middleware"
-version = "0.2.0"
+version = "0.2.1"
 description = ""
 authors = ["Sebastian Behrendt <sebastianbehrendt97@gmail.com>"]
 readme = "README.md"
@@ -23,6 +23,7 @@ aiomqtt = { version = "^2.1.0", optional = true }
 asyncua = { version = "^1.1.0", optional = true }
 mkdocstrings = {extras = ["python-legacy"], version = "^0.25.1"}
 starlette-graphene3 = "^0.6.0"
+typeguard = "^4.4.1"
 
 [tool.poetry.extras]
 industrial = ["aiomqtt", "asyncua"]
