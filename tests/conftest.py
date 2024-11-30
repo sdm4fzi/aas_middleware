@@ -5,6 +5,7 @@ import threading
 import time
 from typing import Any, List, Literal, Optional, Set, Tuple, Type, Union
 
+import anyio
 from fastapi.testclient import TestClient
 from fastapi import FastAPI
 
@@ -457,7 +458,16 @@ def example_middleware(example_aas: ValidAAS, example_submodel: ExampleSubmodel)
 
     @middleware.workflow()
     async def example_workflow() -> bool:
+        await anyio.sleep(2)
         return True
+    
+    @middleware.workflow()
+    def sync_example_workflow() -> bool:
+        time.sleep(2)
+        return True
+    
+    async def exception_workflow() -> bool:
+        raise Exception("Error")
     
     @middleware.workflow(interval=1)
     async def example_workflow_interval() -> bool:
@@ -489,6 +499,27 @@ def example_middleware(example_aas: ValidAAS, example_submodel: ExampleSubmodel)
     async def example_workflow_with_default_argument_complex(arg1: ExampleSubmodel, arg2: int) -> ExampleSubmodel:
         arg1.integer_attribute = arg2
         return arg1
+    
+    @middleware.workflow(blocking=True)
+    async def example_workflow_blocking() -> bool:
+        anyio.sleep(1)
+        return True
+    
+    @middleware.workflow(blocking=True, pool_size=3)
+    async def example_workflow_blocking_pool_size() -> bool:
+        anyio.sleep(1)
+        return True
+    
+    @middleware.workflow(queueing=True)
+    async def example_workflow_queuing() -> bool:
+        anyio.sleep(1)
+        return True
+    
+    @middleware.workflow(queueing=True, pool_size=3)
+    async def example_workflow_queuing_pool_size() -> bool:
+        anyio.sleep(1)
+        return True
+
     
     return middleware
 

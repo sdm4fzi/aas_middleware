@@ -12,6 +12,8 @@ from basyx.aas import model
 
 import aas_middleware
 from aas_middleware.connect.connectors.connector import Connector
+from aas_middleware.connect.workflows.blocking_workflow import BlockingWorkflow
+from aas_middleware.connect.workflows.queuing_workflow import QueueingWorkflow
 from aas_middleware.middleware.connector_router import generate_connector_endpoint, generate_persistence_connector_endpoint
 from aas_middleware.middleware.graphql_routers import GraphQLRouter
 from aas_middleware.middleware.registries import ConnectionInfo, ConnectionRegistry, MapperRegistry, PersistenceConnectionRegistry, WorkflowRegistry
@@ -26,7 +28,6 @@ from aas_middleware.model.data_model import DataModel
 from aas_middleware.model.formatting.aas.basyx_formatter import BasyxFormatter
 from aas_middleware.model.formatting.formatter import Formatter
 from aas_middleware.model.mapping.mapper import Mapper
-
 
 
 def get_license_info() -> str:
@@ -50,7 +51,6 @@ class MiddlewareMetaData(BaseModel):
     }
     license_info: typing.Dict[str, str] = Field(init=False, default_factory=get_license_info)
 
-    
 
 class Middleware:
     """
@@ -167,7 +167,7 @@ class Middleware:
                 return "Welcome to aas-middleware!"
 
         return self._app
-    
+
     def load_data_model(self, name: str, data_model: DataModel, persist_instances: bool = False):
         """
         Function to load a data model into the middleware to be used for synchronization.
@@ -256,7 +256,7 @@ class Middleware:
             await connector.consume(value)
         except KeyError as e:
             await self.persist(data_model_name, value)
-        
+
     async def get_value(self, data_model_name: str, model_id: typing.Optional[str]=None, contained_model_id: typing.Optional[str]=None, field_name: typing.Optional[str]=None) -> typing.Any:
         """
         Function to get a value from the persistence.
@@ -275,7 +275,7 @@ class Middleware:
             return await connector.provide()
         except KeyError:
             raise KeyError(f"No provider found for {connection_info}")
-    
+
     def add_default_persistence(self, persistence_factory: PersistenceFactory, data_model_name: typing.Optional[str], model_id: typing.Optional[Identifiable], model_type: typing.Type[typing.Any] = typing.Any):
         """
         Function to add a default persistence for a model.
@@ -286,10 +286,9 @@ class Middleware:
         """
         if not data_model_name in self.data_models:
             raise ValueError(f"No data model {data_model_name} found.")
-        
+
         connection_info = ConnectionInfo(data_model_name=data_model_name, model_id=model_id, contained_model_id=None, field_id=None)
         self.persistence_registry.add_persistence_factory(connection_info, model_type, persistence_factory)
-    
 
     async def persist(self, data_model_name: str, model: typing.Optional[Identifiable]=None, persistence_factory: typing.Optional[PersistenceFactory]=None):
         """
@@ -311,7 +310,6 @@ class Middleware:
         # TODO: raise an error if consume is not possible and remove the persistence in the persistence registry
         await connector.consume(model)
 
-
     def add_connector(self, connector_id: str, connector: Connector, model_type: typing.Type[typing.Any], data_model_name: typing.Optional[str]=None, model_id: typing.Optional[str]=None, contained_model_id: typing.Optional[str]=None, field_id: typing.Optional[str]=None):
         """
         Function to add a connector to the middleware.
@@ -326,7 +324,6 @@ class Middleware:
             self.generate_rest_endpoint_for_connector(connector_id, ConnectionInfo(data_model_name=data_model_name, model_id=model_id, contained_model_id=contained_model_id, field_id=field_id))	
         else:
             self.generate_rest_endpoint_for_connector(connector_id)
-
 
     def generate_rest_endpoint_for_connector(self, connector_id: str, connection_info: typing.Optional[ConnectionInfo]=None):
         """
@@ -349,9 +346,7 @@ class Middleware:
             router = generate_persistence_connector_endpoint(connector_id, connector, connection_info, model_type)
         self.app.include_router(router)
 
-
     # TODO: handle also async connectors!!
-        
 
     def connect_connector_to_persistence(self, connector_id: str, data_model_name: str, model_id: typing.Optional[str]=None, contained_model_id: typing.Optional[str]=None, field_id: typing.Optional[str]=None, persistence_mapper: typing.Optional[Mapper]=None, external_mapper: typing.Optional[Mapper]=None, formatter: typing.Optional[Formatter]=None):
         """
@@ -381,24 +376,50 @@ class Middleware:
         on_startup: bool = False,
         on_shutdown: bool = False,
         interval: typing.Optional[float] = None,
+        blocking: bool = False,
+        queueing: bool = False,
+        pool_size: int = 1,
         **kwargs
     ):
         def decorator(func):
-            workflow = Workflow.define(
-                func,
-                *args,
-                on_startup=on_startup,
-                on_shutdown=on_shutdown,
-                interval=interval,
-                **kwargs
-            )
+            if blocking and queueing:
+                raise ValueError("Workflow cannot be both blocking and queuing.")
+            if blocking:
+                workflow = BlockingWorkflow.define(
+                    func,
+                    *args,
+                    on_startup=on_startup,
+                    on_shutdown=on_shutdown,
+                    interval=interval,
+                    pool_size=pool_size,
+                    **kwargs
+                )
+            elif queueing:
+                workflow = QueueingWorkflow.define(
+                    func,
+                    *args,
+                    on_startup=on_startup,
+                    on_shutdown=on_shutdown,
+                    interval=interval,
+                    pool_size=pool_size,
+                    **kwargs
+                )
+            else:
+                workflow = Workflow.define(
+                    func,
+                    *args,
+                    on_startup=on_startup,
+                    on_shutdown=on_shutdown,
+                    interval=interval,
+                    **kwargs
+                )
             self.workflow_registry.add_workflow(workflow)
             workflows_app = generate_workflow_endpoint(workflow)
             self.app.include_router(workflows_app)
             return func
 
         return decorator
-    
+
     def connect_workflow_to_persistence_provider(self, workflow_id: str, arg_name: str, data_model_name: str, model_id: typing.Optional[str]=None, contained_model_id: typing.Optional[str]=None, field_id: typing.Optional[str]=None, persistence_mapper: typing.Optional[Mapper]=None, external_mapper: typing.Optional[Mapper]=None, formatter: typing.Optional[Formatter]=None):
         """
         Function to connect a workflow to a data entity in the middleware.
@@ -434,7 +455,6 @@ class Middleware:
         synchronize_workflow_with_persistence_consumer(workflow, connection_info, self.persistence_registry, external_mapper, formatter)
         # TODO: register mappers, formatters in middleware and add endpoint for them, also add connection to workflow registry
 
-
     def generate_model_registry_api(self):
         """
         Adds a REST API so that new models can be registered and unregistered from the Middleware.
@@ -457,7 +477,7 @@ class Middleware:
         data_model = self.data_models[data_model_name]
         rest_router = RestRouter(data_model, data_model_name, self)
         rest_router.generate_endpoints()
-        
+
     def generate_graphql_api_for_data_model(self, data_model_name: str):
         """
         Generates a GraphQL API with query operations for aas' and submodels from the loaded models.
@@ -465,6 +485,3 @@ class Middleware:
         data_model = self.data_models[data_model_name]
         graphql_router = GraphQLRouter(data_model, data_model_name, self)
         graphql_router.generate_graphql_endpoint()
-
-
-
