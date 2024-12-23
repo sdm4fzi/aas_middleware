@@ -10,7 +10,7 @@ from basyx.aas.model import DictObjectStore
 import basyx.aas.adapter.json
 
 
-from aas_middleware.model.formatting.aas.aas_model import AAS, Submodel
+from aas_pydantic.aas_model import AAS, Submodel
 from aas_middleware.model.formatting.aas.basyx_formatter import BasyxFormatter, BasyxTemplateFormatter
 
 class AasTemplateJsonFormatter:

@@ -1,7 +1,7 @@
 from aas_middleware.model.data_model import DataModel
 from aas_middleware.model.data_model_rebuilder import DataModelRebuilder
-from aas_middleware.model.formatting.aas import aas_model
-from aas_middleware.model.formatting.aas.convert_pydantic_type import logger
+from aas_pydantic import aas_model
+from aas_pydantic.convert_pydantic_type import logger
 
 
 from typing import List, Tuple

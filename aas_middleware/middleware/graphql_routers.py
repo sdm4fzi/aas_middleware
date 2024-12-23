@@ -18,8 +18,14 @@ from starlette_graphene3 import (
     make_graphiql_handler,
 )
 
-from aas_middleware.model.formatting.aas.aas_middleware_util import get_all_submodel_elements_from_submodel, get_contained_models_attribute_info, is_basemodel_union_type, is_optional_basemodel_type
-from aas_middleware.model.formatting.aas.aas_model import AAS, Blob, File, Submodel, SubmodelElementCollection
+from aas_middleware.model.formatting.aas.aas_middleware_util import (
+    get_all_submodel_elements_from_submodel,
+    get_contained_models_attribute_info,
+    is_basemodel_union_type,
+    is_optional_basemodel_type,
+)
+from aas_pydantic.aas_model import AAS, Blob, File, Submodel, SubmodelElementCollection
+
 
 def get_base_query_and_mutation_classes() -> (
     typing.Tuple[graphene.ObjectType, graphene.ObjectType]
@@ -39,8 +45,11 @@ def get_base_query_and_mutation_classes() -> (
 
     return Query, Mutation
 
+
 class GraphQLRouter:
-    def  __init__(self, data_model: DataModel, data_model_name: str, middleware: "Middleware"):
+    def __init__(
+        self, data_model: DataModel, data_model_name: str, middleware: "Middleware"
+    ):
         self.data_model = data_model
         self.data_model_name = data_model_name
 
@@ -48,8 +57,9 @@ class GraphQLRouter:
         self.query, self.mutation = get_base_query_and_mutation_classes()
 
     def get_connector(self, item_id: str) -> Connector:
-        return self.middleware.persistence_registry.get_connection(ConnectionInfo(data_model_name=self.data_model_name, model_id=item_id))
-    
+        return self.middleware.persistence_registry.get_connection(
+            ConnectionInfo(data_model_name=self.data_model_name, model_id=item_id)
+        )
 
     def generate_graphql_endpoint(self):
         """
@@ -63,8 +73,9 @@ class GraphQLRouter:
         graphql_app = GraphQLApp(schema=schema, on_get=make_graphiql_handler())
         self.middleware.app.mount("/graphql", graphql_app)
 
-
-    def resolve_optional_and_union_types(self, models: typing.List[typing.Tuple[str, typing.Type[Submodel]]]):
+    def resolve_optional_and_union_types(
+        self, models: typing.List[typing.Tuple[str, typing.Type[Submodel]]]
+    ):
         resolved_models = []
         for _, model in models:
             if not typing.get_origin(model) is typing.Union:
@@ -76,7 +87,7 @@ class GraphQLRouter:
                     resolved_models.append(submodel)
 
         return resolved_models
-    
+
     def create_query_for_model(self, model_type: type):
         model_name = model_type.__name__
 
@@ -92,10 +103,11 @@ class GraphQLRouter:
             submodel_name = submodel.__name__
             class_dict = {
                 f"{submodel_name}": graphene.List(graphene_submodel),
-                f"resolve_{submodel_name}": self.get_submodel_resolve_function(submodel),
+                f"resolve_{submodel_name}": self.get_submodel_resolve_function(
+                    submodel
+                ),
             }
             self.query = type("Query", (self.query,), class_dict)
-
 
         graphene_model = create_graphe_pydantic_output_type_for_model(model_type)
 
@@ -105,7 +117,9 @@ class GraphQLRouter:
         }
         self.query = type("Query", (self.query,), class_dict)
 
-    def get_aas_resolve_function(self, model: typing.Type[BaseModel]) -> typing.Callable:
+    def get_aas_resolve_function(
+        self, model: typing.Type[BaseModel]
+    ) -> typing.Callable:
         """
         Returns the resolve function for the given pydantic model.
 
@@ -116,11 +130,18 @@ class GraphQLRouter:
             typing.Callable: Resolve function for the given pydantic model.
         """
         middleware_instance = self.middleware
+
         async def resolve_models(self, info):
             aas_list = []
-            connection_infos = middleware_instance.persistence_registry.get_type_connection_info(model.__name__)
+            connection_infos = (
+                middleware_instance.persistence_registry.get_type_connection_info(
+                    model.__name__
+                )
+            )
             for connection_info in connection_infos:
-                connector = middleware_instance.persistence_registry.get_connection(connection_info)
+                connector = middleware_instance.persistence_registry.get_connection(
+                    connection_info
+                )
                 retrieved_aas: AAS = await connector.provide()
                 aas = model.model_validate(retrieved_aas.model_dump())
                 aas_list.append(aas)
@@ -129,8 +150,9 @@ class GraphQLRouter:
         resolve_models.__name__ = f"resolve_{model.__name__}"
         return resolve_models
 
-
-    def get_submodel_resolve_function(self, model: typing.Type[BaseModel]) -> typing.Callable:
+    def get_submodel_resolve_function(
+        self, model: typing.Type[BaseModel]
+    ) -> typing.Callable:
         """
         Returns the resolve function for the given pydantic model.
 
@@ -144,9 +166,15 @@ class GraphQLRouter:
 
         async def resolve_models(self, info):
             submodel_list = []
-            connection_infos = middleware_instance.persistence_registry.get_type_connection_info(model.__name__)
+            connection_infos = (
+                middleware_instance.persistence_registry.get_type_connection_info(
+                    model.__name__
+                )
+            )
             for connection_info in connection_infos:
-                connector = middleware_instance.persistence_registry.get_connection(connection_info)
+                connector = middleware_instance.persistence_registry.get_connection(
+                    connection_info
+                )
                 retrieved_submodel: Submodel = await connector.provide()
                 submodel = model.model_validate(retrieved_submodel.model_dump())
                 submodel_list.append(submodel)
@@ -206,7 +234,9 @@ def is_typing_list_or_tuple(input_type: typing.Any) -> bool:
     Returns:
         bool: True if the given type is a typing.List or typing.Tuple, False otherwise.
     """
-    return typing.get_origin(input_type) == list or typing.get_origin(input_type) == tuple
+    return (
+        typing.get_origin(input_type) == list or typing.get_origin(input_type) == tuple
+    )
 
 
 def is_optional_typing_list_or_tuple(input_type: typing.Any) -> bool:
@@ -265,10 +295,10 @@ def create_graphe_pydantic_output_type_for_submodel_elements(
     Args:
         model (typing.Union[base.Submodel, base.SubmodelElementCollectiontuple, list, set, ]): Submodel element for which the graphene pydantic output types should be created.
     """
-    for attribute_value in get_all_submodel_elements_from_submodel(
-        model
-    ).values():
-        if is_basemodel_union_type(attribute_value) or is_optional_basemodel_type(attribute_value):
+    for attribute_value in get_all_submodel_elements_from_submodel(model).values():
+        if is_basemodel_union_type(attribute_value) or is_optional_basemodel_type(
+            attribute_value
+        ):
             subtypes = typing.get_args(attribute_value)
             for subtype in subtypes:
                 if subtype is NoneType:
@@ -289,13 +319,19 @@ def create_graphe_pydantic_output_type_for_submodel_elements(
         ):
             create_graphe_pydantic_output_type_for_model(File, union_type)
         # FIXME: handle optional list here....
-        elif is_typing_list_or_tuple(attribute_value) or is_optional_typing_list_or_tuple(attribute_value):
+        elif is_typing_list_or_tuple(
+            attribute_value
+        ) or is_optional_typing_list_or_tuple(attribute_value):
             if is_optional_typing_list_or_tuple(attribute_value):
-                attribute_value = [t for t in typing.get_args(attribute_value) if t is not NoneType][0]
+                attribute_value = [
+                    t for t in typing.get_args(attribute_value) if t is not NoneType
+                ][0]
             if not list_contains_any_submodel_element_collections(attribute_value):
                 continue
             for nested_type in typing.get_args(attribute_value):
-                if is_basemodel_union_type(nested_type) or is_optional_basemodel_type(nested_type):
+                if is_basemodel_union_type(nested_type) or is_optional_basemodel_type(
+                    nested_type
+                ):
                     subtypes = typing.get_args(nested_type)
                     for subtype in subtypes:
                         if subtype is NoneType:

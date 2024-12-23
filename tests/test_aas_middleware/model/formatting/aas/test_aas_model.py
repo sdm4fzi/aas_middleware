@@ -2,7 +2,7 @@ from typing import Type
 
 from pydantic import ValidationError
 
-from aas_middleware.model.formatting.aas.aas_model import (
+from aas_pydantic.aas_model import (
     AAS,
     Submodel,
     SubmodelElementCollection,

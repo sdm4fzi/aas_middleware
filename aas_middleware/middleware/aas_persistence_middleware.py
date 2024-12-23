@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-from aas_middleware.connect.connectors.aas_client_connector.aas_client_caching_connector import BasyxAASCachingConnector, BasyxSubmodelCachingConnector
+from aas_middleware.connect.connectors.aas_client_connector.aas_client_caching_connector import (
+    BasyxAASCachingConnector,
+    BasyxSubmodelCachingConnector,
+)
 from aas_middleware.connect.connectors.aas_client_connector.aas_client_connector import (
     BasyxAASConnector,
     BasyxSubmodelConnector,
@@ -9,7 +12,7 @@ from aas_middleware.middleware.middleware import Middleware
 from aas_middleware.middleware.persistence_factory import PersistenceFactory
 from aas_middleware.model.data_model import DataModel
 from aas_middleware.model.data_model_rebuilder import DataModelRebuilder
-from aas_middleware.model.formatting.aas.aas_model import AAS, Submodel
+from aas_pydantic.aas_model import AAS, Submodel
 
 
 class AasMiddleware(Middleware):
@@ -29,7 +32,7 @@ class AasMiddleware(Middleware):
         submodel_host: str,
         submodel_port: int,
         persist_instances: bool = False,
-        caching: bool = False
+        caching: bool = False,
     ):
         """
         Function to load a data model into the middleware to be used for synchronization.

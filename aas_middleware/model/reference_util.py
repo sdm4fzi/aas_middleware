@@ -1,18 +1,22 @@
 from types import NoneType
 import typing
 from aas_middleware.model.data_model import DataModel
-from aas_middleware.model.formatting.aas.aas_model import Blob, File, Submodel
+from aas_pydantic.aas_model import Blob, File, Submodel
 from aas_middleware.model.schema_util import get_attribute_dict_of_schema
 
 
-def get_path_to_top_level_model_instance(item_id: str, data_model: DataModel) -> list[str]:
+def get_path_to_top_level_model_instance(
+    item_id: str, data_model: DataModel
+) -> list[str]:
     model = data_model.get_model(item_id)
     if not model:
         return []
     path = [item_id]
     for referencing_info in data_model.get_referencing_info(model):
         path.extend(
-            get_path_to_top_level_model_instance(referencing_info.identifiable_id, data_model)
+            get_path_to_top_level_model_instance(
+                referencing_info.identifiable_id, data_model
+            )
         )
     return path
 
@@ -93,9 +97,9 @@ def get_attribute_paths_to_type(type: type, data_model: DataModel) -> list[list[
         for attribute_name, attribute in get_attribute_dict_of_schema(
             referncing_schema
         ).items():
-            if typing.get_origin(attribute) == typing.Union and NoneType in typing.get_args(
+            if typing.get_origin(
                 attribute
-            ):
+            ) == typing.Union and NoneType in typing.get_args(attribute):
                 attribute_types = typing.get_args(attribute)
                 if not type in attribute_types:
                     continue
@@ -124,6 +128,8 @@ def get_attribute_paths_to_contained_type(
     attribute_paths = get_attribute_paths_to_type(contained_type, data_model)
     new_attribute_paths = []
     for attribute_path in attribute_paths:
-        assert attribute_path[0] == type.__name__, f"Expected {type.__name__}, got {attribute_path[0]}"
+        assert (
+            attribute_path[0] == type.__name__
+        ), f"Expected {type.__name__}, got {attribute_path[0]}"
         new_attribute_paths.append(attribute_path[1:])
     return new_attribute_paths

@@ -93,7 +93,8 @@ class DataModel(BaseModel):
             self.add(*value)
         elif is_identifiable(value):
             current_value_of_the_attribute = super().__getattribute__(name)
-            self.remove(get_id_with_patch(current_value_of_the_attribute))
+            if current_value_of_the_attribute:
+                self.remove(get_id_with_patch(current_value_of_the_attribute))
             self.add(value)
 
         return super().__setattr__(name, value)

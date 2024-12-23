@@ -4,28 +4,30 @@ from typing import List, Optional
 from aas_middleware.model.data_model import DataModel
 
 
-from aas_middleware.model.formatting.aas.aas_meta_model_inference import infere_aas_structure
-from aas_middleware.model.formatting.aas.aas_model import AAS, BasyxModels, Submodel
+from aas_middleware.model.formatting.aas.aas_meta_model_inference import (
+    infere_aas_structure,
+)
+from aas_pydantic.aas_model import AAS, BasyxModels, Submodel
 from basyx.aas.model import DictObjectStore
 from basyx.aas import model
 
-from aas_middleware.model.formatting.aas.convert_pydantic_type import (
+from aas_pydantic.convert_pydantic_type import (
     convert_model_to_aas_template,
-    convert_model_to_submodel_template
+    convert_model_to_submodel_template,
 )
 
-from aas_middleware.model.formatting.aas.convert_pydantic_model import (
+from aas_pydantic.convert_pydantic_model import (
     convert_model_to_aas,
-    convert_model_to_submodel
+    convert_model_to_submodel,
 )
 
 
-from aas_middleware.model.formatting.aas.convert_aas_template import (
-    convert_object_store_to_pydantic_types
+from aas_pydantic.convert_aas_template import (
+    convert_object_store_to_pydantic_types,
 )
 
-from aas_middleware.model.formatting.aas.convert_aas_instance import (
-    convert_object_store_to_pydantic_models
+from aas_pydantic.convert_aas_instance import (
+    convert_object_store_to_pydantic_models,
 )
 
 
@@ -33,7 +35,7 @@ class BasyxTemplateFormatter:
     """
     Allows to serialize and deserialize Basyx AAS template objects (AssetAdministrationShells, Submodels or Containers of both) to a DataModel Template.
     """
-    
+
     def serialize(self, data: DataModel) -> DictObjectStore[model.Identifiable]:
         """
         Serialize a DataModel object to the specific format of the formatter.
@@ -58,7 +60,7 @@ class BasyxTemplateFormatter:
                 continue
             obj_store.add(submodel_to_add)
         return obj_store
-    
+
     def deserialize(self, data: BasyxModels) -> DataModel:
         """
         Deserialize the specific format of the formater to a DataModel object.
@@ -73,7 +75,6 @@ class BasyxTemplateFormatter:
             data = DictObjectStore(data)
         types = convert_object_store_to_pydantic_types(data)
         return DataModel.from_model_types(*types)
-
 
 
 class BasyxFormatter:
@@ -106,7 +107,9 @@ class BasyxFormatter:
             obj_store.add(submodel_to_add)
         return obj_store
 
-    def deserialize(self, data: BasyxModels, types: Optional[List[type[AAS | Submodel]]] = None) -> DataModel:
+    def deserialize(
+        self, data: BasyxModels, types: Optional[List[type[AAS | Submodel]]] = None
+    ) -> DataModel:
         """
         Deserialize the specific format of the formater to a DataModel object.
 

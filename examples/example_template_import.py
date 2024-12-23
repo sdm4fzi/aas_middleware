@@ -5,8 +5,10 @@ from basyx.aas import model
 import basyx.aas.adapter.json
 from pydantic import BaseModel
 
-from aas_middleware.model.formatting.aas.convert_aas_template import convert_object_store_to_pydantic_types
-from aas_middleware.model.formatting.aas.convert_pydantic_type import convert_model_to_aas_template
+from aas_pydantic.convert_aas_template import convert_object_store_to_pydantic_types
+from aas_pydantic.convert_pydantic_type import (
+    convert_model_to_aas_template,
+)
 
 file_name = "idta_carbon_foot_print_submodel_template"
 resources_folder = pathlib.Path(__file__).parent / "resources"

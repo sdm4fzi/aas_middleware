@@ -17,7 +17,7 @@ from aas_middleware.middleware.aas_persistence_middleware import AasMiddleware
 from aas_middleware.model.core import Identifier, Reference
 
 from aas_middleware.model.data_model import DataModel
-from aas_middleware.model.formatting.aas.aas_model import (
+from aas_pydantic.aas_model import (
     AAS,
     Submodel,
     SubmodelElementCollection,
@@ -25,11 +25,14 @@ from aas_middleware.model.formatting.aas.aas_model import (
 
 from aas_middleware.middleware.middleware import Middleware
 
+
 class ExampleEnum(str, Enum):
     value1 = "value1"
     value2 = "value2"
 
+
 # TODO: also add optional attribute!
+
 
 class SimpleExampleSEC(SubmodelElementCollection):
     integer_attribute: int
@@ -196,7 +199,9 @@ def simple_submodel_element_collection() -> SubmodelElementCollection:
 
 
 @pytest.fixture(scope="function")
-def example_submodel_element_collection(simple_submodel_element_collection: SubmodelElementCollection) -> SubmodelElementCollection:
+def example_submodel_element_collection(
+    simple_submodel_element_collection: SubmodelElementCollection,
+) -> SubmodelElementCollection:
     return ExampleSEC(
         id_short="example_submodel_element_collection_id",
         integer_attribute=1,
@@ -211,8 +216,11 @@ def example_submodel_element_collection(simple_submodel_element_collection: Subm
         submodel_element_collection_attribute=simple_submodel_element_collection,
     )
 
+
 @pytest.fixture(scope="function")
-def example_submodel_element_collection_for_union(simple_submodel_element_collection: SubmodelElementCollection) -> SubmodelElementCollection:
+def example_submodel_element_collection_for_union(
+    simple_submodel_element_collection: SubmodelElementCollection,
+) -> SubmodelElementCollection:
     return ExampleSEC(
         id_short="example_submodel_element_collection_for_union_id",
         integer_attribute=1,
@@ -229,12 +237,19 @@ def example_submodel_element_collection_for_union(simple_submodel_element_collec
 
 
 @pytest.fixture(scope="function")
-def example_list_submodel_element_collection(simple_submodel_element_collection: SubmodelElementCollection) -> List[SubmodelElementCollection]:
+def example_list_submodel_element_collection(
+    simple_submodel_element_collection: SubmodelElementCollection,
+) -> List[SubmodelElementCollection]:
     return [simple_submodel_element_collection]
 
 
 @pytest.fixture(scope="function")
-def example_submodel(simple_submodel_element_collection: SubmodelElementCollection, example_submodel_element_collection: SubmodelElementCollection, example_submodel_element_collection_for_union: SubmodelElementCollection, example_list_submodel_element_collection: List[SubmodelElementCollection]) -> Submodel:
+def example_submodel(
+    simple_submodel_element_collection: SubmodelElementCollection,
+    example_submodel_element_collection: SubmodelElementCollection,
+    example_submodel_element_collection_for_union: SubmodelElementCollection,
+    example_list_submodel_element_collection: List[SubmodelElementCollection],
+) -> Submodel:
     return ExampleSubmodel(
         id_short="example_submodel_id",
         description="Example Submodel",
@@ -253,8 +268,14 @@ def example_submodel(simple_submodel_element_collection: SubmodelElementCollecti
         list_submodel_element_collection_attribute=example_list_submodel_element_collection,
     )
 
+
 @pytest.fixture(scope="function")
-def example_submodel_2(simple_submodel_element_collection: SubmodelElementCollection, example_submodel_element_collection: SubmodelElementCollection, example_submodel_element_collection_for_union: SubmodelElementCollection, example_list_submodel_element_collection: List[SubmodelElementCollection]) -> Submodel:
+def example_submodel_2(
+    simple_submodel_element_collection: SubmodelElementCollection,
+    example_submodel_element_collection: SubmodelElementCollection,
+    example_submodel_element_collection_for_union: SubmodelElementCollection,
+    example_list_submodel_element_collection: List[SubmodelElementCollection],
+) -> Submodel:
     return ExampleSubmodel2(
         id_short="example_submodel_2_id",
         integer_attribute=1,
@@ -272,8 +293,14 @@ def example_submodel_2(simple_submodel_element_collection: SubmodelElementCollec
         list_submodel_element_collection_attribute=example_list_submodel_element_collection,
     )
 
+
 @pytest.fixture(scope="function")
-def example_submodel_for_union(simple_submodel_element_collection: SubmodelElementCollection, example_submodel_element_collection: SubmodelElementCollection, example_submodel_element_collection_for_union: SubmodelElementCollection, example_list_submodel_element_collection: List[SubmodelElementCollection]) -> Submodel:
+def example_submodel_for_union(
+    simple_submodel_element_collection: SubmodelElementCollection,
+    example_submodel_element_collection: SubmodelElementCollection,
+    example_submodel_element_collection_for_union: SubmodelElementCollection,
+    example_list_submodel_element_collection: List[SubmodelElementCollection],
+) -> Submodel:
     return ExampleSubmodel(
         id_short="example_submodel_for_union_id",
         integer_attribute=1,
@@ -291,8 +318,14 @@ def example_submodel_for_union(simple_submodel_element_collection: SubmodelEleme
         list_submodel_element_collection_attribute=example_list_submodel_element_collection,
     )
 
+
 @pytest.fixture(scope="function")
-def example_optional_submodel(simple_submodel_element_collection: SubmodelElementCollection, example_submodel_element_collection: SubmodelElementCollection, example_submodel_element_collection_for_union: SubmodelElementCollection, example_list_submodel_element_collection: List[SubmodelElementCollection]) -> Submodel:
+def example_optional_submodel(
+    simple_submodel_element_collection: SubmodelElementCollection,
+    example_submodel_element_collection: SubmodelElementCollection,
+    example_submodel_element_collection_for_union: SubmodelElementCollection,
+    example_list_submodel_element_collection: List[SubmodelElementCollection],
+) -> Submodel:
     return ExampleSubmodel(
         id_short="example_optional_submodel_id",
         integer_attribute=1,
@@ -346,7 +379,12 @@ def example_submodel_with_product_association(
 
 
 @pytest.fixture(scope="function")
-def example_aas(example_submodel: ExampleSubmodel, example_submodel_2: ExampleSubmodel2, example_submodel_for_union: ExampleSubmodel, example_optional_submodel: ExampleSubmodel) -> AAS:
+def example_aas(
+    example_submodel: ExampleSubmodel,
+    example_submodel_2: ExampleSubmodel2,
+    example_submodel_for_union: ExampleSubmodel,
+    example_optional_submodel: ExampleSubmodel,
+) -> AAS:
     return ValidAAS(
         id_short="valid_aas_id",
         example_submodel=example_submodel,
@@ -357,18 +395,28 @@ def example_aas(example_submodel: ExampleSubmodel, example_submodel_2: ExampleSu
 
 
 @pytest.fixture(scope="function")
-def referenced_aas_1(example_submodel: ExampleSubmodel, example_submodel_2: ExampleSubmodel2, example_submodel_for_union: ExampleSubmodel, example_optional_submodel: ExampleSubmodel) -> AAS:
+def referenced_aas_1(
+    example_submodel: ExampleSubmodel,
+    example_submodel_2: ExampleSubmodel2,
+    example_submodel_for_union: ExampleSubmodel,
+    example_optional_submodel: ExampleSubmodel,
+) -> AAS:
     return ValidAAS(
         id_short="referenced_aas_1_id",
         example_submodel=example_submodel,
         example_submodel_2=example_submodel_2,
-        union_submodel=example_submodel_for_union, 
-        optional_submodel=example_optional_submodel,       
+        union_submodel=example_submodel_for_union,
+        optional_submodel=example_optional_submodel,
     )
 
 
 @pytest.fixture(scope="function")
-def referenced_aas_2(example_submodel: ExampleSubmodel, example_submodel_2: ExampleSubmodel2, example_submodel_for_union: ExampleSubmodel, example_optional_submodel: ExampleSubmodel) -> AAS:
+def referenced_aas_2(
+    example_submodel: ExampleSubmodel,
+    example_submodel_2: ExampleSubmodel2,
+    example_submodel_for_union: ExampleSubmodel,
+    example_optional_submodel: ExampleSubmodel,
+) -> AAS:
     return ValidAAS(
         id_short="referenced_aas_2_id",
         example_submodel=example_submodel,
@@ -397,7 +445,7 @@ def example_basemodel_with_id() -> ExampleBaseMdelWithId:
 @pytest.fixture(scope="function")
 def example_object_with_id() -> ObjectBomWithId:
     return ObjectBomWithId(
-        id="example_object_with_id", 
+        id="example_object_with_id",
         integer_attribute=1,
         string_attribute="string",
         float_attribute=1.1,
@@ -411,9 +459,7 @@ def example_object_with_id() -> ObjectBomWithId:
 
 
 @pytest.fixture(scope="function")
-def example_basemodel_with_identifier_attribute() -> (
-    BaseModelWithIdentifierAttribute
-):
+def example_basemodel_with_identifier_attribute() -> BaseModelWithIdentifierAttribute:
     return BaseModelWithIdentifierAttribute(
         other_name_id_attribute="example_basemodel_with_identifier_attribute_id",
         id="id_named_attribute",
@@ -427,22 +473,35 @@ def example_object_with_identifier_attribute() -> ObjectWithIdentifierAttribute:
         id="id_named_attribute",
     )
 
+
 AAS_SERVER_ADDRESS = "localhost"
 AAS_SERVER_PORT = 8081
 SUBMODEL_SERVER_ADDRESS = "localhost"
 SUBMODEL_SERVER_PORT = 8081
 
+
 @pytest.fixture(scope="function")
-def example_middleware(example_aas: ValidAAS, example_submodel: ExampleSubmodel) -> Middleware:
+def example_middleware(
+    example_aas: ValidAAS, example_submodel: ExampleSubmodel
+) -> Middleware:
     data_model = DataModel.from_models(example_aas)
 
-    middleware  = AasMiddleware()
-    middleware.load_aas_persistent_data_model("test", data_model, AAS_SERVER_ADDRESS, AAS_SERVER_PORT, SUBMODEL_SERVER_ADDRESS, SUBMODEL_SERVER_PORT)
+    middleware = AasMiddleware()
+    middleware.load_aas_persistent_data_model(
+        "test",
+        data_model,
+        AAS_SERVER_ADDRESS,
+        AAS_SERVER_PORT,
+        SUBMODEL_SERVER_ADDRESS,
+        SUBMODEL_SERVER_PORT,
+    )
     middleware.generate_rest_api_for_data_model("test")
 
     trivial_float_connector = TrivialFloatConnector()
-    middleware.add_connector("test_connector", trivial_float_connector, model_type=float)
-    
+    middleware.add_connector(
+        "test_connector", trivial_float_connector, model_type=float
+    )
+
     trivial_float_connector_2 = TrivialFloatConnector()
     middleware.add_connector(
         "test_connected_connector",
@@ -454,85 +513,90 @@ def example_middleware(example_aas: ValidAAS, example_submodel: ExampleSubmodel)
         field_id="float_attribute",
     )
 
-
     @middleware.workflow()
     async def example_workflow() -> bool:
         await anyio.sleep(2)
         return True
-    
+
     @middleware.workflow()
     def sync_example_workflow() -> bool:
         time.sleep(2)
         return True
-    
+
     async def exception_workflow() -> bool:
         raise Exception("Error")
-    
+
     @middleware.workflow(interval=1)
     async def example_workflow_interval() -> bool:
         return True
-    
+
     @middleware.workflow(on_startup=True)
     async def example_workflow_startup() -> bool:
         return True
-    
+
     @middleware.workflow()
     async def example_workflow_with_primitive_argument(arg1: int) -> int:
         return arg1
-    
+
     @middleware.workflow()
-    async def example_workflow_with_complex_argument(arg1: ExampleSubmodel) -> ExampleSubmodel:
+    async def example_workflow_with_complex_argument(
+        arg1: ExampleSubmodel,
+    ) -> ExampleSubmodel:
         return arg1
-    
+
     @middleware.workflow()
-    async def example_workflow_with_multiple_arguments(arg1: ExampleSubmodel, arg2: int) -> ExampleSubmodel:
+    async def example_workflow_with_multiple_arguments(
+        arg1: ExampleSubmodel, arg2: int
+    ) -> ExampleSubmodel:
         arg1.integer_attribute = arg2
         return arg1
-    
+
     @middleware.workflow(arg2=3)
-    async def example_workflow_with_default_argument(arg1: ExampleSubmodel, arg2: int) -> ExampleSubmodel:
+    async def example_workflow_with_default_argument(
+        arg1: ExampleSubmodel, arg2: int
+    ) -> ExampleSubmodel:
         arg1.integer_attribute = arg2
         return arg1
-    
+
     @middleware.workflow(arg1=example_submodel)
-    async def example_workflow_with_default_argument_complex(arg1: ExampleSubmodel, arg2: int) -> ExampleSubmodel:
+    async def example_workflow_with_default_argument_complex(
+        arg1: ExampleSubmodel, arg2: int
+    ) -> ExampleSubmodel:
         arg1.integer_attribute = arg2
         return arg1
-    
+
     @middleware.workflow(blocking=True)
     async def example_workflow_blocking() -> bool:
         anyio.sleep(1)
         return True
-    
+
     @middleware.workflow(blocking=True, pool_size=3)
     async def example_workflow_blocking_pool_size() -> bool:
         anyio.sleep(1)
         return True
-    
+
     @middleware.workflow(queueing=True)
     async def example_workflow_queuing() -> bool:
         anyio.sleep(1)
         return True
-    
+
     @middleware.workflow(queueing=True, pool_size=3)
     async def example_workflow_queuing_pool_size() -> bool:
         anyio.sleep(1)
         return True
 
-    
     return middleware
 
 
 @pytest.fixture(scope="function")
-def client(
-    example_middleware: Middleware
-) -> TestClient:
+def client(example_middleware: Middleware) -> TestClient:
     """
     Create a new FastAPI TestClient based on the current app.
     """
     with TestClient(example_middleware.app) as client:
         return client
-    
+
+
 class TrivialFloatConnector:
     def __init__(self):
         pass
@@ -549,6 +613,3 @@ class TrivialFloatConnector:
 
     async def provide(self) -> Any:
         return 1.0
-    
-
-

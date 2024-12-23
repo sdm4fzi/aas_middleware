@@ -19,7 +19,7 @@ from aas_middleware.model.data_model import DataModel
 from aas_middleware.model.formatting.aas.aas_middleware_util import (
     get_contained_models_attribute_info,
 )
-from aas_middleware.model.formatting.aas.aas_model import AAS, Blob, File, Submodel
+from aas_pydantic.aas_model import AAS, Blob, File, Submodel
 from aas_middleware.model.reference_util import (
     get_attribute_paths_to_contained_type,
 )
@@ -56,6 +56,7 @@ def check_if_attribute_is_optional_in_aas(aas: Type[AAS], attribute_name: str) -
     else:
         return False
 
+
 def remove_blob_contens(model: BaseModel, blob_paths: list[list[str]]) -> BaseModel:
     """
     Removes the content of all blob attributes of a model and returns a copy of it.
@@ -75,6 +76,7 @@ def remove_blob_contens(model: BaseModel, blob_paths: list[list[str]]) -> BaseMo
         if isinstance(contained_model, Blob):
             contained_model.content = None
     return model
+
 
 class RestRouter:
     def __init__(
@@ -142,7 +144,7 @@ class RestRouter:
 
             @router.post("/")
             async def post_item(
-                item_id: str, item: submodel_model_type
+                item_id: str, item: submodel_model_type # type: ignore
             ) -> Dict[str, str]:
                 connector = self.get_connector(item_id)
                 try:
@@ -162,7 +164,7 @@ class RestRouter:
                     )
 
         @router.put("/")
-        async def put_item(item_id: str, item: submodel_model_type) -> Dict[str, str]:
+        async def put_item(item_id: str, item: submodel_model_type) -> Dict[str, str]: # type: ignore
             connector = self.get_connector(item_id)
             try:
                 model = await connector.provide()
@@ -347,7 +349,7 @@ class RestRouter:
             return aas_list
 
         @router.post(f"/", response_model=Dict[str, str])
-        async def post_item(item: aas_model_type) -> Dict[str, str]:
+        async def post_item(item: aas_model_type) -> Dict[str, str]: # type: ignore
             try:
                 await self.middleware.persist(
                     data_model_name=self.data_model_name, model=item
@@ -377,7 +379,7 @@ class RestRouter:
                 )
 
         @router.put("/{item_id}")
-        async def put_item(item_id: str, item: aas_model_type) -> Dict[str, str]:
+        async def put_item(item_id: str, item: aas_model_type) -> Dict[str, str]: # type: ignore
             try:
                 consumer = self.get_connector(item_id)
             except KeyError as e:

@@ -1,5 +1,4 @@
 import json
-import re
 from typing import List, Tuple, Type, Dict
 from basyx.aas import model
 
@@ -7,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, create_model
 import typing
 
 from pydantic.fields import FieldInfo
-from aas_middleware.model.formatting.aas import aas_model
+from aas_pydantic import aas_model
 from aas_middleware.model.util import convert_under_score_to_camel_case_str
 
 
@@ -39,7 +38,10 @@ def get_contained_models_attribute_info(
     """
     submodels = []
     for attribute_name, fieldinfo in model.model_fields.items():
-        if typing.get_args(fieldinfo.annotation) != () and any(issubclass(arg, aas_model.Submodel) for arg in typing.get_args(fieldinfo.annotation)):
+        if typing.get_args(fieldinfo.annotation) != () and any(
+            issubclass(arg, aas_model.Submodel)
+            for arg in typing.get_args(fieldinfo.annotation)
+        ):
             submodels.append((attribute_name, fieldinfo.annotation))
         elif issubclass(fieldinfo.annotation, aas_model.Submodel):
             submodels.append((attribute_name, fieldinfo.annotation))
@@ -182,7 +184,7 @@ def is_basemodel_union_type(model: Type) -> bool:
             return False
     else:
         return False
-    
+
 
 def is_optional_basemodel_type(model: Type) -> bool:
     """

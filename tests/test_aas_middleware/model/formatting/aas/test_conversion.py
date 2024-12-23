@@ -1,11 +1,11 @@
 import copy
 from typing import Any, Dict, Optional
 
-from aas_middleware.model.formatting.aas.aas_model import (
+from aas_pydantic.aas_model import (
     AAS,
     Submodel,
 )
-from aas_middleware.model.formatting.aas import (
+from aas_pydantic import (
     convert_aas_instance,
     convert_aas_template,
     convert_pydantic_model,

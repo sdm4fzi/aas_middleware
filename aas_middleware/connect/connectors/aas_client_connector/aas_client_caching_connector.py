@@ -5,20 +5,43 @@ import anyio
 from anyio.abc._tasks import TaskGroup
 
 from fastapi import HTTPException
-from aas_middleware.connect.connectors.aas_client_connector.aas_client import aas_is_on_server, delete_aas_from_server, get_aas_from_server, post_aas_to_server, put_aas_to_server
+from aas_middleware.connect.connectors.aas_client_connector.aas_client import (
+    aas_is_on_server,
+    delete_aas_from_server,
+    get_aas_from_server,
+    post_aas_to_server,
+    put_aas_to_server,
+)
 
 from ba_syx_aas_environment_component_client import Client as AASClient
 from ba_syx_aas_environment_component_client import Client as SubmodelClient
 
-from aas_middleware.connect.connectors.aas_client_connector.client_utils import check_aas_and_sm_server_online, check_sm_server_online
-from aas_middleware.connect.connectors.aas_client_connector.submodel_client import delete_submodel_from_server, get_submodel_from_server, post_submodel_to_server, put_submodel_to_server, submodel_is_on_server
-from aas_middleware.model.formatting.aas.aas_model import AAS, Submodel
+from aas_middleware.connect.connectors.aas_client_connector.client_utils import (
+    check_aas_and_sm_server_online,
+    check_sm_server_online,
+)
+from aas_middleware.connect.connectors.aas_client_connector.submodel_client import (
+    delete_submodel_from_server,
+    get_submodel_from_server,
+    post_submodel_to_server,
+    put_submodel_to_server,
+    submodel_is_on_server,
+)
+from aas_pydantic.aas_model import AAS, Submodel
 
 T = TypeVar("T", bound=AAS)
 S = TypeVar("S", bound=Submodel)
 
+
 class BasyxAASCachingConnector(Generic[T]):
-    def __init__(self, model: T, host: str, port: int, submodel_host: Optional[str] = None, submodel_port: Optional[int] = None):
+    def __init__(
+        self,
+        model: T,
+        host: str,
+        port: int,
+        submodel_host: Optional[str] = None,
+        submodel_port: Optional[int] = None,
+    ):
         self.host = host
         self.port = port
         self.aas_id = model.id
@@ -45,7 +68,9 @@ class BasyxAASCachingConnector(Generic[T]):
         return SubmodelClient(base_url=self.submodel_server_address)
 
     async def connect(self):
-        await check_aas_and_sm_server_online(self.aas_server_address, self.submodel_server_address)
+        await check_aas_and_sm_server_online(
+            self.aas_server_address, self.submodel_server_address
+        )
 
     async def disconnect(self):
         pass
@@ -71,7 +96,9 @@ class BasyxAASCachingConnector(Generic[T]):
 
     async def provide(self) -> T:
         if not self.cached_model:
-            raise ConnectionError(f"No model is consumed until now for this connector. Either consume first a model or use the non caching basyx connector.")
+            raise ConnectionError(
+                f"No model is consumed until now for this connector. Either consume first a model or use the non caching basyx connector."
+            )
         return self.cached_model
 
 

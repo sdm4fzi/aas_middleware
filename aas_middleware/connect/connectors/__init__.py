@@ -5,10 +5,12 @@ from aas_middleware.connect.connectors.http_polling_connector import HttpPolling
 from aas_middleware.connect.connectors.http_request_connector_auth import HttpRequestConnectorAuth
 from aas_middleware.connect.connectors.http_request_connector import HttpRequestConnector
 from aas_middleware.connect.connectors.model_connector import ModelConnector
-from aas_middleware.connect.connectors.mqtt_client_connector import MqttClientConnector
-from aas_middleware.connect.connectors.opc_ua_client_connector import OpcUaConnector
 
-
+try:
+    from aas_middleware.connect.connectors.mqtt_client_connector import MqttClientConnector
+    from aas_middleware.connect.connectors.opc_ua_client_connector import OpcUaConnector
+except ImportError:
+    pass
 
 # TODO: connectors below need testing
 # from aas_middleware.connect.connectors.web_hook_client_connector import WebHookClientConnector

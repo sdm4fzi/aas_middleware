@@ -1,5 +1,5 @@
 from aas_middleware import Middleware
-from aas_middleware.model.formatting.aas.aas_model import AAS
+from aas_pydantic.aas_model import AAS
 
 
 middleware = Middleware()

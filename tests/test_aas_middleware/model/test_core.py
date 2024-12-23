@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 
 from aas_middleware.model.core import Identifiable
-from aas_middleware.model.formatting.aas.aas_model import BasyxModels
+from aas_pydantic.aas_model import BasyxModels
 from aas_middleware.model.util import get_id
 
 
