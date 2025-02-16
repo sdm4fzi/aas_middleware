@@ -59,7 +59,6 @@ class DataModel(BaseModel):
     _reference_info_dict_for_referencing: Dict[str, Dict[str, ReferenceInfo]] = {}
     _reference_info_dict_for_referenced: Dict[str, Dict[str, ReferenceInfo]] = {}
 
-
     # TODO: refactor so that all schema information is in a seperate class called Schema
     _schemas: Dict[str, Type[Any]] = {}
     _top_level_schemas: Set[str] = set()
@@ -99,7 +98,6 @@ class DataModel(BaseModel):
 
         return super().__setattr__(name, value)
 
-
     @classmethod
     def from_models(
         cls, *models: Tuple[Identifiable], **data: Dict[str, Any]
@@ -117,7 +115,7 @@ class DataModel(BaseModel):
         data_model = cls(**data)
         data_model.add(*models)
         return data_model
-    
+
     @classmethod
     def from_model_types(cls, *model_types: Tuple[Type[Identifiable]], **data: Dict[str, Any]) -> DataModel:
         """
@@ -164,7 +162,6 @@ class DataModel(BaseModel):
         for model in models:
             self.add_model(model)
 
-
     def remove(self, *model_ids: str) -> None:
         """
         Method to remove models from the data model.
@@ -210,7 +207,6 @@ class DataModel(BaseModel):
         self._add_top_level_model(model)
         self._add_references_to_referencing_models_dict(reference_infos)
 
-
     def remove_model(self, model: Identifiable) -> None:
         """
         Method to remove a model from the data model.
@@ -235,7 +231,7 @@ class DataModel(BaseModel):
             if not self._top_level_models[underscore_type_name]:
                 self._top_level_models.pop(underscore_type_name)
             self.remove_model_from_pydantic_fields(model)
-                
+
     def remove_model_from_pydantic_fields(self, model: Identifiable) -> None:
         """
         Method to remove a model from the pydantic fields of the data model.
@@ -282,7 +278,6 @@ class DataModel(BaseModel):
                     self.remove_model(self.get_model(referenced_id))
                 except ValueError:
                     pass
-        
 
     def _add_contained_models(
         self, top_level_model: Identifiable, contained_models_map: Dict[str, Identifiable]
@@ -312,7 +307,6 @@ class DataModel(BaseModel):
         for contained_schema in contained_schemas:
             self._schemas[contained_schema.__name__] = contained_schema
 
-
     def patch_schema_references(self) -> None:
         """
         Function tries to patch schema reference infos to represent a more realistic data model.
@@ -333,18 +327,19 @@ class DataModel(BaseModel):
         Args:
             model (Identifiable): The model to add the information for.
         """
-        self._reference_infos = self._reference_infos | reference_infos
+        if self._reference_infos is None:
+            self._reference_infos = set()
+        self._reference_infos.update(reference_infos)
+        ref_dict_for_referencing = self._reference_info_dict_for_referencing
+        ref_dict_for_referenced = self._reference_info_dict_for_referenced
+
         for reference_info in reference_infos:
             referencing_model_id = reference_info.identifiable_id
             referenced_model_id = reference_info.reference_id
-            if not referencing_model_id in self._reference_info_dict_for_referencing:
-                self._reference_info_dict_for_referencing[referencing_model_id] = {}
-            self._reference_info_dict_for_referencing[referencing_model_id][
+            ref_dict_for_referencing.setdefault(referencing_model_id, {})[
                 referenced_model_id
             ] = reference_info
-            if not referenced_model_id in self._reference_info_dict_for_referenced:
-                self._reference_info_dict_for_referenced[referenced_model_id] = {}
-            self._reference_info_dict_for_referenced[referenced_model_id][
+            ref_dict_for_referenced.setdefault(referenced_model_id, {})[
                 referencing_model_id
             ] = reference_info
 
@@ -355,21 +350,21 @@ class DataModel(BaseModel):
         Args:
             schema (Type[Identifiable]): The schema to add the information for.
         """
-        self._schema_reference_infos = self._schema_reference_infos | reference_infos
+        if self._schema_reference_infos is None:
+            self._schema_reference_infos = set()
+        self._schema_reference_infos.update(reference_infos)
+        schema_ref_dict_for_referencing = self._schema_reference_info_for_referencing
+        schema_ref_dict_for_referenced = self._schema_reference_info_for_referenced
+
         for reference_info in reference_infos:
             referencing_schema_id = reference_info.identifiable_id
             referenced_schema_id = reference_info.reference_id
-            if not referencing_schema_id in self._schema_reference_info_for_referencing:
-                self._schema_reference_info_for_referencing[referencing_schema_id] = {}
-            self._schema_reference_info_for_referencing[referencing_schema_id][
+            schema_ref_dict_for_referencing.setdefault(referencing_schema_id, {})[
                 referenced_schema_id
             ] = reference_info
-            if not referenced_schema_id in self._schema_reference_info_for_referenced:
-                self._schema_reference_info_for_referenced[referenced_schema_id] = {}
-            self._schema_reference_info_for_referenced[referenced_schema_id][
+            schema_ref_dict_for_referenced.setdefault(referenced_schema_id, {})[
                 referencing_schema_id
             ] = reference_info
-
 
     def _add_model(self, model: Identifiable) -> None:
         """
@@ -476,7 +471,7 @@ class DataModel(BaseModel):
                 self.get_model(model_id) for model_id in top_level_model_ids
             ]
         return top_level_models
-    
+
     def get_top_level_types(self) -> List[Type[Identifiable]]:
         """
         Method to get all types of the top level models in the data model.
@@ -546,7 +541,7 @@ class DataModel(BaseModel):
         return list(
             self._reference_info_dict_for_referenced[referenced_model_id].values()
         )
-    
+
     def get_schema_referencing_info(
         self, referenced_schema: Type[Identifiable]
     ) -> List[ReferenceInfo]:
