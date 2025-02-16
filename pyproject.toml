@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "aas-middleware"
-version = "0.2.3"
+version = "0.2.4"
 description = ""
 authors = ["Sebastian Behrendt <sebastianbehrendt97@gmail.com>"]
 readme = "README.md"
@@ -25,7 +25,7 @@ mkdocstrings = {extras = ["python-legacy"], version = "^0.25.1"}
 starlette-graphene3 = "^0.6.0"
 typeguard = "^4.4.1"
 exceptiongroup = "^1.2.2"
-aas-pydantic = "^0.1.0"
+aas-pydantic = "^0.1.2"
 
 [tool.poetry.extras]
 industrial = ["aiomqtt", "asyncua"]
@@ -37,6 +37,7 @@ pytest-order = "^1.2.1"
 mkdocs-material = "^9.5.29"
 mkdocs-include-dir-to-nav = "^1.2.0"
 snakeviz = "^2.2.0"
+sdm-reference-model = "^0.1.8"
 
 [tool.poetry.group.sdm.dependencies]
 pandas = "^2.2.2"
