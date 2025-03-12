@@ -97,8 +97,8 @@ class Workflow:
         for exc in excgroup.exceptions:
             if execution_id in self.task_groups:
                 del self.task_groups[execution_id]
-            raise RuntimeError(f"Error during execution of workflow: {str(exc)}".replace("\"", "'"))
-
+            raise exc.with_traceback(exc.__traceback__)
+        
     async def execute(self, *args, **kwargs) -> Awaitable[Any]:
         """
         Args:
