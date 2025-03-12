@@ -154,7 +154,7 @@ def get_id_with_patch(model: Any) -> str:
         return str(get_id(model))
     except ValueError:
         return "id_" + str(id(model))
-    
+
 
 def is_identifiable_type(schema: Type[Any]) -> bool:
     """
@@ -244,7 +244,7 @@ def get_values_as_identifiable_list(value: Any) -> List[Optional[Identifiable]]:
         return value
     else:
         return []
-    
+
 
 def get_identifiable_attributes_dict_of_model(
     potential_identifiable_container: Identifiable,
@@ -467,7 +467,6 @@ def get_attribute_name_encoded_references(model: Identifiable) -> List[str]:
     return referenced_ids
 
 
-
 def convert_to_fitting_identifiable_container_type(list_container: List[Identifiable], container_type: Type[Any]) -> List[Identifiable] | Tuple[Identifiable] | Set[Identifiable]:
     """
     Function to convert a list of identifiables to a fitting container type.
@@ -580,7 +579,6 @@ def models_are_equal(model1: Identifiable, model2: Identifiable) -> bool:
     return True
 
 
-
 def check_and_replace(model: Identifiable, id_map: Dict[str, Identifiable]) -> Identifiable:
         model_id = get_id_with_patch(model)
 
@@ -601,19 +599,22 @@ def check_and_replace(model: Identifiable, id_map: Dict[str, Identifiable]) -> I
             elif is_identifiable_container(field_value):
                 normalized_list = [check_and_replace(item, id_map) for item in field_value]
                 setattr(model, field_name, normalized_list)
-
         return model
 
-def normalize_identifiables_in_model(model: List[Identifiable], id_map: Dict[str, Identifiable] = {}):
+
+def normalize_identifiables_in_model(models: List[Identifiable], id_map: Optional[Dict[str, Identifiable]] = None):
     """
     Normalize a list of Pydantic models by replacing duplicate models that share the same ID
     and have the same values.
 
     Args:
         model (Identifiable): List of Pydantic models (can be nested).
+        id_map (Optional[Dict[str, Identifiable]]): A dictionary to store the mapping of IDs to models.
     """
+    if id_map is None:
+        id_map = {}
     local_id_map = dict(id_map)
-    check_and_replace(model, local_id_map)
+    check_and_replace(models, local_id_map)
 
 
 def normalize_identifiables(models: List[Identifiable]) -> List[Identifiable]:

@@ -185,6 +185,8 @@ class DataModel(BaseModel):
         Args:
             schema (Type[Identifiable]): The schema to load.
         """
+        if schema.__name__ in self._schemas:
+            return
         all_schemas, schema_reference_infos = ReferenceFinder.find_schema_references(schema)
         self._add_contained_schemas(all_schemas)
         self._add_top_level_schema(schema)
