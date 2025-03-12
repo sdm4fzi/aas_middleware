@@ -103,6 +103,9 @@ def synchronize_connector_with_persistence(connector: Union[Consumer, Provider],
         connection_info (ConnectionInfo): The connection info for the persistence layer.
         persistence_registry (PersistenceConnectionRegistry): The registry for the persistence connectors.    
     """
+    # TODO: instead of using wraps use a SyncedConnector class that allows to retrieve all sync information again
+    # if persistence provides -> all connected providers provide (at least ground truth providers), all connected consumers consume
+    # if persistence consumses -> all connected consumers consume
     if isinstance(connector, Consumer):
         original_consume = connector.consume
 
