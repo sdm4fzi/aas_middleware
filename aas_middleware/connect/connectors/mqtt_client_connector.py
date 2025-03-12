@@ -2,7 +2,7 @@ import asyncio
 import json
 import os
 import sys
-from typing import Any, Optional
+from typing import Any, AsyncGenerator, Optional
 import aiomqtt
 
 class MqttClientConnector:
@@ -11,6 +11,7 @@ class MqttClientConnector:
         self.topic = topic
         self.client: aiomqtt.Client = None
         self.value = None
+        self.queue = asyncio.Queue()
 
     async def connect(self):
         if sys.platform.lower() == "win32" or os.name.lower() == "nt":
@@ -25,6 +26,7 @@ class MqttClientConnector:
         await self.mqtt_client.subscribe(self.topic)
         async for message in self.mqtt_client.messages:
             self.value = json.loads(message.payload.decode())
+            await self.queue.put(self.value)
                 
     async def disconnect(self):
         await self.mqtt_client.__aexit__()
@@ -35,3 +37,8 @@ class MqttClientConnector:
 
     async def provide(self) -> Any:
         return self.value
+
+    async def receive(self) -> AsyncGenerator[Any, None]:
+        while True:
+            new_value = await self.queue.get()
+            yield new_value

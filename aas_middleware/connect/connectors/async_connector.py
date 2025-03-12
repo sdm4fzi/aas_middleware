@@ -1,64 +1,35 @@
-from typing import Callable, Awaitable, Protocol
+from typing import AsyncGenerator, Callable, Awaitable, Protocol
 
 from typing import Optional, Protocol, Any, runtime_checkable
 
-@runtime_checkable
-class Subsciber(Protocol):
-    async def connect(self):
-        """
-        Raises:
-            ConnectionError: If the connection to the server could not be established.
-        """
-        ...
-
-    async def disconnect(self):
-        """
-        Raises:
-            ConnectionError: If the connection to the server could not be established.
-        """
-        ...
-
-    async def subscribe(self, topic: str) -> None:
-        """
-        Interfaces for a subscriber to subscribe to a topic and receive messages.
-
-        Args:
-            topic (str): The topic to subscribe to.
-
-        Raises:
-            ConnectionError: If the subscribing to the topic failed.
-        """
-        ...
-
+from aas_middleware.connect.connectors.connector import Connector
 
 @runtime_checkable
-class Publisher(Protocol):
-    async def connect(self):
+class Receiver(Protocol):
+    async def connect(self) -> None:
+        """
+        Raises:
+            ConnectionError: If the connection to the server could not be established.
+        """
+        ...
+    
+    async def disconnect(self) -> None:
         """
         Raises:
             ConnectionError: If the connection to the server could not be established.
         """
         ...
 
-    async def disconnect(self):
+    async def receive(self) -> AsyncGenerator[Any, None]:
         """
+        Interfaces for a receiver to receive data in an asynchronous way. Instead of providing the last value (as the provide() method does), this method gives a generator that yields the data as it is received.
+
+        Yields:
+            Any: The data to be received.
+
         Raises:
-            ConnectionError: If the connection to the server could not be established.
+            ConnectionError: If the receiving of the data failed.
         """
         ...
 
-    async def publish(self, topic: str, message: Any) -> None:
-        """
-        Interfaces for a publisher to publish messages to a topic.
-
-        Args:
-            topic (str): The topic to publish the message to.
-            message (Any): The message to be published.
-
-        Raises:
-            ConnectionError: If the publishing of the message failed.
-        """
-        ...
-
-
-class AsyncConnector(Subsciber, Publisher): ...
+class AsyncConnector(Connector, Receiver): ...
