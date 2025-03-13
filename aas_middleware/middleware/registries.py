@@ -14,6 +14,7 @@ from aas_middleware.connect.workflows.worfklow_description import WorkflowDescri
 from aas_middleware.connect.workflows.workflow import Workflow
 from aas_middleware.middleware.persistence_factory import PersistenceFactory
 from aas_middleware.model.core import Identifiable
+from aas_middleware.middleware.sync.persisted_connector import wrap_persistence_connector
 
 
 class ConnectionInfo(BaseModel):
@@ -284,6 +285,19 @@ class PersistenceConnectionRegistry(ConnectionRegistry):
         self.add_connector(connector_id, connector, type_connection_info)
         self.connections[connection_info] = connector_id
 
+    def add_connector(self, connector_id: str, connector: Connector, connection_type: typing.Type[typing.Any]):
+        """
+        Function to add a connector to the connection manager.
+        Wraps the connector with PersistedConnector for bidirectional sync.
+
+        Args:
+            connector_id (str): The name of the connector.
+            connector (Connector): The connector to be added.
+            connection_type (typing.Type[Connector]): The type of the connector.
+        """
+        # Wrap persistence connectors to enable bidirectional sync
+        wrapped_connector = wrap_persistence_connector(connector, connector_id)
+        super().add_connector(connector_id, wrapped_connector, connection_type)
 
     def remove_connection(self, connection_info: ConnectionInfo):
         """
@@ -576,7 +590,3 @@ class MapperRegistry:
             if mapper_id2 == self.mappers[mapper_id]:
                 connections.append(connection)
         return connections
-            
-
-    
-            

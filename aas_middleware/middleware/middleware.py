@@ -11,16 +11,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from basyx.aas import model
 
 import aas_middleware
+from aas_middleware.connect.connectors.async_connector import AsyncConnector, Receiver
 from aas_middleware.connect.connectors.connector import Connector
 from aas_middleware.connect.workflows.blocking_workflow import BlockingWorkflow
 from aas_middleware.connect.workflows.queuing_workflow import QueueingWorkflow
-from aas_middleware.middleware.connector_router import generate_connector_endpoint, generate_persistence_connector_endpoint
+from aas_middleware.middleware.connector_router import generate_connector_endpoint, generate_synced_connector_endpoint
 from aas_middleware.middleware.graphql_routers import GraphQLRouter
 from aas_middleware.middleware.registries import ConnectionInfo, ConnectionRegistry, MapperRegistry, PersistenceConnectionRegistry, WorkflowRegistry
 from aas_middleware.middleware.model_registry_api import generate_model_api
 from aas_middleware.middleware.persistence_factory import PersistenceFactory
 from aas_middleware.middleware.rest_routers import RestRouter
-from aas_middleware.middleware.synchronization import synchronize_connector_with_persistence, synchronize_workflow_with_persistence_consumer, synchronize_workflow_with_persistence_provider
+from aas_middleware.middleware.sync.synchronization import synchronize_workflow_with_persistence_consumer, synchronize_workflow_with_persistence_provider
 from aas_middleware.middleware.workflow_router import generate_workflow_endpoint
 from aas_middleware.connect.workflows.workflow import Workflow
 from aas_middleware.model.core import Identifiable
@@ -28,6 +29,7 @@ from aas_middleware.model.data_model import DataModel
 from aas_middleware.model.formatting.aas.basyx_formatter import BasyxFormatter
 from aas_middleware.model.formatting.formatter import Formatter
 from aas_middleware.model.mapping.mapper import Mapper
+from aas_middleware.middleware.sync.synced_connector import SyncedConnector, SyncRole, SyncDirection, synchronize_connector_with_persistence
 
 
 def get_license_info() -> str:
@@ -118,7 +120,6 @@ class Middleware:
             await persistence.connect()
         for workflow in self.workflow_registry.get_workflows():
             if workflow.on_startup:
-                # TODO: make a case distinction for workflows that postpone start up or not...
                 asyncio.create_task(workflow.execute())
         for callback in self.on_start_up_callbacks:
             await callback()
@@ -188,27 +189,6 @@ class Middleware:
 
                 for model in models_of_type:
                     self.add_callback("on_start_up", self.persist, name, model)
-
-    def load_json_models(
-        self,
-        json_models: typing.Dict[str, typing.Any] = None,
-        all_fields_required: bool = False,
-    ):
-        """
-        Functions that loads models from a json dict into the middleware that can be used for synchronization.
-
-        The function can either be used with a dict that contains the objects.
-
-        Args:
-            json_models (dict): Dictionary of aas' and submodels.
-            all_fields_required (bool): If all fields are required in the models.
-        """
-        # TODO: use here the function to load a DataModel from a dict
-        # for model_name, model_values in json_models.items():
-        #     pydantic_model = get_pydantic_model_from_dict(
-        #         model_values, model_name, all_fields_required
-        #     )
-        #     self.models.append(pydantic_model)
 
     def load_model_instances(self, name: str, instances: typing.List[BaseModel]):
         """
@@ -308,68 +288,70 @@ class Middleware:
             raise ValueError(f"Connection {connection_info} already exists. Try using the existing connector or remove it first.")
         await self.persistence_registry.add_to_persistence(connection_info, model, persistence_factory)
         connector = self.persistence_registry.get_connection(connection_info)
-        # TODO: raise an error if consume is not possible and remove the persistence in the persistence registry
-        await connector.consume(model)
+        try:
+            await connector.consume(model)
+        except Exception as e:
+            self.persistence_registry.remove_connection(connection_info)
+            raise e
 
-    def add_connector(self, connector_id: str, connector: Connector, model_type: typing.Type[typing.Any], data_model_name: typing.Optional[str]=None, model_id: typing.Optional[str]=None, contained_model_id: typing.Optional[str]=None, field_id: typing.Optional[str]=None):
+    def add_connector(self, connector_id: str, connector: Connector, model_type: typing.Type[typing.Any]):
         """
         Function to add a connector to the middleware.
 
         Args:
             connector_id (str): The name of the connector.
             connector (Connector): The connector that should be added.
+            model_type (typing.Type[typing.Any]): The type of the connector.
         """
         self.connection_registry.add_connector(connector_id, connector, model_type)
-        if data_model_name:
-            self.connect_connector_to_persistence(connector_id, data_model_name, model_id, contained_model_id, field_id)
-            self.generate_rest_endpoint_for_connector(connector_id, ConnectionInfo(data_model_name=data_model_name, model_id=model_id, contained_model_id=contained_model_id, field_id=field_id))	
-        else:
-            self.generate_rest_endpoint_for_connector(connector_id)
-
-    def generate_rest_endpoint_for_connector(self, connector_id: str, connection_info: typing.Optional[ConnectionInfo]=None):
-        """
-        Function to generate a REST endpoint for a connector.
-
-        Args:
-            connector_id (str): _description_
-            connection_info (typing.Optional[ConnectionInfo], optional): _description_. Defaults to None.
-
-        Raises:
-            ValueError: _description_
-        """
-        if not connector_id in self.connection_registry.connectors:
-            raise ValueError(f"Connector {connector_id} not found.")
-        connector = self.connection_registry.get_connector(connector_id)
-        model_type = self.connection_registry.connection_types[connector_id]
-        if not connection_info:
-            router = generate_connector_endpoint(connector_id, connector, model_type)
-        else:
-            router = generate_persistence_connector_endpoint(connector_id, connector, connection_info, model_type)
+        router = generate_connector_endpoint(connector_id, connector, model_type)
         self.app.include_router(router)
 
-    # TODO: handle also async connectors!!
-
-    def connect_connector_to_persistence(self, connector_id: str, data_model_name: str, model_id: typing.Optional[str]=None, contained_model_id: typing.Optional[str]=None, field_id: typing.Optional[str]=None, persistence_mapper: typing.Optional[Mapper]=None, external_mapper: typing.Optional[Mapper]=None, formatter: typing.Optional[Formatter]=None):
+    def sync_connector(self, connector_id: str, data_model_name: str, model_id: typing.Optional[str]=None, contained_model_id: typing.Optional[str]=None, field_id: typing.Optional[str]=None, persistence_mapper: typing.Optional[Mapper]=None, external_mapper: typing.Optional[Mapper]=None, formatter: typing.Optional[Formatter]=None, sync_role: SyncRole=SyncRole.READ_WRITE, sync_direction: SyncDirection=SyncDirection.BIDIRECTIONAL):
         """
         Function to connect a connector to a data entity in the middleware.
 
         Args:
             connector_id (str): The name of the connector.
-            connector (Connector): The connector that should be connected.
             data_model_name (str): The name of the data model used for identifying the data model in the middleware.
             model_id (typing.Optional[str], optional): The id of the model in the data model. Defaults to None.
+            contained_model_id (typing.Optional[str], optional): The id of a contained model. Defaults to None.
             field_id (typing.Optional[str], optional): The id of the field in the model. Defaults to None.
-            model_type (typing.Type[typing.Any], optional): The type of the model. Defaults to typing.Any.
             persistence_mapper (typing.Optional[Mapper], optional): The mapper that should be used. Defaults to None.
             external_mapper (typing.Optional[Mapper], optional): The mapper that should be used. Defaults to None.
             formatter (typing.Optional[Formatter], optional): The formatter that should be used. Defaults to None.
+            sync_role (typing.Optional[SyncRole], optional): Role of the connector in synchronization. Defaults to SyncRole.READ_WRITE.
+            sync_direction (typing.Optional[SyncDirection], optional): Direction of synchronization. Defaults to SyncDirection.BIDIRECTIONAL.
         """
         connection_info = ConnectionInfo(data_model_name=data_model_name, model_id=model_id, contained_model_id=contained_model_id, field_id=field_id)
         connector = self.connection_registry.get_connector(connector_id)
         type_connection_info = self.connection_registry.connection_types[connector_id]
         self.connection_registry.add_connection(connector_id, connection_info, connector, type_connection_info)
+        async def initiate_sync():
+            synced_connector = synchronize_connector_with_persistence(
+                connector_id,
+                connector,
+                connection_info,
+                self.persistence_registry,
+                sync_role,
+                sync_direction,
+                persistence_mapper,
+                external_mapper,
+                formatter,
+            )
+            if isinstance(connector, Receiver):
+                async def run_receive():
+                    async for _ in synced_connector.receive():
+                        pass
+                asyncio.create_task(run_receive())
+            # Replace the original connector with the synced one
+            self.connection_registry.connectors[connector_id] = synced_connector
+        self.add_callback("on_start_up", initiate_sync)
 
-        synchronize_connector_with_persistence(connector, connection_info, self.persistence_registry, persistence_mapper, external_mapper, formatter)
+        router = generate_synced_connector_endpoint(
+            connector_id, connector, connection_info, sync_role, sync_direction, type_connection_info
+        )
+        self.app.include_router(router)
 
     def workflow(
         self,
