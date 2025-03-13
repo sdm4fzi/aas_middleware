@@ -20,7 +20,7 @@ class ConnectorDescription(BaseModel):
 
 def generate_synced_connector_endpoint(
     connector_id: str,
-    connector: Connector,
+    connector: SyncedConnector,
     connection_info: ConnectionInfo,
     sync_role: SyncRole,
     sync_direction: SyncDirection,
@@ -45,7 +45,7 @@ def generate_synced_connector_endpoint(
     async def describe_connector():
         return ConnectorDescription(
             connector_id=connector_id,
-            connector_type=type(connector).__name__,
+            connector_type=type(connector.connector).__name__,
             persistence_connection=connection_info,
             model_type=model_type.__name__,
             sync_role=sync_role,

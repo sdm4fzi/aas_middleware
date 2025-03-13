@@ -14,13 +14,16 @@ from aas_middleware.connect.workflows.worfklow_description import WorkflowDescri
 from aas_middleware.connect.workflows.workflow import Workflow
 from aas_middleware.middleware.persistence_factory import PersistenceFactory
 from aas_middleware.model.core import Identifiable
-from aas_middleware.middleware.sync.persisted_connector import wrap_persistence_connector
+from aas_middleware.middleware.sync.persisted_connector import (
+    wrap_persistence_connector,
+)
 
 
 class ConnectionInfo(BaseModel):
     """
     Class that contains the information of a connection of a provider and a consumer to the persistence layer.
     """
+
     data_model_name: str
     model_id: typing.Optional[str] = None
     contained_model_id: typing.Optional[str] = None
@@ -29,7 +32,9 @@ class ConnectionInfo(BaseModel):
     model_config = ConfigDict(frozen=True, protected_namespaces=())
 
     @property
-    def connection_type(self) -> typing.Literal["data_model", "model", "contained_model", "field"]:
+    def connection_type(
+        self,
+    ) -> typing.Literal["data_model", "model", "contained_model", "field"]:
         if self.model_id:
             if self.contained_model_id:
                 if self.field_id:
@@ -37,7 +42,7 @@ class ConnectionInfo(BaseModel):
                 return "contained_model"
             return "model"
         return "data_model"
-    
+
 
 class ConnectionRegistry:
     """
@@ -48,7 +53,6 @@ class ConnectionRegistry:
         self.connectors: typing.Dict[str, Connector] = {}
         self.connection_types: typing.Dict[str, typing.Type[typing.Any]] = {}
         self.connections: typing.Dict[ConnectionInfo, typing.List[str]] = {}
-
 
     def get_connector_id(self, connector: Connector) -> str:
         """
@@ -68,7 +72,6 @@ class ConnectionRegistry:
                 return connector_id
         raise KeyError(f"Connector {connector} is not in the connection manager.")
 
-
     def get_connector(self, connector_id: str) -> Connector:
         """
         Function to get a connector from the connection manager.
@@ -84,8 +87,12 @@ class ConnectionRegistry:
         """
         return self.connectors[connector_id]
 
-
-    def add_connector(self, connector_id: str, connector: Connector, connection_type: typing.Type[typing.Any]):
+    def add_connector(
+        self,
+        connector_id: str,
+        connector: Connector,
+        connection_type: typing.Type[typing.Any],
+    ):
         """
         Function to add a connector to the connection manager.
 
@@ -97,7 +104,13 @@ class ConnectionRegistry:
         self.connectors[connector_id] = connector
         self.connection_types[connector_id] = connection_type
 
-    def add_connection(self, connector_id: str, connection_info: ConnectionInfo, connector: Connector, type_connection_info: typing.Type[typing.Any]):
+    def add_connection(
+        self,
+        connector_id: str,
+        connection_info: ConnectionInfo,
+        connector: Connector,
+        type_connection_info: typing.Type[typing.Any]
+    ):
         """
         Function to add a connection to the connection manager.
 
@@ -112,7 +125,9 @@ class ConnectionRegistry:
         self.connections[connection_info].append(connector_id)
         self.add_connector(connector_id, connector, type_connection_info)
 
-    def get_connections(self, connection_info: ConnectionInfo) -> typing.List[typing.Tuple[Connector, typing.Type[typing.Any]]]:
+    def get_connections(
+        self, connection_info: ConnectionInfo
+    ) -> typing.List[typing.Tuple[Connector, typing.Type[typing.Any]]]:
         """
         Function to get a connection from the connection manager.
 
@@ -125,10 +140,14 @@ class ConnectionRegistry:
         connector_ids = self.connections[connection_info]
         connections = []
         for connector_id in connector_ids:
-            connections.append((self.get_connector(connector_id), self.connection_types[connector_id]))
+            connections.append(
+                (self.get_connector(connector_id), self.connection_types[connector_id])
+            )
         return connections
-    
-    def get_data_model_connection_info(self, data_model_name: str) -> typing.List[ConnectionInfo]:
+
+    def get_data_model_connection_info(
+        self, data_model_name: str
+    ) -> typing.List[ConnectionInfo]:
         """
         Function to get the connection info of a data model.
 
@@ -144,7 +163,7 @@ class ConnectionRegistry:
                 continue
             connection_infos.append(connection_info)
         return connection_infos
-    
+
     def get_model_connection_info(self, model_id: str) -> typing.List[ConnectionInfo]:
         """
         Function to get the connection info of a model.
@@ -161,7 +180,7 @@ class ConnectionRegistry:
                 continue
             connection_infos.append(connection_info)
         return connection_infos
-    
+
     def get_field_connection_info(self, field_id: str) -> typing.List[ConnectionInfo]:
         """
         Function to get the connection info of a field.
@@ -178,7 +197,7 @@ class ConnectionRegistry:
                 continue
             connection_infos.append(connection_info)
         return connection_infos
-    
+
     def get_type_connection_info(self, type_name: str) -> typing.List[ConnectionInfo]:
         """
         Function to get the connection info of a type.
@@ -196,7 +215,7 @@ class ConnectionRegistry:
                     continue
                 connection_infos.append(connection_info)
         return connection_infos
-    
+
 
 class PersistenceConnectionRegistry(ConnectionRegistry):
     """
@@ -208,10 +227,14 @@ class PersistenceConnectionRegistry(ConnectionRegistry):
         self.connectors: typing.Dict[str, Connector] = {}
         self.connection_types: typing.Dict[str, typing.Type[Connector]] = {}
         self.connections: typing.Dict[ConnectionInfo, str] = {}
-        self.persistence_factories: typing.Dict[ConnectionInfo, typing.List[typing.Tuple[PersistenceFactory, typing.Type[typing.Any]]]] = {}
+        self.persistence_factories: typing.Dict[
+            ConnectionInfo,
+            typing.List[typing.Tuple[PersistenceFactory, typing.Type[typing.Any]]],
+        ] = {}
 
-
-    def get_connector_by_data_model_and_model_id(self, data_model_name: str, model_id: str) -> Connector:
+    def get_connector_by_data_model_and_model_id(
+        self, data_model_name: str, model_id: str
+    ) -> Connector:
         """
         Function to get a connector from the connection manager.
 
@@ -228,7 +251,12 @@ class PersistenceConnectionRegistry(ConnectionRegistry):
         connector_id = data_model_name + model_id + "_persistence"
         return self.get_connector(connector_id)
 
-    def add_persistence_factory(self, connection_info: ConnectionInfo, model_type: typing.Type[typing.Any], persistence_factory: PersistenceFactory):
+    def add_persistence_factory(
+        self,
+        connection_info: ConnectionInfo,
+        model_type: typing.Type[typing.Any],
+        persistence_factory: PersistenceFactory,
+    ):
         """
         Function to add a persistence factory to the connection manager.
 
@@ -238,9 +266,15 @@ class PersistenceConnectionRegistry(ConnectionRegistry):
         """
         if not connection_info in self.persistence_factories:
             self.persistence_factories[connection_info] = []
-        self.persistence_factories[connection_info].append((model_type, persistence_factory))
+        self.persistence_factories[connection_info].append(
+            (model_type, persistence_factory)
+        )
 
-    def get_default_persistence_factory(self, connection_info: ConnectionInfo, persisted_model_type: typing.Type[typing.Any]) -> PersistenceFactory:
+    def get_default_persistence_factory(
+        self,
+        connection_info: ConnectionInfo,
+        persisted_model_type: typing.Type[typing.Any],
+    ) -> PersistenceFactory:
         """
         Function to get the default persistence factory of a connection.
 
@@ -250,17 +284,30 @@ class PersistenceConnectionRegistry(ConnectionRegistry):
         Returns:
             PersistenceFactory: The default persistence factory of the connection.
         """
-        data_model_connection_info = ConnectionInfo(data_model_name=connection_info.data_model_name)
+        data_model_connection_info = ConnectionInfo(
+            data_model_name=connection_info.data_model_name
+        )
         if not data_model_connection_info in self.persistence_factories:
-            logger.warning(f"No persistence factory found for {data_model_connection_info}. Using default persistence factory.")
+            logger.warning(
+                f"No persistence factory found for {data_model_connection_info}. Using default persistence factory."
+            )
             return PersistenceFactory(ModelConnector)
-        for model_type, persistence_factory in self.persistence_factories[data_model_connection_info]:
+        for model_type, persistence_factory in self.persistence_factories[
+            data_model_connection_info
+        ]:
             if issubclass(persisted_model_type, model_type):
                 return persistence_factory
-        logger.warning(f"No persistence factory found for {data_model_connection_info} and model type {persisted_model_type.__name__}. Using default persistence factory.")
+        logger.warning(
+            f"No persistence factory found for {data_model_connection_info} and model type {persisted_model_type.__name__}. Using default persistence factory."
+        )
         return PersistenceFactory(ModelConnector)
 
-    async def add_to_persistence(self, connection_info: ConnectionInfo, model: Identifiable, persistence_factory: typing.Optional[PersistenceFactory]):
+    async def add_to_persistence(
+        self,
+        connection_info: ConnectionInfo,
+        model: Identifiable,
+        persistence_factory: typing.Optional[PersistenceFactory],
+    ):
         """
         Function to add a persistent connection to the connection manager.
 
@@ -268,12 +315,19 @@ class PersistenceConnectionRegistry(ConnectionRegistry):
             connection_info (ConnectionInfo): The connection info of the connection.
         """
         if not persistence_factory:
-            persistence_factory = self.get_default_persistence_factory(connection_info, type(model))
+            persistence_factory = self.get_default_persistence_factory(
+                connection_info, type(model)
+            )
         connector = persistence_factory.create(model)
         await connector.connect()
         self.add_connection(connection_info, connector, type(model))
 
-    def add_connection(self, connection_info: ConnectionInfo, connector: Connector, type_connection_info: typing.Type[typing.Any]):
+    def add_connection(
+        self,
+        connection_info: ConnectionInfo,
+        connector: Connector,
+        type_connection_info: typing.Type[typing.Any],
+    ):
         """
         Function to add a connection to the connection manager.
 
@@ -281,11 +335,18 @@ class PersistenceConnectionRegistry(ConnectionRegistry):
             connection_info (ConnectionInfo): The connection info of the connection.
             connector (Connector): The connector of the connection.
         """
-        connector_id = connection_info.data_model_name + connection_info.model_id + "_persistence"
+        connector_id = (
+            connection_info.data_model_name + connection_info.model_id + "_persistence"
+        )
         self.add_connector(connector_id, connector, type_connection_info)
         self.connections[connection_info] = connector_id
 
-    def add_connector(self, connector_id: str, connector: Connector, connection_type: typing.Type[typing.Any]):
+    def add_connector(
+        self,
+        connector_id: str,
+        connector: Connector,
+        connection_type: typing.Type[typing.Any],
+    ):
         """
         Function to add a connector to the connection manager.
         Wraps the connector with PersistedConnector for bidirectional sync.
@@ -324,7 +385,9 @@ class PersistenceConnectionRegistry(ConnectionRegistry):
         """
         if connection_info in self.connections:
             return self.get_connector(self.connections[connection_info])
-        raise KeyError(f"Data model Connection info {connection_info} is not in the connection manager.")
+        raise KeyError(
+            f"Data model Connection info {connection_info} is not in the connection manager."
+        )
 
     def get_type_connection_info(self, type_name: str) -> typing.List[ConnectionInfo]:
         """
@@ -353,8 +416,12 @@ class WorkflowRegistry:
     def __init__(self):
         self.workflows: typing.Dict[str, Workflow] = {}
 
-        self.workflow_providers: typing.Dict[str, typing.List[typing.Tuple[ConnectionInfo, Provider]]] = {}
-        self.workflow_consumers: typing.Dict[str, typing.List[typing.Tuple[ConnectionInfo, Consumer]]] = {}
+        self.workflow_providers: typing.Dict[
+            str, typing.List[typing.Tuple[ConnectionInfo, Provider]]
+        ] = {}
+        self.workflow_consumers: typing.Dict[
+            str, typing.List[typing.Tuple[ConnectionInfo, Consumer]]
+        ] = {}
 
     def add_workflow(self, workflow: Workflow):
         """
@@ -365,7 +432,9 @@ class WorkflowRegistry:
         """
         self.workflows[workflow.get_name()] = workflow
 
-    def add_provider_to_workflow(self, workflow_name: str, connection_info: ConnectionInfo, provider: Provider):
+    def add_provider_to_workflow(
+        self, workflow_name: str, connection_info: ConnectionInfo, provider: Provider
+    ):
         """
         Function to add a provider to a workflow.
 
@@ -378,7 +447,9 @@ class WorkflowRegistry:
             self.workflow_providers[workflow_name] = []
         self.workflow_providers[workflow_name].append((connection_info, provider))
 
-    def add_consumer_to_workflow(self, workflow_name: str, connection_info: ConnectionInfo, connector: Connector):
+    def add_consumer_to_workflow(
+        self, workflow_name: str, connection_info: ConnectionInfo, connector: Connector
+    ):
         """
         Function to add a consumer to a workflow.
 
@@ -414,8 +485,11 @@ class WorkflowRegistry:
             KeyError: If the workflow is not in the registry.
         """
         return self.workflows[workflow_name]
-    
-    def get_connections_of_workflow(self, workflow_name: str) -> typing.Tuple[typing.List[typing.Tuple[ConnectionInfo, Provider]], typing.List[typing.Tuple[ConnectionInfo, Consumer]]]:
+
+    def get_connections_of_workflow(self, workflow_name: str) -> typing.Tuple[
+        typing.List[typing.Tuple[ConnectionInfo, Provider]],
+        typing.List[typing.Tuple[ConnectionInfo, Consumer]],
+    ]:
         """
         Function to get the connections of a workflow.
 
@@ -425,10 +499,14 @@ class WorkflowRegistry:
         Returns:
             typing.Tuple[typing.List[ConnectionInfo, Provider], typing.List[ConnectionInfo, Consumer]]: The connections of the workflow.
         """
-        return self.workflow_providers[workflow_name], self.workflow_consumers[workflow_name]
+        return (
+            self.workflow_providers[workflow_name],
+            self.workflow_consumers[workflow_name],
+        )
 
-    
-    def get_providers(self, workflow_name: str) -> typing.List[typing.Tuple[ConnectionInfo, Provider]]:
+    def get_providers(
+        self, workflow_name: str
+    ) -> typing.List[typing.Tuple[ConnectionInfo, Provider]]:
         """
         Function to get the providers of a workflow.
 
@@ -439,8 +517,10 @@ class WorkflowRegistry:
             typing.List[typing.Tuple[ConnectionInfo, Provider]]: The providers of the workflow.
         """
         return self.workflow_providers[workflow_name]
-    
-    def get_consumers(self, workflow_name: str) -> typing.List[typing.Tuple[ConnectionInfo, Consumer]]:
+
+    def get_consumers(
+        self, workflow_name: str
+    ) -> typing.List[typing.Tuple[ConnectionInfo, Consumer]]:
         """
         Function to get the consumers of a workflow.
 
@@ -451,7 +531,7 @@ class WorkflowRegistry:
             typing.List[typing.Tuple[ConnectionInfo, Consumer]]: The consumers of the workflow.
         """
         return self.workflow_consumers[workflow_name]
-    
+
     def get_workflow_names(self) -> typing.List[str]:
         """
         Function to get the names of the workflows in the registry.
@@ -460,7 +540,7 @@ class WorkflowRegistry:
             typing.List[str]: The names of the workflows in the registry.
         """
         return list(self.workflows.keys())
-    
+
     def get_workflow_descriptions(self) -> typing.List[WorkflowDescription]:
         """
         Function to get the descriptions of the workflows in the registry.
@@ -469,8 +549,6 @@ class WorkflowRegistry:
             typing.List[WorkflowDescription]: The descriptions of the workflows in the registry.
         """
         return [workflow.get_description() for workflow in self.workflows.values()]
-    
-
 
 
 class MapperRegistry:
@@ -483,9 +561,17 @@ class MapperRegistry:
         self.mapper_input_types: typing.Dict[str, typing.Type] = {}
         self.mapper_output_types: typing.Dict[str, typing.Type] = {}
 
-        self.connections: typing.Dict[typing.Tuple[ConnectionInfo, ConnectionInfo], str] = {}
+        self.connections: typing.Dict[
+            typing.Tuple[ConnectionInfo, ConnectionInfo], str
+        ] = {}
 
-    def add_mapper(self, mapper_id: str, mapper: Mapper, input_connection: typing.Optional[ConnectionInfo] = None, output_connection: typing.Optional[ConnectionInfo] = None):
+    def add_mapper(
+        self,
+        mapper_id: str,
+        mapper: Mapper,
+        input_connection: typing.Optional[ConnectionInfo] = None,
+        output_connection: typing.Optional[ConnectionInfo] = None,
+    ):
         """
         Function to add a mapper to the registry.
 
@@ -497,12 +583,15 @@ class MapperRegistry:
         """
         self.mappers[mapper_id] = mapper
         self.mapper_input_types[mapper_id] = typing.get_type_hints(mapper.map)["data"]
-        self.mapper_output_types[mapper_id] = typing.get_type_hints(mapper.map)["return"]
+        self.mapper_output_types[mapper_id] = typing.get_type_hints(mapper.map)[
+            "return"
+        ]
         if input_connection and output_connection:
             self.connections[(input_connection, output_connection)] = mapper_id
         elif input_connection or output_connection:
-            raise ValueError("Either None or both input and output connection must be provided.")
-                
+            raise ValueError(
+                "Either None or both input and output connection must be provided."
+            )
 
     def get_mappers(self) -> typing.List[Mapper]:
         """
@@ -527,7 +616,7 @@ class MapperRegistry:
             KeyError: If the mapper is not in the registry.
         """
         return self.mappers[mapper_id]
-    
+
     def get_mapper_ids(self) -> typing.List[str]:
         """
         Function to get the names of the mappers in the registry.
@@ -536,8 +625,10 @@ class MapperRegistry:
             typing.List[str]: The names of the mappers in the registry.
         """
         return list(self.mappers.keys())
-    
-    def get_mapper_connections(self) -> typing.List[typing.Tuple[ConnectionInfo, ConnectionInfo]]:
+
+    def get_mapper_connections(
+        self,
+    ) -> typing.List[typing.Tuple[ConnectionInfo, ConnectionInfo]]:
         """
         Function to get the connections of the mappers in the registry.
 
@@ -545,9 +636,10 @@ class MapperRegistry:
             typing.List[typing.Tuple[ConnectionInfo, ConnectionInfo]]: The connections of the mappers in the registry.
         """
         return list(self.connections.keys())
-    
 
-    def get_mapper_by_input_connection(self, input_connection: ConnectionInfo) -> typing.Optional[Mapper]:
+    def get_mapper_by_input_connection(
+        self, input_connection: ConnectionInfo
+    ) -> typing.Optional[Mapper]:
         """
         Function to get a mapper by the input connection.
 
@@ -560,8 +652,10 @@ class MapperRegistry:
         for connection, mapper_id in self.connections.items():
             if connection[0] == input_connection:
                 return self.mappers[mapper_id]
-    
-    def get_mapper_by_output_connection(self, output_connection: ConnectionInfo) -> typing.Optional[Mapper]:
+
+    def get_mapper_by_output_connection(
+        self, output_connection: ConnectionInfo
+    ) -> typing.Optional[Mapper]:
         """
         Function to get a mapper by the output connection.
 
@@ -574,8 +668,10 @@ class MapperRegistry:
         for connection, mapper_id in self.connections.items():
             if connection[1] == output_connection:
                 return self.mappers[mapper_id]
-            
-    def get_connection_of_mapper(self, mapper_id: str) -> typing.List[typing.Tuple[ConnectionInfo, ConnectionInfo]]:
+
+    def get_connection_of_mapper(
+        self, mapper_id: str
+    ) -> typing.List[typing.Tuple[ConnectionInfo, ConnectionInfo]]:
         """
         Function to get the connections of a mapper.
 

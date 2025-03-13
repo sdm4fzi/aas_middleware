@@ -175,19 +175,18 @@ class SyncedConnector(Generic[T]):
                 await self._update_persistence_value(persistence_data)
             return connector_data
 
-        # For non-ground truth connectors that read from persistence
-        if self.sync_direction in (
-            SyncDirection.FROM_PERSISTENCE,
-            SyncDirection.BIDIRECTIONAL,
-        ):
-            try:
-                persistence_data = await self._get_persistence_value()
-                transformed_data = self._transform_from_persistence(persistence_data)
-                # TODO: this case should consider if persistence and connector data are the same -> resolve then
-                return transformed_data
-            except Exception as e:
-                # Fall back to connector data if persistence fails
-                pass
+        # # For non-ground truth connectors that read from persistence
+        # if self.sync_direction in (
+        #     SyncDirection.FROM_PERSISTENCE,
+        #     SyncDirection.BIDIRECTIONAL,
+        # ):
+        #     try:
+        #         persistence_data = await self._get_persistence_value()
+        #         transformed_data = self._transform_from_persistence(persistence_data)
+        #         return transformed_data
+        #     except Exception as e:
+        #         # Fall back to connector data if persistence fails
+        #         pass
 
         connector_data = await self.connector.provide()
 
@@ -231,8 +230,8 @@ class SyncedConnector(Generic[T]):
         ):
             try:
                 persistence_data = await self._get_persistence_value()
-                body = self._transform_from_persistence(persistence_data)
-                # TODO: this case should consider if persistence and connector data are the same -> resolve then
+                persistence_body = self._transform_from_persistence(persistence_data)
+                # TODO: this case should consider if persistence and connector data are not the same -> resolve then by either updating persistence or connector data
             except Exception:
                 # Continue with None if this fails
                 pass
