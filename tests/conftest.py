@@ -1,4 +1,5 @@
 from __future__ import annotations
+from calendar import c
 from enum import Enum
 import enum
 import threading
@@ -502,16 +503,16 @@ def example_middleware(
         "test_connector", trivial_float_connector, model_type=float
     )
 
-    trivial_float_connector_2 = TrivialFloatConnector()
-    middleware.add_connector(
-        "test_connected_connector",
-        trivial_float_connector_2,
-        model_type=float,
-        data_model_name="test",
-        model_id="valid_aas_id",
-        contained_model_id="example_submodel_id",
-        field_id="float_attribute",
-    )
+    # trivial_float_connector_2 = TrivialFloatConnector()
+    # middleware.add_synced_connector(
+    #     "test_synced_connector",
+    #     trivial_float_connector_2,
+    #     model_type=float,
+    #     data_model_name="test",
+    #     model_id="valid_aas_id",
+    #     contained_model_id="example_submodel_id",
+    #     field_id="float_attribute",
+    # )
 
     @middleware.workflow()
     async def example_workflow() -> bool:
@@ -589,11 +590,63 @@ def example_middleware(
 
 
 @pytest.fixture(scope="function")
+def example_sync_connector_middleware(
+    example_aas: ValidAAS, example_submodel: ExampleSubmodel
+) -> Middleware:
+    example_aas = example_aas.model_copy(deep=True)
+    example_aas.id = "valid_synced_aas_id"
+    example_aas.id_short = "valid_synced_aas_id_short"
+    example_aas.example_submodel.id = "valid_synced_submodel_id"
+    example_aas.example_submodel.id_short = "valid_synced_submodel_id_short"
+    example_aas.example_submodel_2.id = "valid_synced_submodel_2_id"
+    example_aas.example_submodel_2.id_short = "valid_synced_submodel_2_id_short"
+    example_aas.union_submodel.id = "valid_synced_union_submodel_id"
+    example_aas.union_submodel.id_short = "valid_synced_union_submodel_id_short"
+    example_aas.optional_submodel.id = "valid_synced_optional_submodel_id"
+    example_aas.optional_submodel.id_short = "valid_synced_optional_submodel_id_short"
+    data_model = DataModel.from_models(example_aas)
+
+    middleware = AasMiddleware()
+    middleware.load_aas_persistent_data_model(
+        "test",
+        data_model,
+        AAS_SERVER_ADDRESS,
+        AAS_SERVER_PORT,
+        SUBMODEL_SERVER_ADDRESS,
+        SUBMODEL_SERVER_PORT,
+        persist_instances=True
+    )
+    middleware.generate_rest_api_for_data_model("test")
+
+    trivial_float_connector_2 = TrivialFloatConnector()
+    middleware.add_synced_connector(
+        "test_synced_connector",
+        trivial_float_connector_2,
+        model_type=float,
+        data_model_name="test",
+        model_id="valid_synced_aas_id",
+        contained_model_id="valid_synced_submodel_id",
+        field_id="float_attribute",
+    )
+
+    return middleware
+
+
+@pytest.fixture(scope="function")
 def client(example_middleware: Middleware) -> TestClient:
     """
     Create a new FastAPI TestClient based on the current app.
     """
     with TestClient(example_middleware.app) as client:
+        return client
+    
+
+@pytest.fixture(scope="function")
+def sync_connector_client(example_sync_connector_middleware: Middleware) -> TestClient:
+    """
+    Create a new FastAPI TestClient based on the current app.
+    """
+    with TestClient(example_sync_connector_middleware.app) as client:
         return client
 
 
