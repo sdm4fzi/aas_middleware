@@ -9,8 +9,7 @@ from aas_middleware.connect.connectors.aas_client_connector.aas_client import (
     put_aas_to_server,
 )
 
-from ba_syx_aas_environment_component_client import Client as AASClient
-from ba_syx_aas_environment_component_client import Client as SubmodelClient
+from ba_syx_aas_environment_component_client import Client as BasyxClient
 
 from aas_middleware.connect.connectors.aas_client_connector.client_utils import (
     check_aas_and_sm_server_online,
@@ -27,6 +26,28 @@ from aas_pydantic.aas_model import AAS, Submodel
 
 T = TypeVar("T", bound=AAS)
 S = TypeVar("S", bound=Submodel)
+
+
+class _SharedClientManager:
+    """
+    Keeps one AsyncClient per base_url alive across all connector instances.
+    """
+
+    _clients: dict[str, BasyxClient] = {}
+
+    @classmethod
+    def get_client(cls, base_url: str) -> BasyxClient:
+        if base_url not in cls._clients:
+            # you can tune timeouts, limits, etc. here
+            cls._clients[base_url] = BasyxClient(base_url=base_url)
+        return cls._clients[base_url]
+
+    @classmethod
+    async def close_all(cls) -> None:
+        # Call this once on application shutdown
+        for client in cls._clients.values():
+            await client.aclose()
+        cls._clients.clear()
 
 
 class BasyxAASConnector(Generic[T]):
@@ -52,14 +73,10 @@ class BasyxAASConnector(Generic[T]):
         self.submodel_port = submodel_port
         self.aas_server_address = f"http://{host}:{port}"
         self.submodel_server_address = f"http://{submodel_host}:{submodel_port}"
-
-    @property
-    def aas_client(self):
-        return AASClient(base_url=self.aas_server_address)
-
-    @property
-    def submodel_client(self):
-        return SubmodelClient(base_url=self.submodel_server_address)
+        self._aas_client = _SharedClientManager.get_client(self.aas_server_address)
+        self._submodel_client = _SharedClientManager.get_client(
+            self.submodel_server_address
+        )
 
     async def connect(self):
         await check_aas_and_sm_server_online(
@@ -67,7 +84,7 @@ class BasyxAASConnector(Generic[T]):
         )
 
     async def disconnect(self):
-        pass
+        await _SharedClientManager.close_all()
 
     async def consume(self, body: Optional[T]) -> None:
         if body and body.id != self.aas_id:
@@ -76,24 +93,24 @@ class BasyxAASConnector(Generic[T]):
             self.aas_type_template = type(body)
         try:
             if not body:
-                await delete_aas_from_server(self.aas_id, self.aas_client)
-            elif await aas_is_on_server(self.aas_id, self.aas_client):
-                await put_aas_to_server(body, self.aas_client, self.submodel_client)
+                await delete_aas_from_server(self.aas_id, self._aas_client)
+            elif await aas_is_on_server(self.aas_id, self._aas_client):
+                await put_aas_to_server(body, self._aas_client, self._submodel_client)
             else:
-                await post_aas_to_server(body, self.aas_client, self.submodel_client)
+                await post_aas_to_server(body, self._aas_client, self._submodel_client)
         except Exception as e:
-            raise ConnectionError(f"Error consuming AAS: {e}")
+            raise ConnectionError(f"Error consuming AAS: {e}") from e
 
     async def provide(self) -> T:
         try:
             return await get_aas_from_server(
                 self.aas_id,
-                self.aas_client,
-                self.submodel_client,
+                self._aas_client,
+                self._submodel_client,
                 self.aas_type_template,
             )
         except Exception as e:
-            raise ConnectionError(f"Error providing AAS: {e}")
+            raise ConnectionError(f"Error providing AAS: {e}") from e
 
 
 class BasyxSubmodelConnector(Generic[S]):
@@ -105,13 +122,15 @@ class BasyxSubmodelConnector(Generic[S]):
 
         self.submodel_server_address = f"http://{host}:{port}"
 
-        self.submodel_client = SubmodelClient(base_url=self.submodel_server_address)
+        self._submodel_client = _SharedClientManager.get_client(
+            self.submodel_server_address
+        )
 
     async def connect(self):
         await check_sm_server_online(self.submodel_server_address)
 
     async def disconnect(self):
-        pass
+        await _SharedClientManager.close_all()
 
     async def consume(self, body: Optional[S]) -> None:
         if body and body.id != self.submodel_id:
@@ -121,19 +140,19 @@ class BasyxSubmodelConnector(Generic[S]):
         try:
             if not body:
                 await delete_submodel_from_server(
-                    self.submodel_id, self.submodel_client
+                    self.submodel_id, self._submodel_client
                 )
-            elif await submodel_is_on_server(self.submodel_id, self.submodel_client):
-                await put_submodel_to_server(self.submodel_id, self.submodel_client)
+            elif await submodel_is_on_server(self.submodel_id, self._submodel_client):
+                await put_submodel_to_server(body, self._submodel_client)
             else:
-                await post_submodel_to_server(self.submodel_id, self.submodel_client)
+                await post_submodel_to_server(body, self._submodel_client)
         except Exception as e:
-            raise ConnectionError(f"Error consuming Submodel: {e}")
+            raise ConnectionError(f"Error consuming Submodel: {e}") from e
 
     async def provide(self) -> S:
         try:
             return await get_submodel_from_server(
-                self.submodel_id, self.submodel_client, self.submodel_type_template
+                self.submodel_id, self._submodel_client, self.submodel_type_template
             )
         except Exception as e:
-            raise ConnectionError(f"Error providing Submodel: {e}")
+            raise ConnectionError(f"Error providing Submodel: {e}") from e
