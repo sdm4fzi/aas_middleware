@@ -1,3 +1,4 @@
+import asyncio
 from typing import Generic, Optional, TypeVar
 
 from fastapi import HTTPException
@@ -51,6 +52,13 @@ class _SharedClientManager:
 
 
 class BasyxAASConnector(Generic[T]):
+    """
+    Connector for AAS objects with global concurrency limit.
+    """
+
+    _semaphore: asyncio.Semaphore | None = None
+    _max_connections: int = 32
+
     def __init__(
         self,
         model: T,
@@ -58,7 +66,13 @@ class BasyxAASConnector(Generic[T]):
         port: int,
         submodel_host: Optional[str] = None,
         submodel_port: Optional[int] = None,
+        max_connections: int = 32,
     ):
+        # Initialize or update class-level semaphore once
+        if self.__class__._semaphore is None:
+            self.__class__._max_connections = max_connections
+            self.__class__._semaphore = asyncio.Semaphore(max_connections)
+
         self.host = host
         self.port = port
         self.aas_id = model.id
@@ -87,41 +101,68 @@ class BasyxAASConnector(Generic[T]):
         await _SharedClientManager.close_all()
 
     async def consume(self, body: Optional[T]) -> None:
-        if body and body.id != self.aas_id:
-            self.aas_id = body.id
-        if not self.aas_type_template:
-            self.aas_type_template = type(body)
-        try:
-            if not body:
-                await delete_aas_from_server(self.aas_id, self._aas_client)
-            elif await aas_is_on_server(self.aas_id, self._aas_client):
-                await put_aas_to_server(body, self._aas_client, self._submodel_client)
-            else:
-                await post_aas_to_server(body, self._aas_client, self._submodel_client)
-        except Exception as e:
-            raise ConnectionError(f"Error consuming AAS: {e}") from e
+        sem = self.__class__._semaphore
+        assert sem is not None, "Semaphore not initialized"
+        async with sem:
+            if body and body.id != self.aas_id:
+                self.aas_id = body.id
+            if not self.aas_type_template:
+                self.aas_type_template = type(body)
+            try:
+                if not body:
+                    await delete_aas_from_server(self.aas_id, self._aas_client)
+                elif await aas_is_on_server(self.aas_id, self._aas_client):
+                    await put_aas_to_server(
+                        body, self._aas_client, self._submodel_client
+                    )
+                else:
+                    await post_aas_to_server(
+                        body, self._aas_client, self._submodel_client
+                    )
+            except Exception as e:
+                raise ConnectionError(f"Error consuming AAS: {e}") from e
 
     async def provide(self) -> T:
-        try:
-            return await get_aas_from_server(
-                self.aas_id,
-                self._aas_client,
-                self._submodel_client,
-                self.aas_type_template,
-            )
-        except Exception as e:
-            raise ConnectionError(f"Error providing AAS: {e}") from e
+        sem = self.__class__._semaphore
+        assert sem is not None, "Semaphore not initialized"
+        async with sem:
+            try:
+                return await get_aas_from_server(
+                    self.aas_id,
+                    self._aas_client,
+                    self._submodel_client,
+                    self.aas_type_template,
+                )
+            except Exception as e:
+                raise ConnectionError(f"Error providing AAS: {e}") from e
 
 
 class BasyxSubmodelConnector(Generic[S]):
-    def __init__(self, submodel: S, host: str, port: int):
+    """
+    Connector for Submodel objects with global concurrency limit.
+    """
+
+    _semaphore: asyncio.Semaphore | None = None
+    _max_connections: int = 32
+
+    def __init__(
+        self,
+        submodel: S,
+        host: str,
+        port: int,
+        max_connections: int = 32,
+    ):
+        # Initialize or update class-level semaphore once
+        if self.__class__._semaphore is None:
+            self.__class__._max_connections = max_connections
+            self.__class__._semaphore = asyncio.Semaphore(max_connections)
+
         self.host = host
         self.port = port
         self.submodel_id = submodel.id
         self.submodel_type_template = type(submodel)
 
         self.submodel_server_address = f"http://{host}:{port}"
-
         self._submodel_client = _SharedClientManager.get_client(
             self.submodel_server_address
         )
@@ -133,26 +174,34 @@ class BasyxSubmodelConnector(Generic[S]):
         await _SharedClientManager.close_all()
 
     async def consume(self, body: Optional[S]) -> None:
-        if body and body.id != self.submodel_id:
-            self.submodel_id = body.id
-        if not self.submodel_type_template:
-            self.submodel_type_template = type(body)
-        try:
-            if not body:
-                await delete_submodel_from_server(
+        sem = self.__class__._semaphore
+        assert sem is not None, "Semaphore not initialized"
+        async with sem:
+            if body and body.id != self.submodel_id:
+                self.submodel_id = body.id
+            if not self.submodel_type_template:
+                self.submodel_type_template = type(body)
+            try:
+                if not body:
+                    await delete_submodel_from_server(
+                        self.submodel_id, self._submodel_client
+                    )
+                elif await submodel_is_on_server(
                     self.submodel_id, self._submodel_client
-                )
-            elif await submodel_is_on_server(self.submodel_id, self._submodel_client):
-                await put_submodel_to_server(body, self._submodel_client)
-            else:
-                await post_submodel_to_server(body, self._submodel_client)
-        except Exception as e:
-            raise ConnectionError(f"Error consuming Submodel: {e}") from e
+                ):
+                    await put_submodel_to_server(body, self._submodel_client)
+                else:
+                    await post_submodel_to_server(body, self._submodel_client)
+            except Exception as e:
+                raise ConnectionError(f"Error consuming Submodel: {e}") from e
 
     async def provide(self) -> S:
-        try:
-            return await get_submodel_from_server(
-                self.submodel_id, self._submodel_client, self.submodel_type_template
-            )
-        except Exception as e:
-            raise ConnectionError(f"Error providing Submodel: {e}") from e
+        sem = self.__class__._semaphore
+        assert sem is not None, "Semaphore not initialized"
+        async with sem:
+            try:
+                return await get_submodel_from_server(
+                    self.submodel_id, self._submodel_client, self.submodel_type_template
+                )
+            except Exception as e:
+                raise ConnectionError(f"Error providing Submodel: {e}") from e
