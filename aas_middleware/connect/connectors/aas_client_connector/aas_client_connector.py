@@ -36,10 +36,9 @@ def _default_httpx_args(max_conn: int) -> Dict[str, Any]:
     """
     return {
         "limits": Limits(
-            max_connections=max_conn,
-            max_keepalive_connections=max_conn // 2,
-        ),
-        "http2": True,
+            max_connections=8,
+            max_keepalive_connections=8,
+        )
     }
 
 
@@ -104,7 +103,7 @@ class BasyxAASConnector(Generic[T]):
     """
 
     _semaphore: asyncio.Semaphore | None = None
-    _max_connections: int = 1
+    _max_connections: int = 32
 
     def __init__(
         self,
@@ -113,7 +112,7 @@ class BasyxAASConnector(Generic[T]):
         port: int,
         submodel_host: Optional[str] = None,
         submodel_port: Optional[int] = None,
-        max_connections: int = 1,
+        max_connections: int = 32,
     ):
         # Initialize or update class-level semaphore once
         if self.__class__._semaphore is None:
@@ -149,6 +148,7 @@ class BasyxAASConnector(Generic[T]):
             self.submodel_server_address,
             httpx_args=httpx_args,
         )
+        print(id(self._aas_client), id(self._submodel_client))
 
     async def connect(self) -> None:
         await check_aas_and_sm_server_online(
@@ -207,14 +207,14 @@ class BasyxSubmodelConnector(Generic[S]):
     """
 
     _semaphore: asyncio.Semaphore | None = None
-    _max_connections: int = 1
+    _max_connections: int = 32
 
     def __init__(
         self,
         submodel: S,
         host: str,
         port: int,
-        max_connections: int = 1,
+        max_connections: int = 32,
     ):
         # Initialize or update class-level semaphore once
         if self.__class__._semaphore is None:

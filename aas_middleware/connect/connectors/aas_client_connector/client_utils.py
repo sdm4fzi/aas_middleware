@@ -1,6 +1,8 @@
+import asyncio
 import base64
 from urllib.parse import urlparse
 
+import aiohttp
 from fastapi import HTTPException
 from pydantic import BaseModel, ConfigDict
 
@@ -68,17 +70,23 @@ def remove_empty_lists(dictionary: dict) -> None:
         del dictionary[key]
 
 
-def is_server_online(adress: str):
+async def is_server_online(
+    url: str, timeout: float = 2.0, use_get: bool = False
+) -> bool:
+    """
+    Check whether an HTTP(S) server at `url` is responding (status < 500)
+    within `timeout` seconds. By default uses HEAD; set use_get=True if
+    your endpoint doesn’t support HEAD.
+    """
+    method = "GET" if use_get else "HEAD"
     try:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        parsed_url = urlparse(adress)
-        host = parsed_url.hostname
-        port = parsed_url.port
-        sock.settimeout(2)  # 2 seconds
-        sock.connect((host, port))
-        sock.close()
-        return True
-    except (socket.timeout, ConnectionRefusedError):
+        # Configure a short timeout for connect + read
+        timeout_cfg = aiohttp.ClientTimeout(total=timeout)
+        async with aiohttp.ClientSession(timeout=timeout_cfg) as session:
+            async with session.request(method, url) as resp:
+                # Consider any 2xx–3xx–4xx as “up”
+                return resp.status < 500
+    except (aiohttp.ClientError, asyncio.TimeoutError):
         return False
 
 async def check_sm_server_online(sm_server_adress: str):
