@@ -104,7 +104,7 @@ class BasyxAASConnector(Generic[T]):
     """
 
     _semaphore: asyncio.Semaphore | None = None
-    _max_connections: int = 32
+    _max_connections: int = 1
 
     def __init__(
         self,
@@ -113,7 +113,7 @@ class BasyxAASConnector(Generic[T]):
         port: int,
         submodel_host: Optional[str] = None,
         submodel_port: Optional[int] = None,
-        max_connections: int = 32,
+        max_connections: int = 1,
     ):
         # Initialize or update class-level semaphore once
         if self.__class__._semaphore is None:
@@ -207,14 +207,14 @@ class BasyxSubmodelConnector(Generic[S]):
     """
 
     _semaphore: asyncio.Semaphore | None = None
-    _max_connections: int = 32
+    _max_connections: int = 1
 
     def __init__(
         self,
         submodel: S,
         host: str,
         port: int,
-        max_connections: int = 32,
+        max_connections: int = 1,
     ):
         # Initialize or update class-level semaphore once
         if self.__class__._semaphore is None:
