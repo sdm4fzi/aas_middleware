@@ -23,7 +23,7 @@ class BasyxAASCachingConnector(Generic[T]):
         port: int,
         submodel_host: Optional[str] = None,
         submodel_port: Optional[int] = None,
-        max_connections: int = 32,
+        max_connections: int = 64,
     ):
         self._core = BasyxAASConnector(
             model=model,
@@ -61,7 +61,7 @@ class BasyxSubmodelCachingConnector(Generic[S]):
         submodel: S,
         host: str,
         port: int,
-        max_connections: int = 32,
+        max_connections: int = 64,
     ):
         self._core = BasyxSubmodelConnector(
             submodel=submodel,
