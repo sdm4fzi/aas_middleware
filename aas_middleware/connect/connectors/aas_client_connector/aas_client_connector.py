@@ -1,6 +1,7 @@
 import asyncio
-from typing import Generic, Optional, TypeVar
+from typing import Any, Generic, Optional, TypeVar, Dict
 
+from httpx import Limits
 from fastapi import HTTPException
 from aas_middleware.connect.connectors.aas_client_connector.aas_client import (
     aas_is_on_server,
@@ -29,18 +30,35 @@ T = TypeVar("T", bound=AAS)
 S = TypeVar("S", bound=Submodel)
 
 
+def _default_httpx_args(max_conn: int) -> Dict[str, Any]:
+    # default to HTTP/2 multiplexing with a pool of keep-alive connections
+    return {
+        "limits": Limits(
+            max_connections=max_conn, max_keepalive_connections=max_conn // 2
+        ),
+        "http2": True,
+    }
+
+
 class _SharedClientManager:
     """
-    Keeps one AsyncClient per base_url alive across all connector instances.
+    Keeps one AsyncClient per base_url alive across all connector instances,
+    optionally with injected httpx_args.
     """
 
-    _clients: dict[str, BasyxClient] = {}
+    _clients: Dict[str, BasyxClient] = {}
 
     @classmethod
-    def get_client(cls, base_url: str) -> BasyxClient:
+    def get_client(
+        cls,
+        base_url: str,
+        httpx_args: Optional[Dict[str, Any]] = None,
+    ) -> BasyxClient:
         if base_url not in cls._clients:
-            # you can tune timeouts, limits, etc. here
-            cls._clients[base_url] = BasyxClient(base_url=base_url)
+            init_args: Dict[str, Any] = {"base_url": base_url}
+            if httpx_args:
+                init_args["httpx_args"] = httpx_args
+            cls._clients[base_url] = BasyxClient(**init_args)
         return cls._clients[base_url]
 
     @classmethod
@@ -53,7 +71,8 @@ class _SharedClientManager:
 
 class BasyxAASConnector(Generic[T]):
     """
-    Connector for AAS objects with global concurrency limit.
+    Connector for AAS objects with global concurrency limit
+    and httpx_args injection.
     """
 
     _semaphore: asyncio.Semaphore | None = None
@@ -67,16 +86,22 @@ class BasyxAASConnector(Generic[T]):
         submodel_host: Optional[str] = None,
         submodel_port: Optional[int] = None,
         max_connections: int = 32,
+        httpx_args: Optional[Dict[str, Any]] = None,
     ):
         # Initialize or update class-level semaphore once
         if self.__class__._semaphore is None:
             self.__class__._max_connections = max_connections
             self.__class__._semaphore = asyncio.Semaphore(max_connections)
 
+        # Compute default httpx_args if not provided
+        if httpx_args is None:
+            httpx_args = _default_httpx_args(self.__class__._max_connections)
+
         self.host = host
         self.port = port
         self.aas_id = model.id
         self.aas_type_template: Optional[T] = type(model)
+        self._httpx_args = httpx_args
 
         if not submodel_host:
             submodel_host = host
@@ -87,9 +112,13 @@ class BasyxAASConnector(Generic[T]):
         self.submodel_port = submodel_port
         self.aas_server_address = f"http://{host}:{port}"
         self.submodel_server_address = f"http://{submodel_host}:{submodel_port}"
-        self._aas_client = _SharedClientManager.get_client(self.aas_server_address)
+
+        # Use httpx_args when creating shared clients
+        self._aas_client = _SharedClientManager.get_client(
+            self.aas_server_address, httpx_args=self._httpx_args
+        )
         self._submodel_client = _SharedClientManager.get_client(
-            self.submodel_server_address
+            self.submodel_server_address, httpx_args=self._httpx_args
         )
 
     async def connect(self):
@@ -139,7 +168,8 @@ class BasyxAASConnector(Generic[T]):
 
 class BasyxSubmodelConnector(Generic[S]):
     """
-    Connector for Submodel objects with global concurrency limit.
+    Connector for Submodel objects with global concurrency limit
+    and httpx_args injection.
     """
 
     _semaphore: asyncio.Semaphore | None = None
@@ -151,20 +181,26 @@ class BasyxSubmodelConnector(Generic[S]):
         host: str,
         port: int,
         max_connections: int = 32,
+        httpx_args: Optional[Dict[str, Any]] = None,
     ):
         # Initialize or update class-level semaphore once
         if self.__class__._semaphore is None:
             self.__class__._max_connections = max_connections
             self.__class__._semaphore = asyncio.Semaphore(max_connections)
 
+        # Compute default httpx_args if not provided
+        if httpx_args is None:
+            httpx_args = _default_httpx_args(self.__class__._max_connections)
+
         self.host = host
         self.port = port
         self.submodel_id = submodel.id
         self.submodel_type_template = type(submodel)
+        self._httpx_args = httpx_args
 
         self.submodel_server_address = f"http://{host}:{port}"
         self._submodel_client = _SharedClientManager.get_client(
-            self.submodel_server_address
+            self.submodel_server_address, httpx_args=self._httpx_args
         )
 
     async def connect(self):
