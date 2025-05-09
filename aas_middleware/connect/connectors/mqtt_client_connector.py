@@ -11,22 +11,24 @@ class MqttClientConnector:
     def __init__(self, broker_ip: str, topic: str):
         self.broker_ip = broker_ip
         self.topic = topic
-        self.client: aiomqtt.Client = aiomqtt.Client(
-            self.broker_ip,
-            keepalive=60,
-            clean_start=False,
-        )
         self.queue: asyncio.Queue[Any] = asyncio.Queue()
         self.value: Optional[Any] = None
         self._runner: Optional[asyncio.Task] = None
+        self.client: Optional[aiomqtt.Client] = None
 
     async def connect(self):
         """Start the background task that maintains the connection & listens."""
         if sys.platform.lower() == "win32" or os.name.lower() == "nt":
             from asyncio import set_event_loop_policy, WindowsSelectorEventLoopPolicy
             set_event_loop_policy(WindowsSelectorEventLoopPolicy())
+        self.client = aiomqtt.Client(
+            self.broker_ip,
+            keepalive=60,
+            clean_start=False,
+        )
+        loop = asyncio.get_event_loop()
         if self._runner is None:
-            self._runner = asyncio.create_task(self._run_forever())
+            self._runner = loop.create_task(self._run_forever())
 
     async def disconnect(self):
         """Cancel background task and cleanly close the MQTT session."""
