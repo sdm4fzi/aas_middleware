@@ -25,9 +25,8 @@ class MqttClientConnector:
         if sys.platform.lower() == "win32" or os.name.lower() == "nt":
             from asyncio import set_event_loop_policy, WindowsSelectorEventLoopPolicy
             set_event_loop_policy(WindowsSelectorEventLoopPolicy())
-        loop = asyncio.get_event_loop()
         if self._runner is None:
-            self._runner = loop.create_task(self._run_forever())
+            self._runner = asyncio.create_task(self._run_forever())
 
     async def disconnect(self):
         """Cancel background task and cleanly close the MQTT session."""
