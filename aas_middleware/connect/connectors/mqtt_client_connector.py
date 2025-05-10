@@ -3,9 +3,7 @@ import sys
 
 
 if sys.platform.startswith("win") or os.name == "nt":
-    # BEFORE you import or call asyncio.run()
     from asyncio import set_event_loop_policy, WindowsSelectorEventLoopPolicy
-
     set_event_loop_policy(WindowsSelectorEventLoopPolicy())
 
 import asyncio
@@ -21,24 +19,45 @@ class MqttClientConnector:
         self.client: aiomqtt.Client = None
         self.value = None
         self.queue = asyncio.Queue()
+        self._listener = None
+
+    async def _connect_client(self, max_retry_count: int = 5):
+        retry_count = 0
+        while retry_count < max_retry_count:
+            try:
+                retry_count += 1
+                self.client = aiomqtt.Client(self.mqtt_broker_ip)
+                await self.client.__aenter__()
+                return
+            except Exception as e:
+                await asyncio.sleep(1)
+        raise ConnectionError(
+            f"Failed to connect to MQTT broker after {max_retry_count} attempts"
+        )
+
 
     async def connect(self):
-        self.mqtt_client = aiomqtt.Client(self.mqtt_broker_ip)
-        await self.mqtt_client.__aenter__()
+        await self._connect_client()
         loop = asyncio.get_event_loop()
-        task = loop.create_task(self.listen_for_mqtt_messages())
+        self._listener = loop.create_task(self.listen_for_mqtt_messages())
 
     async def listen_for_mqtt_messages(self):
-        await self.mqtt_client.subscribe(self.topic)
-        async for message in self.mqtt_client.messages:
-            self.value = json.loads(message.payload.decode())
-            await self.queue.put(self.value)
+        while True:
+            try:
+                await self.client.subscribe(self.topic)
+                async for message in self.client.messages:
+                    self.value = json.loads(message.payload.decode())
+                    await self.queue.put(self.value)
+            except Exception as e:
+                await self._connect_client()
 
     async def disconnect(self):
-        await self.mqtt_client.__aexit__()
+        await self.client.__aexit__()
+        await self._listener.cancel()
+        self._listener = None
 
     async def consume(self, body: Optional[Any]) -> None:
-        await self.mqtt_client.publish(self.topic, body)
+        await self.client.publish(self.topic, body)
 
     async def provide(self) -> Any:
         return self.value
@@ -60,11 +79,10 @@ if __name__ == "__main__":
         )
 
         await mqtt_vda5050_feedback_provider.connect()
-        print("Connected to MQTT broker")
         await mqtt_vda5050_feedback_provider.consume("Hello World")
         # print("Published message to topic")
-        # async for message in mqtt_vda5050_feedback_provider.receive():
-        #     print(f"Received message: {message}")
-        #     await asyncio.sleep(1)
+        async for message in mqtt_vda5050_feedback_provider.receive():
+            print(f"Received message: {message}")
+            await asyncio.sleep(1)
 
     asyncio.run(main())
