@@ -13,8 +13,9 @@ import aiomqtt
 
 
 class MqttClientConnector:
-    def __init__(self, broker_ip: str, topic: str):
+    def __init__(self, broker_ip: str, topic: str, port: int = 1883):
         self.mqtt_broker_ip = broker_ip
+        self.mqtt_broker_port = port
         self.topic = topic
         self.client: aiomqtt.Client = None
         self.value = None
@@ -26,7 +27,7 @@ class MqttClientConnector:
         while retry_count < max_retry_count:
             try:
                 retry_count += 1
-                self.client = aiomqtt.Client(self.mqtt_broker_ip)
+                self.client = aiomqtt.Client(self.mqtt_broker_ip, port=self.mqtt_broker_port)
                 await self.client.__aenter__()
                 return
             except Exception as e:
@@ -34,7 +35,6 @@ class MqttClientConnector:
         raise ConnectionError(
             f"Failed to connect to MQTT broker after {max_retry_count} attempts"
         )
-
 
     async def connect(self):
         await self._connect_client()
@@ -57,7 +57,11 @@ class MqttClientConnector:
         self._listener = None
 
     async def consume(self, body: Optional[Any]) -> None:
-        await self.client.publish(self.topic, body)
+        try:
+            await self.client.publish(self.topic, body)
+        except Exception as e:
+            await self._connect_client()
+            await self.client.publish(self.topic, body)
 
     async def provide(self) -> Any:
         return self.value
@@ -68,21 +72,37 @@ class MqttClientConnector:
             yield new_value
 
 
+async def main():
+    broker_ip = "172.22.192.101"
+    topic = "vda5050/feedback"
+    port = 50000
+    # port = 1883
+    import time
+    client = MqttClientConnector(broker_ip, topic, port)
+    await client.connect()
+
+    async def producer():
+        msg_id = 0
+        while True:
+            # stamp with monotonic time for best precision
+            ts = time.monotonic()
+            payload = json.dumps({"id": msg_id, "ts": ts})
+            await client.consume(payload)
+            msg_id += 1
+            await asyncio.sleep(0.001)  # adjust send rate as needed
+
+    async def consumer():
+        last_time = time.monotonic()
+        async for data in client.receive():
+            now = time.monotonic()
+            latency_ms = (now - data["ts"]) * 1_000
+            print(f"[Msg {data['id']}] round-trip latency: {latency_ms:.2f} ms time since last msg: {now -last_time:.2f} ms")
+            last_time = now
+    try:
+        await asyncio.gather(producer(), consumer())
+    finally:
+        await client.disconnect()
+
+
 if __name__ == "__main__":
-    import asyncio
-    import random
-
-    async def main():
-        mqtt_vda5050_feedback_provider = MqttClientConnector(
-            broker_ip="172.22.192.101", topic="vda5050/feedback"
-            # broker_ip="broker.emqx.io", topic="vda5050/feedback"
-        )
-
-        await mqtt_vda5050_feedback_provider.connect()
-        await mqtt_vda5050_feedback_provider.consume("Hello World")
-        # print("Published message to topic")
-        async for message in mqtt_vda5050_feedback_provider.receive():
-            print(f"Received message: {message}")
-            await asyncio.sleep(1)
-
     asyncio.run(main())
