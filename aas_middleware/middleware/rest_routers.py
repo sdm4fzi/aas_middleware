@@ -15,38 +15,40 @@ from aas_middleware.connect.connectors.connector import Connector
 from aas_middleware.middleware import middleware
 from aas_middleware.middleware.registries import ConnectionInfo
 from aas_middleware.model import data_model
+from aas_middleware.model.core import Identifiable
 from aas_middleware.model.data_model import DataModel
 from aas_middleware.model.formatting.aas.aas_middleware_util import (
     get_contained_models_attribute_info,
 )
-from aas_pydantic.aas_model import AAS, Blob, File, Submodel
+from aas_pydantic.aas_model import Blob, File
 from aas_middleware.model.reference_util import (
     get_attribute_paths_to_contained_type,
 )
+from aas_middleware.model.util import is_identifiable_type
 
 if TYPE_CHECKING:
     from aas_middleware.middleware.middleware import Middleware
 
 
-def check_if_attribute_is_optional_in_aas(aas: Type[AAS], attribute_name: str) -> bool:
+def check_if_attribute_is_optional(model: Type[Identifiable], attribute_name: str) -> bool:
     """
-    Checks if a submodel is an optional attribute in an aas.
+    Checks if the attribute of a model is optional.
 
     Args:
-        aas (Type[base.AAS]): AAS model.
-        submodel (Type[base.Submodel]): Submodel to be checked.
-
-    Raises:
-        ValueError: If the submodel is not a submodel of the aas.
+        model (Type[Identifiable]): Pydantic model.
+        attribute_name (str): Name of the attribute.
 
     Returns:
-        bool: True if the submodel is an optional attribute in the aas, False otherwise.
+        bool: True if the attribute is optional, False otherwise.
+
+    Raises:
+        ValueError: If the attribute is not present in the model.
     """
-    if attribute_name not in aas.model_fields:
+    if attribute_name not in model.model_fields:
         raise ValueError(
-            f"Submodel {attribute_name} is not a submodel attribute of {aas.__name__}."
+            f"{attribute_name} is not an attribute of {model.__name__}."
         )
-    field_info = aas.model_fields[attribute_name]
+    field_info = model.model_fields[attribute_name]
     if not field_info.is_required():
         return True
     elif typing.get_origin(field_info.annotation) == Union and type(
@@ -57,7 +59,42 @@ def check_if_attribute_is_optional_in_aas(aas: Type[AAS], attribute_name: str) -
         return False
 
 
-def remove_blob_contens(model: BaseModel, blob_paths: list[list[str]]) -> BaseModel:
+def check_if_attribute_is_iterable(model: Type[Identifiable], attribute_name: str) -> bool:
+    """
+    Checks if an an attribute is iterable. Sets are not considered iterable, since they do not allow indexing.
+    This is important for the CRUD endpoints, since they are generated for lists and tuples.
+    Args:
+        model (Type[Identifiable]): the model to check.
+        attribute_name (str): the name of the attribute to check.
+
+    Returns:
+        bool: True if the attribute is iterable, False otherwise.
+
+    Raises:
+        ValueError: If the attribute is not in the model.
+    """
+    if attribute_name not in model.model_fields:
+        raise ValueError(
+            f"{attribute_name} is not an attribute of {model.__name__}."
+        )
+    field_info = model.model_fields[attribute_name]
+    if typing.get_origin(field_info.annotation) == Union:
+        all_args_are_iterable = False
+        for arg in typing.get_args(field_info.annotation):
+            if arg is type(None):
+                continue
+            elif typing.get_origin(arg) in (list, tuple):
+                all_args_are_iterable = True
+            else:
+                all_args_are_iterable = False
+        return all_args_are_iterable
+    elif typing.get_origin(field_info.annotation) in (list, tuple):
+        return True
+    else:
+        return False
+
+
+def remove_blob_contents(model: BaseModel, blob_paths: list[list[str]]) -> BaseModel:
     """
     Removes the content of all blob attributes of a model and returns a copy of it.
 
@@ -95,65 +132,67 @@ class RestRouter:
 
     def generate_endpoints_from_contained_model(
         self,
-        aas_model_type: Type[AAS],
+        top_level_model: Type[Identifiable],
         attribute_name: str,
-        submodel_model_type: Type[Submodel],
+        contained_model: Type[Identifiable],
     ) -> APIRouter:
         """
-        Generates CRUD endpoints for a submodel of a pydantic model representing an aas.
+        Generates CRUD endpoints for a contained model of an Identifiable model.
 
         Args:
-            aas_model_type (Type[BaseModel]): Pydantic model representing the aas of the submodel.
-            submodel_model_type (Type[base.Submodel]): Pydantic model representing the submodel.
+            aas_model_type (Type[Identifiable]): Pydantic model representing the top level model.
+            contained_model (Type[Identifiable]): Pydantic model representing the contained model.
 
         Returns:
-            APIRouter: FastAPI router with CRUD endpoints for the given submodel that performs Middleware syxnchronization.
+            APIRouter: FastAPI router with CRUD endpoints for the given contained model that performs Middleware synchronization.
         """
-        model_name = aas_model_type.__name__
-        optional_submodel = check_if_attribute_is_optional_in_aas(
-            aas_model_type, attribute_name
+        model_name = top_level_model.__name__
+        is_optional_contained_model = check_if_attribute_is_optional(
+            top_level_model, attribute_name
         )
-        # TODO: the data model name should be used for creating the endpoint
-        # TODO: adjust that no aas or submodel reference appears in the router -> should work for all models.
+        is_iterable_contained_model = check_if_attribute_is_iterable(
+            top_level_model, attribute_name
+        )
+
+        # TODO: consider data model name in url of the model endpoints
         router = APIRouter(
             prefix=f"/{model_name}/{{item_id}}/{attribute_name}",
             tags=[model_name],
             responses={404: {"description": "Not found"}},
         )
 
-        file_paths = get_attribute_paths_to_contained_type(submodel_model_type, File)
-        blob_paths = get_attribute_paths_to_contained_type(submodel_model_type, Blob)
+        file_paths = get_attribute_paths_to_contained_type(contained_model, File)
+        blob_paths = get_attribute_paths_to_contained_type(contained_model, Blob)
 
         @router.get(
             "/",
-            response_model=submodel_model_type,
+            response_model=contained_model,
         )
         async def get_item(item_id: str):
             try:
-                model = await self.get_connector(item_id).provide()
-                submodel = getattr(model, attribute_name)
-                submodel = remove_blob_contens(submodel, blob_paths)
-                return submodel
+                top_level_model = await self.get_connector(item_id).provide()
+                contained_model = getattr(top_level_model, attribute_name)
+                if is_identifiable_type(contained_model):
+                    contained_model = remove_blob_contents(contained_model, blob_paths)
+                return contained_model
             except Exception as e:
                 raise HTTPException(
                     status_code=400,
                     detail=f"Submodel with id {item_id} could not be retrieved. Error: {e}",
                 )
 
-        if optional_submodel:
-
+        if is_optional_contained_model:
             @router.post("/")
             async def post_item(
-                item_id: str, item: submodel_model_type # type: ignore
+                item_id: str, item: contained_model # type: ignore
             ) -> Dict[str, str]:
                 connector = self.get_connector(item_id)
                 try:
-                    provided_data = await connector.provide()
-                    # TODO: update that the correct type is immediately returned -> using model validate inside the connector
+                    provided_data: Identifiable = await connector.provide()
                     provided_data_dict = provided_data.model_dump()
-                    model = aas_model_type.model_validate(provided_data_dict)
-                    setattr(model, attribute_name, item)
-                    await connector.consume(model)
+                    top_level_model_instance = top_level_model.model_validate(provided_data_dict)
+                    setattr(top_level_model_instance, attribute_name, item)
+                    await connector.consume(top_level_model_instance)
                     return {
                         "message": f"Succesfully created attribute {attribute_name} of aas with id {item_id}"
                     }
@@ -164,16 +203,16 @@ class RestRouter:
                     )
 
         @router.put("/")
-        async def put_item(item_id: str, item: submodel_model_type) -> Dict[str, str]: # type: ignore
+        async def put_item(item_id: str, item: contained_model) -> Dict[str, str]: # type: ignore
             connector = self.get_connector(item_id)
             try:
-                model = await connector.provide()
-                if getattr(model, attribute_name) == item:
+                top_level_model_instance: Identifiable = await connector.provide()
+                if getattr(top_level_model_instance, attribute_name) == item:
                     return {
                         "message": f"Attribute {attribute_name} of model with id {item_id} is already up to date"
                     }
-                setattr(model, attribute_name, item)
-                await connector.consume(model)
+                setattr(top_level_model_instance, attribute_name, item)
+                await connector.consume(top_level_model_instance)
                 return {
                     "message": f"Succesfully updated attribute {attribute_name} of model with id {item_id}"
                 }
@@ -183,15 +222,15 @@ class RestRouter:
                     detail=f"Attribute {attribute_name} of model with id {item_id} could not be updated. Error: {e}",
                 )
 
-        if optional_submodel:
+        if is_optional_contained_model:
 
             @router.delete("/")
             async def delete_item(item_id: str):
                 connector = self.get_connector(item_id)
                 try:
-                    model = await connector.provide()
-                    setattr(model, attribute_name, None)
-                    await connector.consume(model)
+                    top_level_model_instance: Identifiable = await connector.provide()
+                    setattr(top_level_model_instance, attribute_name, None)
+                    await connector.consume(top_level_model_instance)
                     return {
                         "message": f"Succesfully deleted attribute {attribute_name} of model with id {item_id}"
                     }
@@ -204,13 +243,13 @@ class RestRouter:
         if file_paths:
             for file_path in file_paths:
                 self.generate_endpoints_for_file_path(
-                    router, attribute_name, submodel_model_type, file_path
+                    router, attribute_name, contained_model, file_path
                 )
 
         if blob_paths:
             for blob_path in blob_paths:
                 self.generate_endpoints_for_blob_path(
-                    router, attribute_name, submodel_model_type, blob_path
+                    router, attribute_name, contained_model, blob_path
                 )
 
         return router
@@ -219,28 +258,21 @@ class RestRouter:
         self,
         router: APIRouter,
         attribute_name: str,
-        submodel_model_type: Type[Submodel],
+        contained_model_type: Type[Identifiable],
         file_path: list[str],
     ):
         """
-        Generates CRUD endpoints for a file path of a submodel of a pydantic model representing an aas.
+        Generates CRUD endpoints for a file path of a File of an Identifiable model.
 
         Args:
-            router (APIRouter): FastAPI router with CRUD endpoints for the given submodel that performs Middleware syxnchronization.
-            attribute_name (str): The name of the attribute of the submodel.
-            submodel_model_type (Type[base.Submodel]): Pydantic model representing the submodel.
-            file_path (list[str]): The path to the file.
+            router (APIRouter): FastAPI router with CRUD endpoints for the given contained model that performs Middleware synchronization.
+            attribute_name (str): The name of the attribute with the contained model.
+            contained_model_type (Type[Identifiable]): Pydantic model representing the contained model.
+            file_path (list[str]): The path to the file attribute of the contained model.
 
-        Returns:
-            APIRouter: FastAPI router with CRUD endpoints for the given file path that performs Middleware syxnchronization.
+        Returns:    
+            APIRouter: FastAPI router with CRUD endpoints for the given file path that performs Middleware synchronization.
         """
-        # if typing.get_origin(submodel_model_type) == Union and type(
-        #     None
-        # ) in typing.get_args(submodel_model_type):
-        #     submodel_model_type = typing.get_args(submodel_model_type)[0]
-
-        # assert file_path[0] == submodel_model_type.__name__
-        # file_path.pop(0)
         url_file_path = "/".join(file_path)
         file_path.insert(0, attribute_name)
 
@@ -263,34 +295,28 @@ class RestRouter:
             except Exception as e:
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Submodel with id {item_id} could not be retrieved. Error: {e}",
+                    detail=f"Model with id {item_id} could not be retrieved. Error: {e}",
                 )
 
     def generate_endpoints_for_blob_path(
         self,
         router: APIRouter,
         attribute_name: str,
-        submodel_model_type: Type[Submodel],
+        contained_model_type: Type[Identifiable],
         blob_path: list[str],
     ):
         """
-        Generates CRUD endpoints for a file path of a submodel of a pydantic model representing an aas.
+        Generates CRUD endpoints for a file path of a Blob of an Identifiable model.
 
         Args:
-            router (APIRouter): FastAPI router with CRUD endpoints for the given submodel that performs Middleware syxnchronization.
-            attribute_name (str): The name of the attribute of the submodel.
-            submodel_model_type (Type[base.Submodel]): Pydantic model representing the submodel.
-            blob_path (list[str]): The path to the file.
+            router (APIRouter): FastAPI router with CRUD endpoints for the given contained model that performs Middleware synchronization.
+            attribute_name (str): The name of the attribute with the contained model.
+            contained_model_type (Type[Identifiable]): Pydantic model representing the contained model.
+            blob_path (list[str]): The path to the blob attribute of the contained model.
 
         Returns:
-            APIRouter: FastAPI router with CRUD endpoints for the given file path that performs Middleware syxnchronization.
+            APIRouter: FastAPI router with CRUD endpoints for the given blob path that performs Middleware synchronization.
         """
-        # if typing.get_origin(submodel_model_type) == Union and type(
-        #     None
-        # ) in typing.get_args(submodel_model_type):
-        #     submodel_model_type = typing.get_args(submodel_model_type)[0]
-        # assert blob_path[0] == submodel_model_type.__name__
-        # blob_path.pop(0)
         url_blob_path = "/".join(blob_path)
         blob_path.insert(0, attribute_name)
 
@@ -310,94 +336,97 @@ class RestRouter:
             except Exception as e:
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Submodel with id {item_id} could not be retrieved. Error: {e}",
+                    detail=f"Model with id {item_id} could not be retrieved. Error: {e}",
                 )
 
-    def generate_aas_endpoints_from_model(self, aas_model_type: Type[AAS]) -> APIRouter:
+    def generate_aas_endpoints_from_model(self, model_type: Type[Identifiable]) -> APIRouter:
         """
-        Generates CRUD endpoints for a pydantic model representing an aas.
+        Generates CRUD endpoints for a pydantic model representing an Identifiable model.
 
         Args:
-            aas_model_type (Type[AAS]): Pydantic model representing an aas
+            model_type (Type[Identifiable]): Identifiable model.
 
         Returns:
-            APIRouter: FastAPI router with CRUD endpoints for the given pydantic model that performs Middleware syxnchronization.
+            APIRouter: FastAPI router with CRUD endpoints for the given pydantic model that performs Middleware synchronization.
         """
         router = APIRouter(
-            prefix=f"/{aas_model_type.__name__}",
-            tags=[aas_model_type.__name__],
+            prefix=f"/{model_type.__name__}",
+            tags=[model_type.__name__],
             responses={404: {"description": "Not found"}},
         )
 
-        blob_paths = get_attribute_paths_to_contained_type(aas_model_type, Blob)
+        blob_paths = get_attribute_paths_to_contained_type(model_type, Blob)
 
-        @router.get("/", response_model=List[aas_model_type])
+        @router.get("/", response_model=List[model_type])
         async def get_items():
-            aas_list = []
+            model_instance_list = []
             connection_infos = (
                 self.middleware.persistence_registry.get_type_connection_info(
-                    aas_model_type.__name__
+                    model_type.__name__
                 )
             )
             for connection_info in connection_infos:
                 connector = self.middleware.persistence_registry.get_connection(
                     connection_info
                 )
-                retrieved_aas = await connector.provide()
-                retrieved_aas = remove_blob_contens(retrieved_aas, blob_paths)
-                aas_list.append(retrieved_aas)
-            return aas_list
+                retrieved_model_instance = await connector.provide()
+                retrieved_model_instance = remove_blob_contents(retrieved_model_instance, blob_paths)
+                model_instance_list.append(retrieved_model_instance)
+            return model_instance_list
 
         @router.post(f"/", response_model=Dict[str, str])
-        async def post_item(item: aas_model_type) -> Dict[str, str]: # type: ignore
+        async def post_item(item: model_type) -> Dict[str, str]: # type: ignore
             try:
                 await self.middleware.persist(
                     data_model_name=self.data_model_name, model=item
                 )
                 return {
-                    "message": f"Succesfully created aas {aas_model_type.__name__} with id {item.id}"
+                    "message": f"Succesfully created Model {model_type.__name__} with id {item.id}"
                 }
             except ValueError:
                 raise HTTPException(
-                    status_code=400, detail=f"AAS with id {item.id} already exists"
+                    status_code=400, detail=f"Model with id {item.id} already exists. Try updating it instead."
                 )
 
-        @router.get("/{item_id}", response_model=aas_model_type)
+        @router.get("/{item_id}", response_model=model_type)
         async def get_item(item_id: str):
             try:
                 connector = self.get_connector(item_id)
-                provided_data = await connector.provide()
-                # TODO: update that the correct type is immediately returned -> using model validate inside the connector
+                provided_data: Identifiable = await connector.provide()
                 provided_data_dict = provided_data.model_dump()
-                aas_model = aas_model_type.model_validate(provided_data_dict)
-                aas_model = remove_blob_contens(aas_model, blob_paths)
-                return aas_model
+                model_instance = model_type.model_validate(provided_data_dict)
+                model_instance = remove_blob_contents(model_instance, blob_paths)
+                return model_instance
             except Exception as e:
                 raise HTTPException(
                     status_code=400,
-                    detail=f"AAS with id {item_id} could not be retrieved. Error: {e}",
+                    detail=f"Model with id {item_id} could not be retrieved. Error: {e}",
                 )
 
         @router.put("/{item_id}")
-        async def put_item(item_id: str, item: aas_model_type) -> Dict[str, str]: # type: ignore
+        async def put_item(item_id: str, item: model_type) -> Dict[str, str]: # type: ignore
             try:
                 consumer = self.get_connector(item_id)
             except KeyError as e:
                 raise HTTPException(
                     status_code=400,
-                    detail=f"AAS with id {item_id} could not be retrieved. Try posting it at first.",
+                    detail=f"Model with id {item_id} could not be retrieved. Try posting it at first.",
                 )
+            try:
+                if item_id == item.id:
+                    await consumer.consume(item)
+                else:
+                    await self.middleware.persist(
+                        data_model_name=self.data_model_name, model=item
+                    )
+                    await delete_item(item_id)
 
-            # TODO: add some exception handling below
-            if item_id == item.id:
-                await consumer.consume(item)
-            else:
-                await self.middleware.persist(
-                    data_model_name=self.data_model_name, model=item
+                return {"message": f"Succesfully updated Model with id {item.id}"}
+            except Exception as e:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Model with id {item_id} could not be updated. Error: {e}",
                 )
-                await delete_item(item_id)
-
-            return {"message": f"Succesfully updated aas with id {item.id}"}
 
         @router.delete("/{item_id}")
         async def delete_item(item_id: str):
@@ -405,12 +434,12 @@ class RestRouter:
             self.middleware.persistence_registry.remove_connection(
                 ConnectionInfo(data_model_name=self.data_model_name, model_id=item_id)
             )
-            return {"message": f"Succesfully deleted aas with id {item_id}"}
+            return {"message": f"Succesfully deleted Model with id {item_id}"}
 
         return router
 
     def generate_endpoints_from_model(
-        self, pydantic_model: Type[BaseModel]
+        self, identifiable: Type[Identifiable]
     ) -> List[APIRouter]:
         """
         Generates CRUD endpoints for a pydantic model representing an aas and its submodels.
@@ -422,12 +451,12 @@ class RestRouter:
             List[APIRouter]: List of FastAPI routers with CRUD endpoints for the given pydantic model and its submodels that perform Middleware syxnchronization.
         """
         routers = []
-        routers.append(self.generate_aas_endpoints_from_model(pydantic_model))
-        attribute_infos = get_contained_models_attribute_info(pydantic_model)
+        routers.append(self.generate_aas_endpoints_from_model(identifiable))
+        attribute_infos = get_contained_models_attribute_info(identifiable)
         for attribute_name, contained_model in attribute_infos:
             routers.append(
                 self.generate_endpoints_from_contained_model(
-                    pydantic_model, attribute_name, contained_model
+                    identifiable, attribute_name, contained_model
                 )
             )
         return routers

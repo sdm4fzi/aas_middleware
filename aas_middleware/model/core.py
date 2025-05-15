@@ -39,7 +39,8 @@ class Identifiable(BaseModel):
     def check_id_and_id_short(cls, data: Any) -> Any:
         potential_id = get_id(data)
         assert potential_id, "Either id or id_short must be set"
-        return {"id": potential_id}
+        data.update({"id": potential_id})
+        return data
 
 
 from aas_middleware.model.util import get_id

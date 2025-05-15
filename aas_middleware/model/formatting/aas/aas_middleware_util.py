@@ -38,10 +38,7 @@ def get_contained_models_attribute_info(
     """
     submodels = []
     for attribute_name, fieldinfo in model.model_fields.items():
-        if typing.get_args(fieldinfo.annotation) != () and any(
-            issubclass(arg, aas_model.Submodel)
-            for arg in typing.get_args(fieldinfo.annotation)
-        ):
+        if typing.get_args(fieldinfo.annotation) != ():
             submodels.append((attribute_name, fieldinfo.annotation))
         elif issubclass(fieldinfo.annotation, aas_model.Submodel):
             submodels.append((attribute_name, fieldinfo.annotation))

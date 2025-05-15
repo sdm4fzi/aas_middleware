@@ -3,6 +3,7 @@ import typing
 from aas_middleware.model.data_model import DataModel
 from aas_pydantic.aas_model import Blob, File, Submodel
 from aas_middleware.model.schema_util import get_attribute_dict_of_schema
+from aas_middleware.model.util import is_identifiable_type, is_identifiable_type_container
 
 
 def get_path_to_top_level_model_instance(
@@ -122,10 +123,24 @@ def get_attribute_paths_to_contained_type(
     type: type,
     contained_type: type,
 ) -> list[list[str]]:
+    if not is_identifiable_type(type) or not is_identifiable_type_container(type):
+        return []
     if typing.get_origin(type) == typing.Union and NoneType in typing.get_args(type):
         type = typing.get_args(type)[0]
     data_model = DataModel.from_model_types(type)
-    attribute_paths = get_attribute_paths_to_type(contained_type, data_model)
+    if typing.get_origin(contained_type) is typing.Union:
+        attribute_paths = []
+        for arg in typing.get_args(contained_type):
+            if arg == NoneType:
+                continue
+            arg_attribute_paths = get_attribute_paths_to_type(arg, data_model)
+            if not arg_attribute_paths:
+                continue
+            attribute_paths.extend(arg_attribute_paths)
+        # remove duplicates
+        attribute_paths = list({tuple(path): path for path in attribute_paths}.values())
+    else:   
+        attribute_paths = get_attribute_paths_to_type(contained_type, data_model)
     new_attribute_paths = []
     for attribute_path in attribute_paths:
         assert (
