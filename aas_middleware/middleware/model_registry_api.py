@@ -2,6 +2,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List
 import json
 
+from aas_middleware.model.formatting.json_schema.json_schema_to_pydantic_formatter import JsonSchemaFormatter, JsonSchemaToPydanticParser
+from aas_middleware.model.util import get_identifiable_attributes_dict_of_model, is_identifiable_type
+
 if TYPE_CHECKING:
     from aas_middleware.middleware.middleware import Middleware
 
@@ -12,7 +15,6 @@ from aas_middleware.middleware.rest_routers import RestRouter
 
 
 from typing import Dict
-
 
 
 # TODO: extend the model registry API to the admin API, where als consumers, providers etc. can be defined.
@@ -70,26 +72,19 @@ def update_openapi(app: FastAPI):
 def register_model_from_middleware(
     model_name: str, model: dict, middleware_instance: Middleware
 ):
-    middleware_instance.load_json_models(
-        json_models={model_name: model}, all_fields_required=True
+    data_model = JsonSchemaFormatter().deserialize(model)
+    middleware_instance.load_data_model(
+        model_name, data_model, persist_instances=True
     )
-    rest_router = RestRouter(middleware_instance.models[-1], middleware_instance)
+    rest_router = RestRouter(data_model, model_name, middleware_instance)
     routers = rest_router.generate_endpoints()
-    for router in routers:
-        middleware_instance.app.include_router(router)
     update_openapi(middleware_instance.app)
     remove_graphql_api(middleware_instance.app)
-    middleware_instance.generate_graphql_api_for_data_model()
+    # middleware_instance.generate_graphql_api_for_data_model(model_name)
 
 
 def delete_model_from_middleware(model_name: str, middleware_instance: Middleware):
-    new_models = []
-
-    for model in middleware_instance.models:
-        if not model.__name__ == model_name:
-            new_models.append(model)
-    middleware_instance.models = new_models
-
+    del middleware_instance.data_models[model_name]
     remove_model_routes_from_app(middleware_instance.app, model_name)
     remove_graphql_api(middleware_instance.app)
     middleware_instance.generate_graphql_api_for_data_model()
@@ -131,33 +126,17 @@ def generate_model_api(middleware_instance: Middleware) -> APIRouter:
         response_model=dict,
     )
     async def post_model(model_name: str, model: dict) -> Dict[str, str]:
-        if any(
-            model_name == model_instance.__name__
-            for model_instance in middleware_instance.models
-        ):
+        if model_name in middleware_instance.data_models:
             raise HTTPException(
                 403,
                 f"A model with the name {model_name} exists already! Please update the existing model.",
             )
-        if not "id" in model.keys():
-            raise HTTPException(
-                403, f"Mandatory field id is missing for the model <{model_name}>."
-            )
-        for key, value in model.items():
-            if isinstance(value, dict) and not "id" in value.keys():
-                raise HTTPException(
-                    403,
-                    f"Mandatory field id is missing in submodel <{key}> for model <{model_name}>.",
-                )
         register_model_from_middleware(model_name, model, middleware_instance)
         return {"message": f"Succesfully created API for model {model_name}."}
 
     @router.put("/update_model", response_model=dict)
     async def update_model(model_name: str, model: dict) -> Dict[str, str]:
-        if not any(
-            model_name == model_instance.__name__
-            for model_instance in middleware_instance.models
-        ):
+        if model_name not in middleware_instance.data_models:
             raise HTTPException(
                 403,
                 f"A model with the name {model_name} does not exist yet! Please post a new model.",
@@ -178,9 +157,7 @@ def generate_model_api(middleware_instance: Middleware) -> APIRouter:
 
     @router.delete("/delete_model", response_model=dict)
     async def delete_model(model_name: str):
-        if not any(
-            model.__name__ == model_name for model in middleware_instance.models
-        ):
+        if model_name not in middleware_instance.data_models:
             raise HTTPException(
                 404, f"No model registered in middleware with name <{model_name}>"
             )

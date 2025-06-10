@@ -1,0 +1,69 @@
+{
+    "id": "TransferUnit1",
+    "ConveyorBelts": [
+        {
+            "id": "https://www.sfb1574.kit.edu/ontologies/TransferUnitinstances#Conveyorbelt1_right",
+            "ConveyorSpeed": {
+                "id": "https://www.sfb1574.kit.edu/ontologies/TransferUnitinstances#Conveyorbelt1_right_https://www.sfb1574.kit.edu/ontologies/TransferUnit#hasConveyorSpeed",
+                "value": 10.2,
+                "id_short": "ConveyorSpeed",
+                "MQTTTopic": "Conveyorbelt1/right/speed",
+                "MQTTBrokerIP": "192.168.30.89",
+                "semantic_id": "https://www.sfb1574.kit.edu/ontologies/TransferUnit#hasConveyorSpeed",
+                "parameter_type": "MQTTParameter"
+            },
+            "parent_id": "https://www.sfb1574.kit.edu/ontologies/TransferUnitinstances#TransferUnit1",
+            "id_short": "Conveyorbelt1_right",
+            "semantic_id": "https://www.sfb1574.kit.edu/ontologies/TransferUnitinstances#Conveyorbelt1_right"
+        },
+        {
+            "id": "https://www.sfb1574.kit.edu/ontologies/TransferUnitinstances#Conveyorbelt_1_left",
+            "ConveyorSpeed": {
+                "id": "https://www.sfb1574.kit.edu/ontologies/TransferUnitinstances#Conveyorbelt_1_left_https://www.sfb1574.kit.edu/ontologies/TransferUnit#hasConveyorSpeed",
+                "value": 12.1,
+                "id_short": "ConveyorSpeed",
+                "MQTTTopic": "Conveyorbelt_1/left/speed",
+                "MQTTBrokerIP": "192-168.30.90",
+                "semantic_id": "https://www.sfb1574.kit.edu/ontologies/TransferUnit#hasConveyorSpeed",
+                "parameter_type": "MQTTParameter"
+            },
+            "parent_id": "https://www.sfb1574.kit.edu/ontologies/TransferUnitinstances#TransferUnit1",
+            "id_short": "Conveyorbelt_1_left",
+            "semantic_id": "https://www.sfb1574.kit.edu/ontologies/TransferUnitinstances#Conveyorbelt_1_left"
+        }
+    ],
+    "LightBarriers": [
+        {
+            "id": "https://www.sfb1574.kit.edu/ontologies/TransferUnitinstances#LightBarrier1_Front",
+            "Occupied": {
+                "id": "https://www.sfb1574.kit.edu/ontologies/TransferUnitinstances#LightBarrier1_Front_https://www.sfb1574.kit.edu/ontologies/TransferUnit#isOccupied",
+                "value": true,
+                "id_short": "Occupied",
+                "MQTTTopic": "LightBarrier1/Front/occupied",
+                "MQTTBrokerIP": "192.168.30.91",
+                "semantic_id": "https://www.sfb1574.kit.edu/ontologies/TransferUnit#isOccupied",
+                "parameter_type": "MQTTParameter"
+            },
+            "parent_id": "https://www.sfb1574.kit.edu/ontologies/TransferUnitinstances#TransferUnit1",
+            "id_short": "LightBarrier1_Front",
+            "semantic_id": "https://www.sfb1574.kit.edu/ontologies/TransferUnitinstances#LightBarrier1_Front"
+        },
+        {
+            "id": "https://www.sfb1574.kit.edu/ontologies/TransferUnitinstances#Lightbarrier1_Back",
+            "Occupied": {
+                "id": "https://www.sfb1574.kit.edu/ontologies/TransferUnitinstances#Lightbarrier1_Back_https://www.sfb1574.kit.edu/ontologies/TransferUnit#isOccupied",
+                "value": false,
+                "id_short": "Occupied",
+                "MQTTTopic": "Lightbarrier1/Back/occupied",
+                "MQTTBrokerIP": "192.168.30.92",
+                "semantic_id": "https://www.sfb1574.kit.edu/ontologies/TransferUnit#isOccupied",
+                "parameter_type": "MQTTParameter"
+            },
+            "parent_id": "https://www.sfb1574.kit.edu/ontologies/TransferUnitinstances#TransferUnit1",
+            "id_short": "Lightbarrier1_Back",
+            "semantic_id": "https://www.sfb1574.kit.edu/ontologies/TransferUnitinstances#Lightbarrier1_Back"
+        }
+    ],
+    "id_short": "TransferUnit1",
+    "semantic_id": "https://www.sfb1574.kit.edu/ontologies/TransferUnitinstances#TransferUnit1"
+}
