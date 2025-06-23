@@ -74,7 +74,7 @@ class JsonSchemaFormatter:
         dynamic_type = jsonschema_to_pydantic(data)
         # test if all attributes are called like the class and if all are lists, if so create a DataModel from the types
         if all(
-            attribute_name == convert_camel_case_to_underscrore_str(typing.get_args(field_info.annotation)[0].__name__) and typing.get_origin(field_info.annotation) == list
+            typing.get_origin(field_info.annotation) == list and attribute_name == convert_camel_case_to_underscrore_str(typing.get_args(field_info.annotation)[0].__name__)
             for attribute_name, field_info in dynamic_type.model_fields.items()
         ):
             all_types = [typing.get_args(field_info.annotation)[0] for field_info in dynamic_type.model_fields.values()]

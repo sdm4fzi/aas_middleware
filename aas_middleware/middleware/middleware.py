@@ -82,6 +82,7 @@ class Middleware:
 
     def __init__(self):
         self._app: typing.Optional[FastAPI] = None
+        self._startup_complete: bool = False
         self.meta_data: MiddlewareMetaData = MiddlewareMetaData()
 
         self.data_models: typing.Dict[str, DataModel] = {}
@@ -96,6 +97,7 @@ class Middleware:
         self.workflow_registry: WorkflowRegistry = WorkflowRegistry()
 
         self.mapper_registry: MapperRegistry = MapperRegistry()
+
 
     def set_meta_data(
         self, title: str, description: str, version: str, contact: typing.Dict[str, str]
@@ -151,7 +153,7 @@ class Middleware:
                 asyncio.create_task(workflow.execute())
         for callback in self.on_start_up_callbacks:
             await callback()
-
+        self._startup_complete = True
         yield
         for workflow in self.workflow_registry.get_workflows():
             if workflow.on_shutdown:
@@ -469,8 +471,11 @@ class Middleware:
                 model_type,
             )
             self.app.include_router(router)
-
-        self.add_callback("on_start_up", initiate_sync)
+        # make this if the app isnt started already
+        if not self._startup_complete:
+            self.add_callback("on_start_up", initiate_sync)
+        else:
+            asyncio.create_task(initiate_sync())
 
     def workflow(
         self,
