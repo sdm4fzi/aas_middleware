@@ -98,7 +98,6 @@ class Middleware:
 
         self.mapper_registry: MapperRegistry = MapperRegistry()
 
-
     def set_meta_data(
         self, title: str, description: str, version: str, contact: typing.Dict[str, str]
     ):
@@ -115,6 +114,33 @@ class Middleware:
         self.meta_data = MiddlewareMetaData(
             title=title, description=description, version=version, contact=contact
         )
+
+    def connect_to_registry(
+            self,
+            registry_type: typing.Literal["consul"],
+            registry_url: str,
+            host: str,
+            port: int
+    ):
+        """
+        Function to connect the middleware to a service registry.
+
+        Args:
+            registry_type (typing.Literal["consul"]): The type of the registry.
+            registry_url (str): The url of the registry.
+            host (str): The host of the middleware.
+            port (int): The port of the middleware.
+        """
+        if registry_type == "consul":
+            from aas_middleware.middleware.registry_integration import ConsulIntegrator
+
+            self.registry_integrator = ConsulIntegrator(
+                registry_url, host, port, self.meta_data
+            )
+        else:
+            raise ValueError(f"Registry type {registry_type} not supported.")
+
+        self.add_callback("on_start_up", self.registry_integrator.register)
 
     def add_callback(
         self,
@@ -197,6 +223,10 @@ class Middleware:
             @app.get("/", response_model=str)
             async def root():
                 return "Welcome to aas-middleware!"
+            
+            @app.get("/health", response_model=str)
+            async def health():
+                return "OK" 
 
         return self._app
 
@@ -480,6 +510,7 @@ class Middleware:
     def workflow(
         self,
         *args,
+        capability: typing.Optional[str] = None,
         on_startup: bool = False,
         on_shutdown: bool = False,
         interval: typing.Optional[float] = None,
@@ -499,6 +530,7 @@ class Middleware:
                     on_shutdown=on_shutdown,
                     interval=interval,
                     pool_size=pool_size,
+                    capability=capability,
                     **kwargs,
                 )
             elif queueing:
@@ -509,6 +541,7 @@ class Middleware:
                     on_shutdown=on_shutdown,
                     interval=interval,
                     pool_size=pool_size,
+                    capability=capability,
                     **kwargs,
                 )
             else:
@@ -518,6 +551,7 @@ class Middleware:
                     on_startup=on_startup,
                     on_shutdown=on_shutdown,
                     interval=interval,
+                    capability=capability,
                     **kwargs,
                 )
             self.workflow_registry.add_workflow(workflow)

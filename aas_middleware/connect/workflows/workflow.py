@@ -31,6 +31,7 @@ class Workflow:
         interval: Optional[float],
         on_startup: bool = False,
         on_shutdown: bool = False,
+        capability: Optional[str] = None,
     ):
         if not isinstance(workflow_function, functools.partial):
             workflow_function = typeguard.typechecked(workflow_function)
@@ -39,6 +40,7 @@ class Workflow:
         self.on_shutdown = on_shutdown
         self.interval = interval
         self.task_groups: Dict[str, TaskGroup] = {}
+        self.capability: str = capability if capability else self.get_name()
 
     @property
     def running(self) -> bool:
@@ -54,6 +56,7 @@ class Workflow:
     def get_description(self) -> WorkflowDescription:
         return WorkflowDescription(
             name=self.get_name(),
+            capability=self.capability,
             running=self.running,
             on_startup=self.on_startup,
             on_shutdown=self.on_shutdown,
@@ -70,6 +73,7 @@ class Workflow:
         on_startup: bool,
         on_shutdown: bool,
         interval: Optional[float],
+        capability: Optional[str] = None,
         **kwargs: Dict[str, Any],
     ):
         workflow_function = typechecked_partial(
@@ -79,7 +83,8 @@ class Workflow:
             workflow_function=workflow_function,
             on_startup=on_startup,
             on_shutdown=on_shutdown,
-            interval=interval
+            interval=interval,
+            capability=capability
         )
 
     async def _run_workflow_function(self, *args, **kwargs) -> Awaitable[Any]:
@@ -98,7 +103,7 @@ class Workflow:
             if execution_id in self.task_groups:
                 del self.task_groups[execution_id]
             raise exc.with_traceback(exc.__traceback__)
-        
+
     async def execute(self, *args, **kwargs) -> Awaitable[Any]:
         """
         Args:

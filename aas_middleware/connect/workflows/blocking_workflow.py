@@ -46,7 +46,8 @@ class BlockingWorkflow(Workflow):
         on_startup: bool,
         on_shutdown: bool,
         interval: Optional[float],
-        pool_size: int=1,
+        pool_size: int = 1,
+        capability: Optional[str] = None,
         **kwargs: Dict[str, Any],
     ):
         workflow_function = typechecked_partial(func, *args, **kwargs)
@@ -56,6 +57,7 @@ class BlockingWorkflow(Workflow):
             on_shutdown=on_shutdown,
             interval=interval,
             pool_size=pool_size,
+            capability=capability
         )
 
     async def _run_workflow_function(self, *args, **kwargs) -> Awaitable[Any]:

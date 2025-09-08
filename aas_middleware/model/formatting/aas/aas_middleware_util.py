@@ -1,4 +1,5 @@
 import json
+import types
 from typing import List, Tuple, Type, Dict
 from basyx.aas import model
 
@@ -7,7 +8,7 @@ import typing
 
 from pydantic.fields import FieldInfo
 from aas_pydantic import aas_model
-from aas_middleware.model.util import convert_under_score_to_camel_case_str
+from aas_middleware.model.util import convert_under_score_to_camel_case_str, is_identifiable_type, is_identifiable_type_container
 
 
 def save_model_list_with_schema(model_list: typing.List[BaseModel], path: str):
@@ -38,11 +39,39 @@ def get_contained_models_attribute_info(
     """
     submodels = []
     for attribute_name, fieldinfo in model.model_fields.items():
-        if typing.get_args(fieldinfo.annotation) != ():
+        if typing.get_args(fieldinfo.annotation) != () and all(
+            is_identifiable_type(arg) or is_identifiable_type_container(arg) for arg in typing.get_args(fieldinfo.annotation)
+        ):
             submodels.append((attribute_name, fieldinfo.annotation))
-        elif issubclass(fieldinfo.annotation, aas_model.Submodel):
+        elif is_identifiable_type(fieldinfo.annotation) or is_identifiable_type_container(fieldinfo.annotation):
             submodels.append((attribute_name, fieldinfo.annotation))
     return submodels
+
+
+def unwrap_basemodel_types(tp) -> list[type[BaseModel]]:
+    """Extract BaseModel subclasses contained in a typing annotation (handles X|Y, Optional[X], List[X])."""
+    origin = typing.get_origin(tp)
+
+    # List[...] / list[...]
+    if origin in (list, typing.List):
+        (inner,) = typing.get_args(tp) or (None,)
+        return unwrap_basemodel_types(inner)
+
+    # Union[...] / X | Y
+    if origin in (typing.Union, types.UnionType):
+        out: list[type[BaseModel]] = []
+        for arg in typing.get_args(tp):
+            if arg is type(None):
+                continue
+            out.extend(unwrap_basemodel_types(arg))
+        return out
+
+    # Bare BaseModel subclass
+    if isinstance(tp, type) and issubclass(tp, BaseModel):
+        return [tp]
+
+    # Not a BaseModel (e.g., str | int | uuid.UUID)
+    return []
 
 
 def get_all_submodel_elements_from_submodel(
@@ -59,15 +88,18 @@ def get_all_submodel_elements_from_submodel(
     Returns:
         List[aas_model.SubmodelElementCollection | list | str | bool | float | int]: A list of all submodel elements in the pydantic submodel
     """
-    submodel_elements = {}
+    if not (isinstance(model, type) and issubclass(model, BaseModel)):
+        unwrapped = unwrap_basemodel_types(model)
+        if not unwrapped:
+            # Nothing to do for primitive unions like str|int|UUID
+            raise TypeError(f"Expected Submodel class, got {model!r}")
+        model = unwrapped[0]
+
+    submodel_elements: dict[str, type] = {}
     for field_name, field_info in model.model_fields.items():
-        if (
-            field_name != "description"
-            and field_name != "id_short"
-            and field_name != "semantic_id"
-            and field_name != "id"
-        ):
-            submodel_elements[field_name] = field_info.annotation
+        if field_name in {"description", "id_short", "semantic_id", "id"}:
+            continue
+        submodel_elements[field_name] = field_info.annotation
     return submodel_elements
 
 

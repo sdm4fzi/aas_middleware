@@ -19,6 +19,7 @@ class WorkflowDescription(BaseModel):
     """
 
     name: str
+    capability: str
     running: bool
     on_startup: bool
     on_shutdown: bool

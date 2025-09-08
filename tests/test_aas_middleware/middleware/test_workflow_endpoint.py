@@ -41,6 +41,7 @@ def test_example_workflow(client: TestClient):
 
     assert response.text == WorkflowDescription(
         name="example_workflow",
+        capability="example_workflow",
         running=False,
         on_startup=False,
         on_shutdown=False,
@@ -52,13 +53,14 @@ def test_example_workflow(client: TestClient):
 
     response = execute_workflow_background(client, "example_workflow")
     assert response.status_code == 200
-    assert response.json() == {"message": f"Started exeuction of workflow example_workflow"}
+    assert response.json() == {"message": f"Started execution of workflow example_workflow"}
 
     response = get_workflow_description(client, "example_workflow")
     assert response.status_code == 200
 
     assert response.text == WorkflowDescription(
         name="example_workflow",
+        capability="example_workflow",
         running=False,
         on_startup=False,
         on_shutdown=False,

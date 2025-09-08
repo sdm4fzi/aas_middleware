@@ -65,7 +65,9 @@ class GraphQLRouter:
         """
         Generates a GraphQL endpoint for the given data model and adds it to the middleware.
         """
+        print(f"Generating GraphQL endpoint for data model: {self.data_model_name} + {self.data_model.get_top_level_types()}")
         for top_level_model_type in self.data_model.get_top_level_types():
+            print(f"Creating GraphQL types for model: {top_level_model_type}")
             self.create_query_for_model(top_level_model_type)
             # TODO: also make mutation possible
             # self.create_mutation_for_model(top_level_model_type)
@@ -295,6 +297,7 @@ def create_graphe_pydantic_output_type_for_submodel_elements(
     Args:
         model (typing.Union[base.Submodel, base.SubmodelElementCollectiontuple, list, set, ]): Submodel element for which the graphene pydantic output types should be created.
     """
+    print("Creating GraphQL type for model:", model, union_type)
     for attribute_value in get_all_submodel_elements_from_submodel(model).values():
         if is_basemodel_union_type(attribute_value) or is_optional_basemodel_type(
             attribute_value
