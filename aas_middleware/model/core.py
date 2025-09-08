@@ -40,7 +40,16 @@ class Identifiable(BaseModel):
     def check_id_and_id_short(cls, data: Any) -> Any:
         potential_id = get_id(data)
         assert potential_id, "Either id or id_short must be set"
-        data.update({"id": potential_id})
+        if isinstance(data, dict):
+            data.update({"id": potential_id})
+        else:
+            # If data is an object, convert to dict and add id
+            if hasattr(data, 'model_dump'):
+                data_dict = data.model_dump()
+            else:
+                data_dict = data.__dict__.copy()
+            data_dict.update({"id": potential_id})
+            data = data_dict
         return data
 
 

@@ -95,7 +95,7 @@ def generate_workflow_endpoint(workflow: Workflow) -> List[APIRouter]:
         @router.post("/execute_background", response_model=Dict[str, str])
         async def execute_background(background_tasks: BackgroundTasks):
             background_tasks.add_task(workflow.execute)
-            return {"message": f"Started exeuction of workflow {workflow.get_name()}"}
+            return {"message": f"Started execution of workflow {workflow.get_name()}"}
     else:
         if workflow.get_description().interval is None:
             @router.post("/execute", response_model=return_type)
@@ -116,7 +116,7 @@ def generate_workflow_endpoint(workflow: Workflow) -> List[APIRouter]:
                 background_tasks.add_task(workflow.execute, **input_value)
             else:
                 background_tasks.add_task(workflow.execute, arg)
-            return {"message": f"Started exeuction of workflow {workflow.get_name()}"}
+            return {"message": f"Started execution of workflow {workflow.get_name()}"}
         
 
     @router.get("/description", response_model=WorkflowDescription)

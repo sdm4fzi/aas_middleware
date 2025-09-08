@@ -174,13 +174,25 @@ class Middleware:
             await connector.connect()
         for persistence in self.persistence_registry.connectors.values():
             await persistence.connect()
+        # Start startup workflows as background tasks
+        startup_tasks = []
         for workflow in self.workflow_registry.get_workflows():
             if workflow.on_startup:
-                asyncio.create_task(workflow.execute())
+                task = asyncio.create_task(workflow.execute())
+                startup_tasks.append(task)
         for callback in self.on_start_up_callbacks:
             await callback()
         self._startup_complete = True
         yield
+        # Cancel startup tasks
+        for task in startup_tasks:
+            if not task.done():
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
+        
         for workflow in self.workflow_registry.get_workflows():
             if workflow.on_shutdown:
                 if workflow.running:
@@ -190,7 +202,16 @@ class Middleware:
         for callback in self.on_shutdown_callbacks:
             await callback()
 
+        # Cancel any background tasks from connectors
         for connector in self.connection_registry.connectors.values():
+            if hasattr(connector, '_background_tasks'):
+                for task in connector._background_tasks:
+                    if not task.done():
+                        task.cancel()
+                        try:
+                            await task
+                        except asyncio.CancelledError:
+                            pass
             await connector.disconnect()
         for persistence in self.persistence_registry.connectors.values():
             await persistence.disconnect()
@@ -486,10 +507,19 @@ class Middleware:
             if isinstance(connector, Receiver):
 
                 async def run_receive():
-                    async for _ in synced_connector.receive():
+                    try:
+                        async for _ in synced_connector.receive():
+                            pass
+                    except asyncio.CancelledError:
+                        # Task was cancelled, exit gracefully
                         pass
 
-                asyncio.create_task(run_receive())
+                # Store the task for proper cleanup
+                receive_task = asyncio.create_task(run_receive())
+                # Store the task in the connector for cleanup later
+                if not hasattr(synced_connector, '_background_tasks'):
+                    synced_connector._background_tasks = []
+                synced_connector._background_tasks.append(receive_task)
             # Replace the original connector with the synced one
             self.connection_registry.connectors[connector_id] = synced_connector
             router = generate_synced_connector_endpoint(
@@ -505,7 +535,14 @@ class Middleware:
         if not self._startup_complete:
             self.add_callback("on_start_up", initiate_sync)
         else:
-            asyncio.create_task(initiate_sync())
+            # If app is already started, we need to run this in the current event loop
+            # but we can't await it here, so we'll create a task and let it run
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(initiate_sync())
+            except RuntimeError:
+                # No event loop running, this shouldn't happen in normal operation
+                pass
 
     def workflow(
         self,

@@ -94,6 +94,17 @@ class _SharedClientManager:
             await async_client.aclose()
         cls._clients.clear()
         cls._httpx_args_map.clear()
+    
+    @classmethod
+    async def close_client(cls, base_url: str) -> None:
+        """Close a specific client by base_url"""
+        if base_url in cls._clients:
+            client = cls._clients[base_url]
+            async_client = client.get_async_httpx_client()
+            await async_client.aclose()
+            del cls._clients[base_url]
+            if base_url in cls._httpx_args_map:
+                del cls._httpx_args_map[base_url]
 
 
 class BasyxAASConnector(Generic[T]):
@@ -156,7 +167,9 @@ class BasyxAASConnector(Generic[T]):
         )
 
     async def disconnect(self) -> None:
-        await _SharedClientManager.close_all()
+        # Don't close shared clients as they might be used by other connectors
+        # The shared clients will be closed when the application shuts down
+        pass
 
     async def consume(self, body: Optional[T]) -> None:
         sem = self.__class__._semaphore
@@ -237,7 +250,9 @@ class BasyxSubmodelConnector(Generic[S]):
         await check_sm_server_online(self.submodel_server_address)
 
     async def disconnect(self) -> None:
-        await _SharedClientManager.close_all()
+        # Don't close shared clients as they might be used by other connectors
+        # The shared clients will be closed when the application shuts down
+        pass
 
     async def consume(self, body: Optional[S]) -> None:
         sem = self.__class__._semaphore

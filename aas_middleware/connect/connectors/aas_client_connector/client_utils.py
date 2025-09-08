@@ -90,11 +90,11 @@ async def is_server_online(
         return False
 
 async def check_sm_server_online(sm_server_adress: str):
-    if not is_server_online(sm_server_adress):
+    if not await is_server_online(sm_server_adress):
         raise HTTPException(status_code=503, detail=f"Eror 503: Submodel Server cannot be reached at adress {sm_server_adress}")
 
 async def check_aas_and_sm_server_online(aas_server_adress: str, submodel_server_adress: str):
-    if not is_server_online(aas_server_adress):
+    if not await is_server_online(aas_server_adress):
         raise HTTPException(status_code=503, detail=f"Eror 503: AAS Server cannot be reached at adress {aas_server_adress}")
-    if not is_server_online(submodel_server_adress):
+    if not await is_server_online(submodel_server_adress):
         raise HTTPException(status_code=503, detail=f"Eror 503: Submodel Server cannot be reached at adress {submodel_server_adress}")

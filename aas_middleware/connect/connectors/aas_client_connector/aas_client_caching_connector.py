@@ -43,7 +43,7 @@ class BasyxAASCachingConnector(Generic[T]):
 
     async def consume(self, body: Optional[T]) -> None:
         self._cached = body
-        asyncio.create_task(self._core.consume(body))
+        await self._core.consume(body)
 
     async def provide(self) -> T:
         if self._cached is None:

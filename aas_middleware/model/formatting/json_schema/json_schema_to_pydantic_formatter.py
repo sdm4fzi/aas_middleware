@@ -313,7 +313,7 @@ def jsonschema_to_pydantic(
         dynamic_models.update(
             {
                 sorted_result.name: create_model(
-                    sorted_result.name, __config__=config, **fields
+                    sorted_result.name, model_config=config(), **fields
                 )
             }
         )

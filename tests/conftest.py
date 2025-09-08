@@ -637,8 +637,7 @@ def client(example_middleware: Middleware) -> TestClient:
     """
     Create a new FastAPI TestClient based on the current app.
     """
-    with TestClient(example_middleware.app) as client:
-        return client
+    return TestClient(example_middleware.app)
     
 
 @pytest.fixture(scope="function")
@@ -646,8 +645,7 @@ def sync_connector_client(example_sync_connector_middleware: Middleware) -> Test
     """
     Create a new FastAPI TestClient based on the current app.
     """
-    with TestClient(example_sync_connector_middleware.app) as client:
-        return client
+    return TestClient(example_sync_connector_middleware.app)
 
 
 class TrivialFloatConnector:

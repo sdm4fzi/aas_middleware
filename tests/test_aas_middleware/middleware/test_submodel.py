@@ -27,7 +27,7 @@ def get_submodel(client: TestClient, example_aas_instance: ValidAAS):
     class_name = example_aas_instance.__class__.__name__
     example_submodel = example_aas_instance.example_submodel
 
-    response = client.get(url=f"/{class_name}/{example_aas_instance.id}/example_submodel")
+    response = client.get(url=f"/{class_name}/{example_aas_instance.id}/example_submodel/")
     assert response.status_code == 200
     assert response.text == example_submodel.model_dump_json()
 
