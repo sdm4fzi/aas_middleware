@@ -23,9 +23,10 @@ class QueueingWorkflow(Workflow):
         interval: Optional[float],
         on_startup: bool = False,
         on_shutdown: bool = False,
+        capability: Optional[str] = None,
         pool_size: int = 1,
     ):
-        super().__init__(workflow_function, interval, on_startup, on_shutdown)
+        super().__init__(workflow_function, interval, on_startup, on_shutdown, capability)
         self.pool_size = pool_size
         self.semaphore = anyio.Semaphore(pool_size)
 
