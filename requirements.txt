@@ -1,0 +1,38 @@
+# Core dependencies
+pydantic>=2.0.0
+asyncio-mqtt>=0.13.0
+
+# HTTP and networking
+aiohttp>=3.8.0
+httpx>=0.24.0
+
+# Database connectors
+asyncpg>=0.27.0
+redis>=4.5.0
+aioredis>=2.0.0
+
+# Service discovery
+consulate>=1.0.0
+
+# Web framework and API
+fastapi>=0.100.0
+uvicorn[standard]>=0.22.0
+strawberry-graphql>=0.200.0
+
+# Testing
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.0.0
+httpx>=0.24.0
+
+# Development and formatting
+black>=23.0.0
+isort>=5.12.0
+mypy>=1.0.0
+flake8>=6.0.0
+
+# Logging and monitoring
+structlog>=23.0.0
+
+# Utilities
+python-multipart>=0.0.6

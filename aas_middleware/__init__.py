@@ -39,3 +39,47 @@ from aas_pydantic.aas_model import AAS, Submodel, SubmodelElementCollection, Blo
 from aas_middleware.model import formatting
 
 from aas_middleware.connect import connectors
+
+# New modules moved from root directory
+from aas_middleware.core import (
+    bindings, config_model, errors, events, 
+    instrumentation, registries
+)
+from aas_middleware.domain import data_model
+from aas_middleware.ports import connector, lifecycle, discovery
+from aas_middleware.utils import logging as utils_logging
+from aas_middleware.facade import app, builder, rest_api
+
+__all__ = [
+    # Existing exports
+    "Middleware",
+    "AasMiddleware", 
+    "Reference",
+    "Identifier",
+    "DataModel",
+    "DataModelRebuilder",
+    "AAS",
+    "Submodel",
+    "SubmodelElementCollection",
+    "Blob",
+    "File",
+    "formatting",
+    "connectors",
+    "VERSION",
+    
+    # New exports from moved modules
+    "bindings",
+    "config_model", 
+    "errors",
+    "events",
+    "instrumentation",
+    "registries",
+    "data_model",
+    "connector",
+    "lifecycle",
+    "discovery",
+    "utils_logging",
+    "app",
+    "builder",
+    "rest_api"
+]
