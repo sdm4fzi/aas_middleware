@@ -102,7 +102,7 @@ example_connector = TrivialConnector()
 middleware.add_connector("test_connector", example_connector, model_type=str)
 
 
-@middleware.workflow()
+@middleware.workflow(capability="print_and_return")
 def example_workflow(a: str) -> str:
     print(a)
     return a
