@@ -14,12 +14,13 @@ UnIdentifiable = (
 )
 
 
-def string_is_not_empty(v: str):
-    assert v, "value must not be an empty string"
-    return v
+def string_is_not_empty(v: str | int | UUID):
+    if isinstance(v, str):
+        assert v, "value must not be an empty string"
+    return str(v)  # Convert to string for GraphQL compatibility
 
 
-IdString = Annotated[str | int | UUID, BeforeValidator(string_is_not_empty)]
+IdString = Annotated[str, BeforeValidator(string_is_not_empty)]
 
 
 class Identifiable(BaseModel):

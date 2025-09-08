@@ -9,7 +9,11 @@ from graphene_pydantic.registry import get_global_registry
 import graphene
 from aas_middleware.connect.connectors.connector import Connector
 from aas_middleware.model.core import Identifiable
-from aas_middleware.model.util import is_identifiable, is_identifiable_type, is_identifiable_type_container
+from aas_middleware.model.util import (
+    is_identifiable,
+    is_identifiable_type,
+    is_identifiable_type_container,
+)
 
 if typing.TYPE_CHECKING:
     from aas_middleware.middleware.middleware import Middleware
@@ -30,9 +34,9 @@ from aas_middleware.model.formatting.aas.aas_middleware_util import (
 from aas_pydantic.aas_model import AAS, Blob, File, Submodel, SubmodelElementCollection
 
 
-def get_base_query_and_mutation_classes() -> (
-    typing.Tuple[graphene.ObjectType, graphene.ObjectType]
-):
+def get_base_query_and_mutation_classes() -> typing.Tuple[
+    graphene.ObjectType, graphene.ObjectType
+]:
     """
     Returns the base query and mutation classes for the GraphQL endpoint.
 
@@ -68,30 +72,222 @@ class GraphQLRouter:
         """
         Generates a GraphQL endpoint for the given data model and adds it to the middleware.
         """
-        print(f"Generating GraphQL endpoint for data model: {self.data_model_name} + {self.data_model.get_top_level_types()}")
+        print(
+            f"Generating GraphQL endpoint for data model: {self.data_model_name} + {self.data_model.get_top_level_types()}"
+        )
         for top_level_model_type in self.data_model.get_top_level_types():
             print(f"Creating GraphQL types for model: {top_level_model_type}")
             self.create_query_for_model(top_level_model_type)
             # TODO: also make mutation possible
             # self.create_mutation_for_model(top_level_model_type)
         schema = graphene.Schema(query=self.query)
-        graphql_app = GraphQLApp(schema=schema, on_get=make_graphiql_handler())
+        graphql_app = GraphQLApp(
+            schema=schema, on_get=self.make_custom_graphiql_handler()
+        )
         self.middleware.app.mount("/graphql", graphql_app)
 
     def resolve_optional_and_union_types(
-        self, models: typing.List[typing.Tuple[str, typing.Type[Submodel]]]
+        self, models: typing.List[typing.Tuple[str, typing.Type]]
     ):
         resolved_models = []
-        for _, model in models:
-            if not typing.get_origin(model) is typing.Union:
-                resolved_models.append(model)
-                continue
-            submodels = typing.get_args(model)
-            for submodel in submodels:
-                if not submodel is NoneType:
-                    resolved_models.append(submodel)
+        for _, field_annotation in models:
+            # Handle typing.List[SomeModel] or typing.Optional[SomeModel]
+            if typing.get_origin(field_annotation) is typing.Union:
+                # This could be Optional[SomeModel] or Union[SomeModel, None]
+                submodels = typing.get_args(field_annotation)
+                for submodel in submodels:
+                    if submodel is not NoneType and is_identifiable_type(submodel):
+                        resolved_models.append(submodel)
+            elif typing.get_origin(field_annotation) is list:
+                # This is typing.List[SomeModel]
+                list_args = typing.get_args(field_annotation)
+                if list_args and is_identifiable_type(list_args[0]):
+                    resolved_models.append(list_args[0])
+            elif is_identifiable_type(field_annotation):
+                # This is directly a model type
+                resolved_models.append(field_annotation)
 
         return resolved_models
+
+    def make_custom_graphiql_handler(self):
+        """Create a custom GraphiQL handler with updated CDN URLs."""
+        from starlette.responses import HTMLResponse
+
+        def custom_graphiql_handler(request):
+            html = """
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      width: 100%;
+    }
+    #graphiql {
+      height: 100vh;
+    }
+  </style>
+  <link href="https://unpkg.com/graphiql@2.0.11/graphiql.css" rel="stylesheet"/>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/graphiql@2.0.11/graphiql.min.js"></script>
+</head>
+<body>
+  <div id="graphiql">Loading...</div>
+  <script>
+    // Parse the cookie value for a CSRF token
+    var csrftoken;
+    var cookies = ('; ' + document.cookie).split('; csrftoken=');
+    if (cookies.length == 2)
+      csrftoken = cookies.pop().split(';').shift();
+
+    // Collect the URL parameters
+    var parameters = {};
+    window.location.search.substr(1).split('&').forEach(function (entry) {
+      var eq = entry.indexOf('=');
+      if (eq >= 0) {
+        parameters[decodeURIComponent(entry.slice(0, eq))] =
+          decodeURIComponent(entry.slice(eq + 1));
+      }
+    });
+
+    // Produce a Location query string from a parameter object.
+    var graphqlParamNames = {
+      query: true,
+      variables: true,
+      operationName: true
+    };
+    var otherParams = {};
+    for (var k in parameters) {
+      if (parameters.hasOwnProperty(k) && graphqlParamNames[k] !== true) {
+        otherParams[k] = parameters[k];
+      }
+    }
+    var fetchURL = '?' + Object.keys(otherParams).map(function (key) {
+      return encodeURIComponent(key) + '=' +
+          encodeURIComponent(otherParams[key]);
+      }
+    ).join('&');
+
+    // Defines a GraphQL fetcher using the fetch API.
+    function graphQLFetcher(graphQLParams) {
+      var headers = {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      };
+      if (csrftoken) {
+        headers['X-CSRFToken'] = csrftoken;
+      }
+      return fetch(fetchURL, {
+        method: 'post',
+        headers: headers,
+        body: JSON.stringify(graphQLParams),
+        credentials: 'include',
+      }).then(function (response) {
+        return response.text();
+      }).then(function (responseBody) {
+        try {
+          return JSON.parse(responseBody);
+        } catch (error) {
+          return responseBody;
+        }
+      });
+    }
+
+    // if variables was provided, try to format it.
+    if (parameters.variables) {
+      try {
+        parameters.variables =
+          JSON.stringify(JSON.parse(parameters.variables), null, 2);
+      } catch (e) {
+        // Do nothing, we want to display the invalid JSON as a string, rather
+        // than present an error.
+      }
+    }
+
+    // When the query and variables string is edited, update the URL bar so
+    // that it can be easily shared
+    function onEditQuery(newQuery) {
+      parameters.query = newQuery;
+      updateURL();
+    }
+    function onEditVariables(newVariables) {
+      parameters.variables = newVariables;
+      updateURL();
+    }
+    function onEditOperationName(newOperationName) {
+      parameters.operationName = newOperationName;
+      updateURL();
+    }
+    function updateURL() {
+      history.replaceState(null, null, locationQuery(parameters));
+    }
+
+    // Render <GraphiQL /> into the body.
+    ReactDOM.render(
+      React.createElement(GraphiQL, {
+        fetcher: graphQLFetcher,
+        operationName: parameters.operationName,
+        onEditQuery: onEditQuery,
+        onEditVariables: onEditVariables,
+        onEditOperationName: onEditOperationName,
+        defaultQuery: `# Welcome to GraphiQL
+#
+# GraphiQL is an in-browser tool for writing, validating, and
+# testing GraphQL queries.
+#
+# Type queries into this side of the screen, and you will see intelligent
+# typeaheads aware of the current GraphQL type schema and live syntax and
+# validation errors highlighted within the text.
+#
+# GraphQL queries typically start with a "{" character. Lines that start
+# with a # are ignored.
+#
+# An example GraphQL query might look like:
+#
+#     {
+#       Product {
+#         id
+#         primitive
+#         billOfMaterial {
+#           id
+#           components
+#         }
+#       }
+#     }
+#
+# Keyboard shortcuts:
+#
+#  Prettify Query:  Shift-Ctrl-P (or press the prettify button above)
+#
+#  Merge Query:     Shift-Ctrl-M (or press the merge button above)
+#
+#  Run Query:       Ctrl-Enter (or press the play button above)
+#
+#  Auto Complete:   Ctrl-Space (or just start typing)
+#
+{
+  Product {
+    id
+    primitive
+    billOfMaterial {
+      id
+      components
+    }
+  }
+}`
+      }),
+      document.getElementById('graphiql')
+    );
+  </script>
+</body>
+</html>
+            """
+            return HTMLResponse(html)
+
+        return custom_graphiql_handler
 
     def create_query_for_model(self, model_type: type):
         model_name = model_type.__name__
@@ -261,7 +457,7 @@ def is_optional_typing_list_or_tuple(input_type: typing.Any) -> bool:
 
 
 def list_contains_any_submodel_element_collections(
-    input_type: typing.Union[typing.List, typing.Tuple]
+    input_type: typing.Union[typing.List, typing.Tuple],
 ) -> bool:
     try:
         return any(
@@ -272,7 +468,11 @@ def list_contains_any_submodel_element_collections(
         return False
 
 
-def rework_default_list_to_default_factory(model: BaseModel):
+def rework_default_list_to_default_factory(model: typing.Type[BaseModel]):
+    # Check if the model is actually a Pydantic model
+    if not hasattr(model, "model_fields") or not issubclass(model, BaseModel):
+        return
+
     for names, field in model.model_fields.items():
         if field.default:
             pass
@@ -289,6 +489,22 @@ def rework_default_list_to_default_factory(model: BaseModel):
             field.default = None
         if isinstance(field.default, BaseModel):
             field.default = None
+
+        # Handle primitive union types for GraphQL compatibility
+        if typing.get_origin(field.annotation) is typing.Union:
+            union_args = typing.get_args(field.annotation)
+            # Check if it's a primitive union (not containing None or complex types)
+            primitive_types = {int, float, str, bool}
+            if all(arg in primitive_types for arg in union_args):
+                # Convert to the most general type for GraphQL compatibility
+                if float in union_args:
+                    field.annotation = float
+                elif int in union_args:
+                    field.annotation = int
+                elif str in union_args:
+                    field.annotation = str
+                elif bool in union_args:
+                    field.annotation = bool
 
 
 def create_graphe_pydantic_output_type_for_submodel_elements(
