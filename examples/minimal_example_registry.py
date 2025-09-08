@@ -70,7 +70,7 @@ print("### REST ###")
 # middleware.generate_rest_api_for_data_model("example")
 # FIXME: graphql not adjusted yet to generic Object models like REST, still dependency on AAS
 print("### GraphQL ###")
-# middleware.generate_graphql_api_for_data_model("example")
+middleware.generate_graphql_api_for_data_model("example")
 print("### Registry ###")
 middleware.connect_to_registry(
     registry_type="consul",

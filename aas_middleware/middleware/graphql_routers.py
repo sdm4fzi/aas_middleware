@@ -8,6 +8,8 @@ from graphene_pydantic.registry import get_global_registry
 
 import graphene
 from aas_middleware.connect.connectors.connector import Connector
+from aas_middleware.model.core import Identifiable
+from aas_middleware.model.util import is_identifiable, is_identifiable_type, is_identifiable_type_container
 
 if typing.TYPE_CHECKING:
     from aas_middleware.middleware.middleware import Middleware
@@ -23,6 +25,7 @@ from aas_middleware.model.formatting.aas.aas_middleware_util import (
     get_contained_models_attribute_info,
     is_basemodel_union_type,
     is_optional_basemodel_type,
+    unwrap_basemodel_types,
 )
 from aas_pydantic.aas_model import AAS, Blob, File, Submodel, SubmodelElementCollection
 
@@ -289,7 +292,7 @@ def rework_default_list_to_default_factory(model: BaseModel):
 
 
 def create_graphe_pydantic_output_type_for_submodel_elements(
-    model: Submodel, union_type: bool = False
+    model: Identifiable, union_type: bool = False
 ) -> PydanticObjectType:
     """
     Create recursively graphene pydantic output types for submodels and submodel elements.
@@ -297,21 +300,18 @@ def create_graphe_pydantic_output_type_for_submodel_elements(
     Args:
         model (typing.Union[base.Submodel, base.SubmodelElementCollectiontuple, list, set, ]): Submodel element for which the graphene pydantic output types should be created.
     """
-    print("Creating GraphQL type for model:", model, union_type)
     for attribute_value in get_all_submodel_elements_from_submodel(model).values():
         if is_basemodel_union_type(attribute_value) or is_optional_basemodel_type(
             attribute_value
         ):
-            subtypes = typing.get_args(attribute_value)
+            subtypes = unwrap_basemodel_types(attribute_value)
             for subtype in subtypes:
                 if subtype is NoneType:
                     continue
                 create_graphe_pydantic_output_type_for_submodel_elements(
                     subtype, union_type=True
                 )
-        elif hasattr(attribute_value, "model_fields") and issubclass(
-            attribute_value, SubmodelElementCollection
-        ):
+        elif is_identifiable_type(attribute_value):
             create_graphe_pydantic_output_type_for_submodel_elements(attribute_value)
         elif hasattr(attribute_value, "model_fields") and issubclass(
             attribute_value, Blob
@@ -321,10 +321,7 @@ def create_graphe_pydantic_output_type_for_submodel_elements(
             attribute_value, File
         ):
             create_graphe_pydantic_output_type_for_model(File, union_type)
-        # FIXME: handle optional list here....
-        elif is_typing_list_or_tuple(
-            attribute_value
-        ) or is_optional_typing_list_or_tuple(attribute_value):
+        elif is_identifiable_type_container(attribute_value):
             if is_optional_typing_list_or_tuple(attribute_value):
                 attribute_value = [
                     t for t in typing.get_args(attribute_value) if t is not NoneType
@@ -342,7 +339,7 @@ def create_graphe_pydantic_output_type_for_submodel_elements(
                         create_graphe_pydantic_output_type_for_submodel_elements(
                             subtype, union_type=True
                         )
-                elif issubclass(nested_type, SubmodelElementCollection):
+                elif is_identifiable_type(nested_type):
                     create_graphe_pydantic_output_type_for_submodel_elements(
                         nested_type
                     )
