@@ -52,7 +52,9 @@ class MqttClientConnector:
                 await self._connect_client()
 
     async def disconnect(self):
-        await self.client.__aexit__()
+        if self.client is None:
+            return
+        await self.client.__aexit__(exc_type=None, exc=None, tb=None)
         await self._listener.cancel()
         self._listener = None
 
