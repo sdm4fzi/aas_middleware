@@ -1,6 +1,4 @@
-from typing import AsyncGenerator, Callable, Awaitable, Protocol
-
-from typing import Optional, Protocol, Any, runtime_checkable
+from typing import AsyncGenerator, Protocol, Any, runtime_checkable
 
 from aas_middleware.connect.connectors.connector import Connector
 

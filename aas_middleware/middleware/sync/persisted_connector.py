@@ -1,6 +1,7 @@
-from typing import Any, Optional, TypeVar, List, Dict
+from typing import Any, TypeVar, Union, AsyncGenerator
 
 from aas_middleware.connect.connectors.connector import Connector, Provider, Consumer
+from aas_middleware.connect.connectors.async_connector import AsyncConnector, Receiver
 from aas_middleware.middleware.sync.synced_connector import (
     SyncDirection,
     SyncRole,
@@ -18,7 +19,7 @@ class PersistedConnector:
     but also from persistence to external connectors.
     """
 
-    def __init__(self, connector: Connector, connector_id: str):
+    def __init__(self, connector: Union[Connector, AsyncConnector], connector_id: str):
         self.connector = connector
         self.connector_id = connector_id
 
@@ -107,6 +108,16 @@ class PersistedConnector:
 
         await self.connector.consume(body)
         await self._notify_synced_connectors(body)
+
+
+    async def receive(self) -> AsyncGenerator[T, None]:
+        if not isinstance(self.connector, Receiver):
+            return
+        async for item in self.connector.receive():
+            await self._notify_synced_connectors(item)
+            if item != await self.provide_persistence_value():
+                await self.consume(item)
+            yield item
 
 
 def wrap_persistence_connector(

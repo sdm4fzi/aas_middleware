@@ -4,11 +4,13 @@ import logging
 
 from aas_middleware.model.mapping.mapper import Mapper
 
-logger = logging.getLogger(__name__)
 
 from pydantic import BaseModel, ConfigDict
 
+import asyncio
+
 from aas_middleware.connect.connectors.connector import Connector, Consumer, Provider
+from aas_middleware.connect.connectors.async_connector import Receiver
 from aas_middleware.connect.connectors.model_connector import ModelConnector
 from aas_middleware.connect.workflows.worfklow_description import WorkflowDescription
 from aas_middleware.connect.workflows.workflow import Workflow
@@ -17,6 +19,8 @@ from aas_middleware.model.core import Identifiable
 from aas_middleware.middleware.sync.persisted_connector import (
     wrap_persistence_connector,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class ConnectionInfo(BaseModel):
@@ -120,7 +124,7 @@ class ConnectionRegistry:
             connector (Connector): The connector of the connection.
             type_connection_info (typing.Type[typing.Any]): The type of the connection info of the connection.
         """
-        if not connection_info in self.connections:
+        if connection_info not in self.connections:
             self.connections[connection_info] = []
         self.connections[connection_info].append(connector_id)
         self.add_connector(connector_id, connector, type_connection_info)
@@ -264,7 +268,7 @@ class PersistenceConnectionRegistry(ConnectionRegistry):
             connection_info (ConnectionInfo): The connection info of the connection.
             persistence_factory (PersistenceFactory): The persistence factory of the connection.
         """
-        if not connection_info in self.persistence_factories:
+        if connection_info not in self.persistence_factories:
             self.persistence_factories[connection_info] = []
         self.persistence_factories[connection_info].append(
             (model_type, persistence_factory)
@@ -287,7 +291,7 @@ class PersistenceConnectionRegistry(ConnectionRegistry):
         data_model_connection_info = ConnectionInfo(
             data_model_name=connection_info.data_model_name
         )
-        if not data_model_connection_info in self.persistence_factories:
+        if data_model_connection_info not in self.persistence_factories:
             logger.warning(
                 f"No persistence factory found for {data_model_connection_info}. Using default persistence factory."
             )
@@ -358,8 +362,22 @@ class PersistenceConnectionRegistry(ConnectionRegistry):
         """
         # Wrap persistence connectors to enable bidirectional sync
         wrapped_connector = wrap_persistence_connector(connector, connector_id)
+        if isinstance(connector, Receiver):
+            async def run_receive():
+                try:
+                    async for _ in wrapped_connector.receive():
+                        pass
+                except asyncio.CancelledError:
+                    # Task was cancelled, exit gracefully
+                    logger.debug(f"Receive task for connector '{connector_id}' was cancelled")
+                    raise
+                except Exception as e:
+                    logger.error(
+                        f"Error in receive task for connector '{connector_id}': {e}",
+                        exc_info=True
+                    )
+            asyncio.create_task(run_receive())
         super().add_connector(connector_id, wrapped_connector, connection_type)
-
     def remove_connection(self, connection_info: ConnectionInfo):
         """
         Function to remove a connection from the connection manager.
@@ -443,7 +461,7 @@ class WorkflowRegistry:
             connection_info (ConnectionInfo): The connection info of the provider.
             provider (Provider): The provider to be added.
         """
-        if not workflow_name in self.workflow_providers:
+        if workflow_name not in self.workflow_providers:
             self.workflow_providers[workflow_name] = []
         self.workflow_providers[workflow_name].append((connection_info, provider))
 
@@ -458,7 +476,7 @@ class WorkflowRegistry:
             connection_info (ConnectionInfo): The connection info of the consumer.
             connector (Connector): The connector to be added.
         """
-        if not workflow_name in self.workflow_consumers:
+        if workflow_name not in self.workflow_consumers:
             self.workflow_consumers[workflow_name] = []
         self.workflow_consumers[workflow_name].append((connection_info, connector))
 

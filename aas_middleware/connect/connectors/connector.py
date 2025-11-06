@@ -1,4 +1,4 @@
-from typing import Optional, Protocol, Any, runtime_checkable
+from typing import Protocol, Any, runtime_checkable
 
 @runtime_checkable
 class Provider(Protocol):
